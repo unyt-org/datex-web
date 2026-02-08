@@ -2,7 +2,7 @@ use futures_channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
 use std::{cell::RefCell, rc::Rc, sync::Mutex, time::Duration};
 
-use datex_core::{
+use datex::{
     network::{
         com_hub::{
             errors::InterfaceCreateError,
@@ -19,22 +19,22 @@ use datex_core::{
     task::spawn_with_panic_notify_default,
 };
 
-use datex_core::{
+use datex::{
     network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketClientInterfaceSetupData,
     stdlib::sync::Arc,
 };
 
-use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
+use datex::network::com_interfaces::default_com_interfaces::websocket::websocket_common::parse_url;
 use serde::{Deserialize, Serialize};
 
 use crate::wrap_error_for_js;
-use datex_core::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use datex::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{SinkExt, StreamExt, select};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
 
-wrap_error_for_js!(JSWebSocketError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
+wrap_error_for_js!(JSWebSocketError, datex::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketError);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebSocketClientJSInterfaceSetupData(

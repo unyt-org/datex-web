@@ -1,4 +1,4 @@
-use datex_core::{
+use datex::{
     dif::value::{DIFValue, DIFValueContainer},
     global::dxb_block::DXBBlock,
     network::{

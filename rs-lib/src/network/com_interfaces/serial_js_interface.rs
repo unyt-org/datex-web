@@ -1,37 +1,32 @@
-use datex_core::network::com_hub::{
+use datex::network::com_hub::{
     errors::InterfaceCreateError,
     managers::interfaces_manager::ComInterfaceAsyncFactoryResult,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    ops::Deref,
-    time::Duration,
+use std::{ops::Deref, time::Duration};
+
+use datex::network::com_interfaces::{
+    com_interface::{
+        ComInterfaceEvent, ComInterfaceProxy,
+        error::ComInterfaceError,
+        factory::{ComInterfaceAsyncFactory, ComInterfaceSyncFactory},
+        properties::{InterfaceDirection, InterfaceProperties},
+    },
+    default_com_interfaces::serial::serial_common::{
+        SerialError, SerialInterfaceSetupData,
+    },
 };
 
-use datex_core::network::com_interfaces::{
-        com_interface::{
-            ComInterfaceEvent, ComInterfaceProxy,
-            error::ComInterfaceError,
-            factory::{
-                ComInterfaceAsyncFactory, ComInterfaceSyncFactory,
-            },
-            properties::{InterfaceDirection, InterfaceProperties},
-        },
-        default_com_interfaces::serial::serial_common::{
-            SerialError, SerialInterfaceSetupData,
-        },
-    };
-
 use crate::wrap_error_for_js;
-use datex_core::task::spawn_with_panic_notify_default;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
-    ReadableStreamDefaultReader, SerialOptions, SerialPort, js_sys, js_sys::Uint8Array,
+    ReadableStreamDefaultReader, SerialOptions, SerialPort, js_sys,
+    js_sys::Uint8Array,
 };
 
-wrap_error_for_js!(JsSerialError, datex_core::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
+wrap_error_for_js!(JsSerialError, datex::network::com_interfaces::default_com_interfaces::serial::serial_common::SerialError);
 
 #[derive(tsify::Tsify, Serialize, Deserialize)]
 pub struct SerialInterfaceSetupDataJS(pub SerialInterfaceSetupData);

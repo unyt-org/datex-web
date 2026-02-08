@@ -1,22 +1,19 @@
 use crate::network::com_hub::JSComHub;
-use datex_core::{
+use datex::{
     channel::mpsc::{UnboundedSender, create_unbounded_channel},
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
-            InterfacePriority, errors::InterfaceCreateError,
-            managers::sockets_manager,
+            InterfacePriority, errors::ComInterfaceCreateError,
+            managers::socket_manager::ComInterfaceSocketManager,
         },
         com_interfaces::com_interface::{
-            ComInterfaceEvent, ComInterfaceProxy, ComInterfaceUUID,
+            ComInterfaceUUID,
             factory::ComInterfaceSyncFactory,
-            properties::{InterfaceDirection, InterfaceProperties},
+            properties::{ComInterfaceProperties, InterfaceDirection},
             socket::ComInterfaceSocketUUID,
-            socket_manager::ComInterfaceSocketManager,
-            state::{ComInterfaceState, ComInterfaceStateWrapper},
         },
     },
-    runtime::AsyncContext,
     serde::deserializer::from_value_container,
     values::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
@@ -78,7 +75,6 @@ pub struct BaseInterfaceHandle {
     tx: UnboundedSender<BaseInterfaceEvent>,
     socket_manager: Arc<Mutex<ComInterfaceSocketManager>>,
     callbacks: Rc<RefCell<BaseInterfaceCallbacks>>,
-    state: Arc<Mutex<ComInterfaceStateWrapper>>,
 }
 
 impl BaseInterfaceHandle {
@@ -97,7 +93,6 @@ impl BaseInterfaceHandle {
             sender_map,
             socket_manager: socket_manager.clone(),
             callbacks: Rc::new(RefCell::new(BaseInterfaceCallbacks::default())),
-            state: proxy.state.clone(),
         };
         let task_handle = handle.callbacks.clone();
         use futures::{StreamExt, select};

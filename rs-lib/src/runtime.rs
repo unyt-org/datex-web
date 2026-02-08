@@ -1,13 +1,9 @@
 use crate::{
-    crypto::crypto_js::CryptoJS,
     js_utils::{js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
-    utils::time::TimeJS,
 };
 #[cfg(feature = "debug")]
-use datex_core::runtime::global_context::DebugFlags;
-use datex_core::{
-    crypto::crypto::CryptoTrait,
+use datex::{
     decompiler::decompile_value,
     dif::{
         interface::{
@@ -28,8 +24,6 @@ use datex_core::{
         reference::ReferenceMutability,
     },
     runtime::{
-        AsyncContext, Runtime, RuntimeConfig, RuntimeInternal,
-        global_context::GlobalContext,
     },
     serde::deserializer::DatexDeserializer,
     values::{
@@ -39,16 +33,15 @@ use datex_core::{
 };
 use std::borrow::Cow;
 
+use crate::js_utils::cast_from_dif_js_value;
+use datex::{crypto::CryptoImpl, runtime::{Runtime, RuntimeConfig, RuntimeRunner, memory::Memory}};
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
-use std::{fmt::Display, rc::Rc, str::FromStr, sync::Arc};
-use std::cell::RefCell;
-use datex_core::runtime::memory::Memory;
+use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, sync::Arc};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::future_to_promise;
+use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
-use crate::js_utils::cast_from_dif_js_value;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -56,23 +49,23 @@ pub struct JSRuntime {
     pub com_hub: JSComHub,
 }
 
-#[derive(Serialize, Deserialize, Default)]
-pub struct JSDebugFlags {
-    pub allow_unsigned_blocks: Option<bool>,
-    pub enable_deterministic_behavior: Option<bool>,
-}
+// #[derive(Serialize, Deserialize, Default)]
+// pub struct JSDebugFlags {
+//     pub allow_unsigned_blocks: Option<bool>,
+//     pub enable_deterministic_behavior: Option<bool>,
+// }
 
-#[cfg(feature = "debug")]
-impl From<JSDebugFlags> for DebugFlags {
-    fn from(val: JSDebugFlags) -> Self {
-        DebugFlags {
-            allow_unsigned_blocks: val.allow_unsigned_blocks.unwrap_or(false),
-            enable_deterministic_behavior: val
-                .enable_deterministic_behavior
-                .unwrap_or(false),
-        }
-    }
-}
+// #[cfg(feature = "debug")]
+// impl From<JSDebugFlags> for DebugFlags {
+//     fn from(val: JSDebugFlags) -> Self {
+//         DebugFlags {
+//             allow_unsigned_blocks: val.allow_unsigned_blocks.unwrap_or(false),
+//             enable_deterministic_behavior: val
+//                 .enable_deterministic_behavior
+//                 .unwrap_or(false),
+//         }
+//     }
+// }
 
 #[derive(Debug, PartialEq)]
 enum ConversionError {
@@ -94,32 +87,26 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub fn create(
+    pub fn run(
         config: JsValue,
-        debug_flags: Option<JSDebugFlags>,
+        // debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
         // NOTE: mock memory is used here, since we don't have an initialized runtime yet - so no pointers can be resolved during config parsing
         // We must think about a better way to handle this in the future
-        let config: RuntimeConfig = cast_from_dif_js_value(config, &RefCell::new(Memory::default())).unwrap();
-        let runtime = Runtime::init(
-            config,
-            GlobalContext {
-                crypto: Arc::new(CryptoJS),
-                time: Arc::new(TimeJS),
-
-                #[cfg(feature = "debug")]
-                debug_flags: debug_flags.unwrap_or_default().into(),
-            },
-            AsyncContext::new(),
-        );
-        let runtime = JSRuntime::new(runtime);
-        runtime.com_hub.register_default_interface_factories();
-        runtime
+        let config: RuntimeConfig =
+            cast_from_dif_js_value(config, &RefCell::new(Memory::default()))
+                .unwrap();
+        let runtime_runner = RuntimeRunner::new(config);
+        spawn_local(runtime_runner.task_future);
+        return Self::new(runtime_runner.runtime.clone());
     }
 
-    pub fn new(runtime: Runtime) -> JSRuntime {
+    fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
-        JSRuntime { runtime, com_hub }
+        JSRuntime {
+            runtime,
+            com_hub,
+        }
     }
 }
 
@@ -130,20 +117,18 @@ impl JSRuntime {
 impl JSRuntime {
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
-            let crypto = CryptoJS {};
-
             let something = b"yellow submarineyellow submarine".to_owned();
             let some_check =
                 b"9At2nzU19GjL8F4WFRyB7RZSGLemMGUMVBZAMChfndF2".to_owned();
 
-            let based = crypto.enc_b58(&something).unwrap();
-            let unbased = crypto.dec_b58(&some_check).unwrap();
+            let based = CryptoImpl::enc_b58(&something).unwrap();
+            let unbased = CryptoImpl::dec_b58(&some_check).unwrap();
             assert_eq!(something, unbased);
             assert_eq!(some_check, based);
 
             // Hashes
             let mut ikm = Vec::from([0u8; 32]);
-            let hash = crypto.hash_sha256(&ikm).await.unwrap();
+            let hash = CryptoImpl::hash_sha256(&ikm).await.unwrap();
             assert_eq!(
                 hash,
                 [
@@ -153,9 +138,9 @@ impl JSRuntime {
                 ]
             );
             let salt = Vec::from([0u8; 16]);
-            let hash_a = crypto.hkdf_sha256(&ikm, &salt).await.unwrap();
+            let hash_a = CryptoImpl::hkdf_sha256(&ikm, &salt).await.unwrap();
             ikm[0] = 1u8;
-            let hash_b = crypto.hkdf_sha256(&ikm, &salt).await.unwrap();
+            let hash_b = CryptoImpl::hkdf_sha256(&ikm, &salt).await.unwrap();
             assert_ne!(hash_a, hash_b);
             assert_ne!(hash_a.to_vec(), ikm);
             assert_eq!(
@@ -172,29 +157,27 @@ impl JSRuntime {
             let other_data = b"Some message to sign".to_vec();
 
             // Generate key and signature
-            let (pub_key, pri_key) = crypto.gen_ed25519().await.unwrap();
+            let (pub_key, pri_key) = CryptoImpl::gen_ed25519().await.unwrap();
             assert_eq!(pub_key.len(), 44_usize);
             assert_eq!(pri_key.len(), 48_usize);
 
-            let sig = crypto.sig_ed25519(&pri_key, &data).await.unwrap();
+            let sig = CryptoImpl::sig_ed25519(&pri_key, &data).await.unwrap();
             assert_eq!(sig.len(), 64_usize);
 
             // Verify key, signature and data
-            let ver = crypto.ver_ed25519(&pub_key, &sig, &data).await.unwrap();
+            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &data).await.unwrap();
             assert!(ver);
 
             // Falsify other data
-            let ver = crypto
-                .ver_ed25519(&pub_key, &sig, &other_data)
+            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &other_data)
                 .await
                 .unwrap();
             assert!(!ver);
 
             // Falsify other key
             let (other_pub_key, other_pri_key) =
-                crypto.gen_ed25519().await.unwrap();
-            let ver = crypto
-                .ver_ed25519(&other_pub_key, &sig, &data)
+                CryptoImpl::gen_ed25519().await.unwrap();
+            let ver = CryptoImpl::ver_ed25519(&other_pub_key, &sig, &data)
                 .await
                 .unwrap();
             assert!(!ver);
@@ -215,16 +198,16 @@ impl JSRuntime {
             assert_eq!(ser_pri.len(), 48_usize);
 
             let cli_sec =
-                crypto.derive_x25519(&cli_pri, &ser_pub).await.unwrap();
+                CryptoImpl::derive_x25519(&cli_pri, &ser_pub).await.unwrap();
             let ser_sec =
-                crypto.derive_x25519(&ser_pri, &cli_pub).await.unwrap();
+                CryptoImpl::derive_x25519(&ser_pri, &cli_pub).await.unwrap();
 
             assert_eq!(cli_sec, ser_sec);
             assert_eq!(cli_sec.len(), 32_usize);
 
             // AES CTR with random key
             let random_bytes: [u8; 32] =
-                crypto.random_bytes(32).try_into().unwrap();
+                CryptoImpl::random_bytes(32).try_into().unwrap();
 
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];

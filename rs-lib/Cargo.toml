@@ -1,11 +1,12 @@
 
 [package]
-name = "datex-core-js"
+name = "datex-web"
 version = "0.0.12"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
 ]
+license = "../LICENSE"
 edition = "2024"
 
 [lib]
@@ -20,19 +21,15 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
+datex = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
     "std",
-    "wasm_logger",
     "wasm_runtime",
     "compiler",
     "decompiler",
-    "com_websocket",
-    "com_webrtc",
-    "com_serial",
     "syntax_highlighting_legacy",
     "lsp_wasm",
 ] }
-datex_macros = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.1.3", package = "datex_macros" }
+# datex_macros = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.1.3", package = "datex_macros" }
 
 async-trait = "0.1.87"
 url = { version = "2.5.7" }
@@ -110,8 +107,8 @@ default = [
     "wasm_webrtc",
     "lsp",                   # Make optional
 ]
-debug = ["datex-core/debug", "datex-core/wasm_runtime"]
-lsp = ["datex-core/lsp_wasm"]
+debug = ["datex/debug", "datex/wasm_runtime"]
+lsp = ["datex/lsp_wasm"]
 
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support

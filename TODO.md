@@ -3,7 +3,7 @@
 - [x] use `log` and `defmt` for logging (instead of own implementation)
 - [x] smaller binary size: https://github.com/johnthagen/min-sized-rust
   - We can shrink from 2.6MB to 2MB
-    (`wasm-opt' -Oz datex_core_js.wasm -o out.wasm`)
+    (`wasm-opt' -Oz datex_web_js.wasm -o out.wasm`)
 - [x] parsing of dxb_body could maybe be simplified by using a serialization
       library
 - [x] `anyhow` should not be used in library crates (create enums for errors

@@ -1,14 +1,13 @@
 use std::cell::RefCell;
 
-use datex_core::{
+use datex::{
     dif::value::{DIFReferenceNotFoundError, DIFValueContainer},
     runtime::memory::Memory,
     serde::deserializer::from_value_container,
     values::value_container::ValueContainer,
 };
 use log::info;
-use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_wasm_bindgen::{Error, from_value};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};

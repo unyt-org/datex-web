@@ -3,7 +3,7 @@ import type {
     BaseInterfaceHandle,
     InterfaceProperties,
     WebSocketServerInterfaceSetupData,
-} from "../../datex-core/datex_core_js.d.ts";
+} from "../../datex-web/datex_web_js.d.ts";
 
 /**
  * General utility functions for WebSockets that can be reused for different socket server implementations.

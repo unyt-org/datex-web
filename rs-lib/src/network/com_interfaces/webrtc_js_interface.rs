@@ -1,40 +1,51 @@
-use std::cell::RefCell;
-use std::future::Future;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::Mutex;
-use std::time::Duration; // FIXME no-std
+use std::{
+    cell::RefCell, future::Future, pin::Pin, rc::Rc, sync::Mutex,
+    time::Duration,
+}; // FIXME no-std
 
 use async_trait::async_trait;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::media_tracks::{MediaKind, MediaTrack, MediaTracks};
-use datex_core::values::core_values::endpoint::Endpoint;
-use datex_core::network::com_interfaces::com_interface::{
-    ComInterface, ComInterfaceError, ComInterfaceFactory, ComInterfaceInfo, ComInterfaceSockets
+use datex::{
+    delegate_com_interface_info,
+    network::com_interfaces::{
+        com_interface::{
+            ComInterface, ComInterfaceError, ComInterfaceFactory,
+            ComInterfaceInfo, ComInterfaceSockets,
+        },
+        com_interface_properties::InterfaceProperties,
+        com_interface_socket::ComInterfaceSocketUUID,
+        default_com_interfaces::webrtc::webrtc_common::{
+            data_channels::{DataChannel, DataChannels},
+            media_tracks::{MediaKind, MediaTrack, MediaTracks},
+            structures::{
+                RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX,
+                RTCSessionDescriptionDX,
+            },
+            utils::WebRTCError,
+            webrtc_commons::{WebRTCCommon, WebRTCInterfaceSetupData},
+            webrtc_trait::{WebRTCTrait, WebRTCTraitInternal},
+        },
+        socket_provider::SingleSocketProvider,
+    },
+    set_opener,
+    stdlib::sync::Arc,
+    task::spawn_local,
+    values::core_values::endpoint::Endpoint,
 };
-use datex_core::network::com_interfaces::com_interface_properties::InterfaceProperties;
-use datex_core::network::com_interfaces::com_interface_socket::ComInterfaceSocketUUID;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::data_channels::{DataChannel, DataChannels};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::structures::{RTCIceCandidateInitDX, RTCIceServer, RTCSdpTypeDX, RTCSessionDescriptionDX};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError;
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_commons::{WebRTCCommon, WebRTCInterfaceSetupData};
-use datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::webrtc_trait::{WebRTCTrait, WebRTCTraitInternal};
-use datex_core::network::com_interfaces::socket_provider::SingleSocketProvider;
-use datex_core::stdlib::sync::Arc;
-use datex_core::task::spawn_local;
-use datex_core::{delegate_com_interface_info, set_opener};
 
-use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
+use datex::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Array, Function, Reflect};
 use wasm_bindgen_futures::JsFuture;
 
-use crate::js_utils::TryAsByteSlice;
-use crate::network::com_hub::JSComHub;
-use crate::wrap_error_for_js;
-use datex_core::network::com_hub::ComHubError;
+use crate::{
+    js_utils::TryAsByteSlice, network::com_hub::JSComHub, wrap_error_for_js,
+};
+use datex::network::com_hub::ComHubError;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
-use wasm_bindgen::prelude::{Closure, wasm_bindgen};
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{
+    JsCast, JsValue,
+    prelude::{Closure, wasm_bindgen},
+};
 use web_sys::{
     MediaStream, MessageEvent, RtcConfiguration, RtcDataChannel,
     RtcDataChannelEvent, RtcIceCandidateInit, RtcIceServer, RtcPeerConnection,
@@ -42,7 +53,7 @@ use web_sys::{
     RtcSignalingState,
 };
 
-wrap_error_for_js!(JSWebRTCError, datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError);
+wrap_error_for_js!(JSWebRTCError, datex::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError);
 
 impl From<ComHubError> for JSWebRTCError {
     fn from(err: ComHubError) -> Self {

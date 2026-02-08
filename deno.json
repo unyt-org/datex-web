@@ -65,8 +65,8 @@
             "scripts",
             "test",
             "rs-lib",
-            "!src/datex-core/datex_core_js.wasm",
-            "!src/datex-core/datex_core_js.internal.js"
+            "!src/datex-web/datex_web_js.wasm",
+            "!src/datex-web/datex_web_js.internal.js"
         ]
     }
 }

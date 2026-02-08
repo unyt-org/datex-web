@@ -1,9 +1,10 @@
 use futures::StreamExt;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 mod io;
-use datex_core::{runtime::Runtime, task::spawn_local};
+use datex::runtime::Runtime;
 use futures_channel::mpsc;
 use js_sys::Uint8Array;
+use wasm_bindgen_futures::spawn_local;
 
 use crate::lsp::io::{Reader, Writer};
 
@@ -18,7 +19,7 @@ pub fn start_lsp(
     let writer = Writer::new(tx_to_js);
 
     spawn_local(async move {
-        use datex_core::lsp::create_lsp;
+        use datex::lsp::create_lsp;
         create_lsp(runtime, reader, writer).await;
     });
 

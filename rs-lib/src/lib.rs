@@ -7,20 +7,18 @@ extern crate core;
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 
-use datex_core::compiler::{CompileOptions, compile_script, compile_template};
-use datex_core::decompiler::decompile_body;
-use datex_core::runtime::execution::{
-    ExecutionInput, ExecutionOptions, execute_dxb_sync,
+use datex::{
+    compiler::{CompileOptions, compile_script, compile_template},
+    decompiler::decompile_body,
+    runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
 use wasm_bindgen::prelude::*;
 
 mod runtime;
-use crate::runtime::JSDebugFlags;
 use runtime::JSRuntime;
 
 pub mod network;
 
-pub mod crypto;
 pub mod js_utils;
 pub mod pointer;
 pub mod utils;
@@ -36,9 +34,9 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
-    let debug_flags: Option<JSDebugFlags> =
-        from_value(debug_flags).unwrap_or_default();
-    JSRuntime::create(config, debug_flags)
+    // let debug_flags: Option<JSDebugFlags> =
+    //     from_value(debug_flags).unwrap_or_default();
+    JSRuntime::run(config)
 }
 
 /// Executes a Datex script and returns the result as a string.

@@ -1,5 +1,5 @@
-use datex_core::libs::core::{CoreLibPointerId, create_core_lib};
-use datex_core::values::pointer::PointerAddress;
+use datex::libs::core::{CoreLibPointerId, create_core_lib};
+use datex::values::pointer::PointerAddress;
 
 #[test]
 #[ignore]

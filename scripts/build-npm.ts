@@ -43,7 +43,7 @@ await build({
     async postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
         const datexCoreJSInternalPath = new URL(
-            "../npm/esm/datex-core/datex_core_js.js",
+            "../npm/esm/datex-web/datex_web_js.js",
             import.meta.url,
         );
         const fileContent = Deno.readTextFileSync(datexCoreJSInternalPath);
@@ -89,18 +89,18 @@ await build({
 
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
-            "src/datex-core/datex_core_js.wasm",
-            "npm/esm/datex-core/datex_core_js.wasm",
+            "src/datex-web/datex_web_js.wasm",
+            "npm/esm/datex-web/datex_web_js.wasm",
         );
 
-        // replace datex_core_js with custom version for node that also supports node vite builds for browsers
+        // replace datex_web_js with custom version for node that also supports node vite builds for browsers
         Deno.copyFileSync(
-            "scripts/datex_core_js.node.js",
-            "npm/esm/datex-core/datex_core_js.js",
+            "scripts/datex_web_js.node.js",
+            "npm/esm/datex-web/datex_web_js.js",
         );
         Deno.copyFileSync(
             "scripts/wasm_url.node.js",
-            "npm/esm/datex-core/wasm_url.node.js",
+            "npm/esm/datex-web/wasm_url.node.js",
         );
 
         // currently required for version tests

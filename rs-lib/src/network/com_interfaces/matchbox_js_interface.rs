@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::define_registry;
-use datex_core::network::com_hub::InterfacePriority;
-use datex_core::network::com_interfaces::{
+use datex::network::com_hub::InterfacePriority;
+use datex::network::com_interfaces::{
     com_interface::ComInterface,
     default_com_interfaces::webrtc::matchbox_client_interface::MatchboxClientInterface,
 };
