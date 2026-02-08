@@ -74,6 +74,7 @@ features = [
     "CryptoKey",
     "CryptoKeyPair",
     "Serial",
+    "SerialOptions",
     "SerialPort",
     "Navigator",
     "ReadableStream",

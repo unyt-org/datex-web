@@ -2,9 +2,8 @@ use crate::{
     js_utils::{js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
 };
-use datex_crypto_facade::crypto::Crypto;
-#[cfg(feature = "debug")]
 use datex::{
+    self,
     decompiler::decompile_value,
     dif::{
         interface::{
@@ -24,18 +23,22 @@ use datex::{
         observers::{ObserveOptions, TransceiverId},
         reference::ReferenceMutability,
     },
-    runtime::{
-    },
     serde::deserializer::DatexDeserializer,
     values::{
         core_values::endpoint::Endpoint, pointer::PointerAddress,
         value_container::ValueContainer,
     },
 };
+use datex_crypto_facade::crypto::Crypto;
 use std::borrow::Cow;
 
 use crate::js_utils::cast_from_dif_js_value;
-use datex::{crypto::CryptoImpl, runtime::{Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory}};
+use datex::{
+    crypto::CryptoImpl,
+    runtime::{
+        Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
+    },
+};
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
@@ -104,10 +107,7 @@ impl JSRuntime {
 
     fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
-        JSRuntime {
-            runtime,
-            com_hub,
-        }
+        JSRuntime { runtime, com_hub }
     }
 }
 
@@ -166,7 +166,9 @@ impl JSRuntime {
             assert_eq!(sig.len(), 64_usize);
 
             // Verify key, signature and data
-            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &data).await.unwrap();
+            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &data)
+                .await
+                .unwrap();
             assert!(ver);
 
             // Falsify other data
@@ -184,8 +186,9 @@ impl JSRuntime {
             assert!(!ver);
 
             // Falsify other signature
-            let other_sig =
-                CryptoImpl::sig_ed25519(&other_pri_key, &data).await.unwrap();
+            let other_sig = CryptoImpl::sig_ed25519(&other_pri_key, &data)
+                .await
+                .unwrap();
             let ver = CryptoImpl::ver_ed25519(&pub_key, &other_sig, &data)
                 .await
                 .unwrap();
@@ -212,13 +215,18 @@ impl JSRuntime {
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];
 
-            let ctr_ciphered = CryptoImpl::aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
-                .await
-                .unwrap();
+            let ctr_ciphered =
+                CryptoImpl::aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
+                    .await
+                    .unwrap();
 
-            let ctr_deciphered = CryptoImpl::aes_ctr_decrypt(&random_bytes, &ctr_iv, &ctr_ciphered)
-                .await
-                .unwrap();
+            let ctr_deciphered = CryptoImpl::aes_ctr_decrypt(
+                &random_bytes,
+                &ctr_iv,
+                &ctr_ciphered,
+            )
+            .await
+            .unwrap();
 
             assert_eq!(msg, ctr_deciphered);
             assert_ne!(msg, ctr_ciphered);
@@ -227,8 +235,9 @@ impl JSRuntime {
             let wrapped = CryptoImpl::key_upwrap(&random_bytes, &random_bytes)
                 .await
                 .unwrap();
-            let unwrapped =
-                CryptoImpl::key_unwrap(&random_bytes, &wrapped).await.unwrap();
+            let unwrapped = CryptoImpl::key_unwrap(&random_bytes, &wrapped)
+                .await
+                .unwrap();
             assert_eq!(random_bytes.to_vec(), unwrapped);
             // assert_ne!(wrapped, unwrapped);
 
