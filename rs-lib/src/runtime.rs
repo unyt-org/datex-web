@@ -2,7 +2,7 @@ use crate::{
     js_utils::{js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
 };
-use datex::{
+use datex_core::{
     self,
     decompiler::decompile_value,
     dif::{
@@ -33,7 +33,7 @@ use datex_crypto_facade::crypto::Crypto;
 use std::borrow::Cow;
 
 use crate::js_utils::cast_from_dif_js_value;
-use datex::{
+use datex_core::{
     crypto::CryptoImpl,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,

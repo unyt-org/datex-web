@@ -424,7 +424,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "datex"
+name = "datex-core"
 version = "0.0.8"
 dependencies = [
  "ariadne",
@@ -435,7 +435,7 @@ dependencies = [
  "bytes",
  "cfg-if",
  "datex-crypto-esp32",
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "datex-crypto-native",
  "datex-crypto-web",
  "datex-macros",
@@ -445,7 +445,6 @@ dependencies = [
  "futures-core",
  "futures-util",
  "gloo-timers 0.3.0",
- "hashbrown 0.16.1",
  "hex",
  "indexmap 2.13.0",
  "internment",
@@ -482,7 +481,7 @@ dependencies = [
 name = "datex-crypto-esp32"
 version = "0.0.1"
 dependencies = [
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "esp-hal",
  "spin",
  "static_cell",
@@ -496,10 +495,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "datex-crypto-facade"
+version = "0.0.1"
+source = "git+https://github.com/unyt-org/datex-core?branch=refactor%2Fupdate-loop#d7e472309cdba5e44e821098c32e776fa2d2c3fe"
+dependencies = [
+ "bs58",
+]
+
+[[package]]
 name = "datex-crypto-native"
 version = "0.0.1"
 dependencies = [
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "openssl",
  "rand",
  "uuid",
@@ -509,7 +516,7 @@ dependencies = [
 name = "datex-crypto-web"
 version = "0.0.1"
 dependencies = [
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -529,8 +536,8 @@ name = "datex-web"
 version = "0.0.12"
 dependencies = [
  "async-trait",
- "datex",
- "datex-crypto-facade",
+ "datex-core",
+ "datex-crypto-facade 0.0.1 (git+https://github.com/unyt-org/datex-core?branch=refactor%2Fupdate-loop)",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -1286,13 +1293,6 @@ name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
-dependencies = [
- "allocator-api2",
- "equivalent",
- "foldhash 0.2.0",
- "serde",
- "serde_core",
-]
 
 [[package]]
 name = "heapless"

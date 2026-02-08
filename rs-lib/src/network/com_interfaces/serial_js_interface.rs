@@ -1,4 +1,4 @@
-use datex::{
+use datex_core::{
     derive_setup_data,
     global::dxb_block::DXBBlock,
     network::{

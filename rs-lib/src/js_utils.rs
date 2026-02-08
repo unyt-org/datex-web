@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use datex::{
+use datex_core::{
     dif::value::{DIFReferenceNotFoundError, DIFValueContainer},
     runtime::memory::Memory,
     serde::deserializer::from_value_container,

@@ -10,7 +10,7 @@ extern crate core;
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 
-use datex::{
+use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
     decompiler::decompile_body,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},

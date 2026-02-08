@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, str::FromStr};
 
-use datex::{
+use datex_core::{
     channel::mpsc::{UnboundedReceiver, create_unbounded_channel},
     derive_setup_data,
     global::dxb_block::DXBBlock,

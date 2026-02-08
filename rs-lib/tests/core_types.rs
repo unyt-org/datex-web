@@ -1,4 +1,4 @@
-use datex::{
+use datex_core::{
     libs::core::{CoreLibPointerId, create_core_lib_types},
     values::pointer::PointerAddress,
 };

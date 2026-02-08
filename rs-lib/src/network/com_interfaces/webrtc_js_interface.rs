@@ -4,7 +4,7 @@ use std::{
 }; // FIXME no-std
 
 use async_trait::async_trait;
-use datex::{
+use datex_core::{
     delegate_com_interface_info,
     network::com_interfaces::{
         com_interface::{
@@ -32,14 +32,14 @@ use datex::{
     values::core_values::endpoint::Endpoint,
 };
 
-use datex::network::com_interfaces::com_interface::ComInterfaceState;
+use datex_core::network::com_interfaces::com_interface::ComInterfaceState;
 use js_sys::{Array, Function, Reflect};
 use wasm_bindgen_futures::JsFuture;
 
 use crate::{
     js_utils::TryAsByteSlice, network::com_hub::JSComHub, wrap_error_for_js,
 };
-use datex::network::com_hub::ComHubError;
+use datex_core::network::com_hub::ComHubError;
 use datex_macros::{com_interface, create_opener};
 use log::{error, info};
 use wasm_bindgen::{
@@ -53,7 +53,7 @@ use web_sys::{
     RtcSignalingState,
 };
 
-wrap_error_for_js!(JSWebRTCError, datex::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError);
+wrap_error_for_js!(JSWebRTCError, datex_core::network::com_interfaces::default_com_interfaces::webrtc::webrtc_common::utils::WebRTCError);
 
 impl From<ComHubError> for JSWebRTCError {
     fn from(err: ComHubError) -> Self {

@@ -1,4 +1,4 @@
-use datex::network::{
+use datex_core::network::{
     com_hub::managers::interface_manager::ComInterfaceAsyncFactoryResult,
     com_interfaces::com_interface::{
         ComInterfaceProxy, implementation::ComInterfaceAsyncFactory,
@@ -11,8 +11,8 @@ use std::{
     rc::Rc, sync::Mutex, time::Duration,
 };
 
-use datex::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
-use datex::stdlib::sync::Arc;
+use datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::{WebSocketClientInterfaceSetupData, WebSocketError, WebSocketServerError, WebSocketServerInterfaceSetupData};
+use datex_core::stdlib::sync::Arc;
 
 use crate::{define_registry, network::com_hub::JSComHub, wrap_error_for_js};
 use datex_macros::{com_interface, create_opener};
@@ -23,7 +23,7 @@ use wasm_bindgen::{
 };
 use web_sys::{ErrorEvent, MessageEvent, js_sys};
 
-wrap_error_for_js!(JSWebSocketServerError, datex::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
+wrap_error_for_js!(JSWebSocketServerError, datex_core::network::com_interfaces::default_com_interfaces::websocket::websocket_common::WebSocketServerError);
 
 #[derive(Serialize, Deserialize)]
 pub struct WebSocketServerInterfaceSetupDataJS(

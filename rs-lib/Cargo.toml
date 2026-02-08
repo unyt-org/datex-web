@@ -21,7 +21,7 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
+datex-core = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
     "std",
     "wasm_runtime",
     "compiler",
@@ -110,8 +110,8 @@ default = [
     "wasm_webrtc",
     "lsp",                   # Make optional
 ]
-debug = ["datex/debug", "datex/wasm_runtime"]
-lsp = ["datex/lsp_wasm"]
+debug = ["datex-core/debug", "datex-core/wasm_runtime"]
+lsp = ["datex-core/lsp_wasm"]
 
 wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support

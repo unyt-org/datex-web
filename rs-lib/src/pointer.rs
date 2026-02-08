@@ -1,4 +1,4 @@
-use datex::references::reference::Reference;
+use datex_core::references::reference::Reference;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

@@ -1,5 +1,5 @@
 use crate::network::com_hub::JSComHub;
-use datex::{
+use datex_core::{
     channel::mpsc::{UnboundedSender, create_unbounded_channel},
     global::dxb_block::DXBBlock,
     network::{
