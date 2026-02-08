@@ -49,7 +49,6 @@ impl WebSocketClientJSInterfaceSetupData {
     /// Creates the interface asynchronously
     async fn create_interface(
         self,
-        com_interface_proxy: ComInterfaceProxy,
     ) -> Result<InterfaceProperties, InterfaceCreateError> {
         let address = parse_url(&self.0.url).map_err(|e| {
             InterfaceCreateError::InvalidSetupData(e.to_string())
@@ -354,13 +353,8 @@ impl WebSocketClientJSInterfaceSetupData {
 }
 
 impl ComInterfaceAsyncFactory for WebSocketClientJSInterfaceSetupData {
-    fn create_interface(
-        self,
-        com_interface_proxy: ComInterfaceProxy,
-    ) -> ComInterfaceAsyncFactoryResult {
-        Box::pin(
-            async move { self.create_interface(com_interface_proxy).await },
-        )
+    fn create_interface(self) -> ComInterfaceAsyncFactoryResult {
+        Box::pin(self.create_interface())
     }
 
     fn get_default_properties() -> InterfaceProperties {
