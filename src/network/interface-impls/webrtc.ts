@@ -1,6 +1,6 @@
 import { ComInterfaceImpl } from "../com-interface.ts";
 import { ComHub } from "../com-hub.ts";
-import type { WebRTCInterfaceSetupData } from "../../datex-core.ts";
+import type { WebRTCInterfaceSetupData } from "../../datex-web.ts";
 
 /**
  * Implementation of the WebRTC communication interface.

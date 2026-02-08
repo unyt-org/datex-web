@@ -1,4 +1,4 @@
-import type { JSRuntime, RuntimeDIFHandle } from "../datex-core.ts";
+import type { JSRuntime, RuntimeDIFHandle } from "../datex-web.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import {
