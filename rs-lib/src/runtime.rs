@@ -271,14 +271,14 @@ impl JSRuntime {
                 ..BlockHeader::default()
             },
             body: body.unwrap_or_default(),
-            ..DXBBlock::default()
+            ..Default::default()
         };
 
         block.recalculate_struct();
         block.set_receivers(
             receivers
-                .iter()
-                .map(|r| Endpoint::from_str(r))
+                .into_iter()
+                .map(|r| Endpoint::try_from(r))
                 .collect::<Result<Vec<Endpoint>, _>>()
                 .unwrap(),
         );

@@ -1,5 +1,8 @@
 #![feature(coroutines)]
 #![feature(iter_from_coroutine)]
+#![feature(gen_blocks)]
+#![feature(async_iterator)]
+
 // FIXME no-std
 
 extern crate core;
