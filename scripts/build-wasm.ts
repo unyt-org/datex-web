@@ -33,7 +33,7 @@ try {
         kind: "build",
         inline: flags.inline,
         bindingJsFileExt: "js",
-        project: "datex-core-js",
+        project: "datex-web",
         cargoFlags: DEFAULT_FLAGS,
     });
 } catch (e) {

@@ -1,11 +1,11 @@
-import { Runtime } from "datex-core-js/runtime/runtime.ts";
+import { Runtime } from "datex-web/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
 import {
     DIFTypeDefinitionKind,
     type DIFValue,
-} from "datex-core-js/dif/definitions.ts";
-import { JsLibTypeAddress } from "datex-core-js/dif/js-lib.ts";
-import { CoreTypeAddress } from "datex-core-js/dif/core.ts";
+} from "datex-web/dif/definitions.ts";
+import { JsLibTypeAddress } from "datex-web/dif/js-lib.ts";
+import { CoreTypeAddress } from "datex-web/dif/core.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 

@@ -3,11 +3,11 @@
 ## Building the library
 
 The rust adapter code can be found in the [`rs-lib`](./rs-lib/) directory, the
-generated WASM and JS glue code in the [`src/datex-core`](./src/datex-core/)
+generated WASM and JS glue code in the [`src/datex-web`](./src/datex-web/)
 directory.
 
 This project has a strong dependency on
-[DATEX Core](https://github.com/unyt-org/datex-core.git) (see
+[DATEX](https://github.com/unyt-org/datex.git) (see
 [Cargo.toml](./rs-lib/Cargo.toml)).
 
 To generate a WASM binary and JS glue code, run the following command:
@@ -28,20 +28,16 @@ Note that the project is built with **Rust Nightly**
 ---
 
 If you want to build the library with a local version of the
-[`datex-core`](https://github.com/unyt-org/datex-core) crate, you can override
+[`datex`](https://github.com/unyt-org/datex) crate, you can override
 the dependency in a `.cargo/config.toml` file in the project root like this:
 
 ```toml
-[patch."https://github.com/unyt-org/datex-core"]
-datex-core = { 
-    path = "../datex-core", # the path to your local datex-core clone
+[patch."https://github.com/unyt-org/datex"]
+datex = { 
+    path = "../datex", # the path to your local datex clone
     default-features = false, 
     features = [
-        "std",
-        "serde",
-        "wasm_logger",
-        "wasm_runtime",
-        "wasm_webrtc",
+        ...
     ]
 }
 ```
@@ -66,4 +62,4 @@ the developer console via the global `Datex` variable.
 
 - Run `deno task release` to ensure that the generated d.ts files contain the
   types for the release build.
-- Set the `datex-core` crate to the correct version in the `Cargo.toml` file.
+- Set the `datex` crate to the correct version in the `Cargo.toml` file.

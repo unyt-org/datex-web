@@ -16,7 +16,7 @@ import {
     difReferenceToDisplayString,
     difValueContainerToDisplayString,
 } from "../../src/dif/display.ts";
-import { arrayTypeBinding } from "datex-core-js/lib/js-core-types/array.ts";
+import { arrayTypeBinding } from "datex-web/lib/js-core-types/array.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
@@ -24,7 +24,7 @@ runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createReferenceFromDIFValue(
         {
-            value: "Hello, Datex!",
+            value: "Hello, DATEX!",
         },
         undefined,
         DIFReferenceMutability.Mutable,

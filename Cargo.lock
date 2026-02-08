@@ -527,6 +527,7 @@ version = "0.0.12"
 dependencies = [
  "async-trait",
  "datex",
+ "datex-crypto-facade",
  "futures",
  "futures-channel",
  "futures-timer",

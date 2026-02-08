@@ -1,9 +1,9 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
-import { Runtime } from "datex-core-js/runtime/runtime.ts";
+import { Runtime } from "datex-web/runtime/runtime.ts";
 import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
-import { websocketServerDenoComInterfaceFactory } from "datex-core-js/network/interface-impls/websocket-server-deno.ts";
+import { websocketServerDenoComInterfaceFactory } from "datex-web/network/interface-impls/websocket-server-deno.ts";
 import { sleep } from "../utils.ts";
 
 Deno.test("add and close interface", async () => {

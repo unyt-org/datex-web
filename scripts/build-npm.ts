@@ -33,10 +33,10 @@ await build({
         license: "MIT",
         repository: {
             type: "git",
-            url: "git+https://github.com/unyt-org/datex-core-js.git",
+            url: "git+https://github.com/unyt-org/datex-web.git",
         },
         bugs: {
-            url: "https://github.com/unyt-org/datex-core-js/issues",
+            url: "https://github.com/unyt-org/datex-web/issues",
         },
     },
     // steps to run after building and before running the tests

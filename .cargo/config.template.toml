@@ -6,10 +6,11 @@ test-debug = "test --features debug"
 clippy-debug = "clippy --fix --features debug --target wasm32-unknown-unknown"
 
 [patch."https://github.com/unyt-org/datex-core"]
-datex-core = { path = "../datex-core", default-features = false, features = [
+datex = { path = "../datex-core/crates/datex", default-features = false, features = [
     "std",
-    "serde",
-    "wasm_logger",
     "wasm_runtime",
-    "wasm_webrtc",
+    "compiler",
+    "syntax_highlighting_legacy",
+    "lsp_wasm",
 ] }
+datex-crypto-facade = { path = "../datex-core/crates/datex-crypto-facade" }

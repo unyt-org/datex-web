@@ -4,8 +4,7 @@ use datex::{
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
-            InterfacePriority, errors::ComInterfaceCreateError,
-            managers::socket_manager::ComInterfaceSocketManager,
+            InterfacePriority, SocketData, errors::ComInterfaceCreateError, managers::socket_manager::ComInterfaceSocketManager
         },
         com_interfaces::com_interface::{
             ComInterfaceUUID,
@@ -161,11 +160,9 @@ impl BaseInterfaceHandle {
         channel_factor: u32,
         direct_endpoint: Option<String>,
     ) -> Result<String, JsBaseInterfaceError> {
-        let (uuid, sender) = self
-            .socket_manager
-            .lock()
-            .unwrap()
-            .create_and_init_socket_with_optional_endpoint(
+        let (uuid, sender) =
+            self.socket_manager.lock().unwrap().register_socket(
+                SocketData {}
                 InterfaceDirection::from_str(&direction.as_str()).map_err(
                     |_| {
                         JsBaseInterfaceError::InvalidInput(format!(
@@ -202,14 +199,8 @@ impl BaseInterfaceHandle {
         self.socket_manager
             .lock()
             .unwrap()
-            .remove_socket(socket_uuid);
+            .delete_socket(&socket_uuid);
         Ok(())
-    }
-
-    /// Gets the current state of the interface
-    #[wasm_bindgen(js_name = "getState")]
-    pub fn get_state(&self) -> String {
-        self.state.lock().unwrap().get().to_string()
     }
 
     pub fn destroy(&mut self) {

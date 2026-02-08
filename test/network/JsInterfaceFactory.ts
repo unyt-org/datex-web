@@ -1,8 +1,8 @@
 import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert/equals";
-import type { InterfaceProperties } from "../../src/datex-core.ts";
-// TODO https://github.com/unyt-org/datex-core-js/issues/47
+import type { InterfaceProperties } from "datex-web/datex-web.ts";
+// TODO https://github.com/unyt-org/datex-web/issues/47
 const config: InterfaceProperties = {
     name: "base",
     interface_type: "base",

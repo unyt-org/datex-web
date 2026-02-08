@@ -1,5 +1,5 @@
-import { Runtime } from "datex-core-js/runtime/runtime.ts";
-import { arrayTypeBinding } from "datex-core-js/lib/js-core-types/array.ts";
+import { Runtime } from "datex-web/runtime/runtime.ts";
+import { arrayTypeBinding } from "datex-web/lib/js-core-types/array.ts";
 import { assertEquals, assertNotStrictEquals, assertThrows } from "@std/assert";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });

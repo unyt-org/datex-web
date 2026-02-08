@@ -2,6 +2,7 @@ use crate::{
     js_utils::{js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
 };
+use datex_crypto_facade::crypto::Crypto;
 #[cfg(feature = "debug")]
 use datex::{
     decompiler::decompile_value,
@@ -34,7 +35,7 @@ use datex::{
 use std::borrow::Cow;
 
 use crate::js_utils::cast_from_dif_js_value;
-use datex::{crypto::CryptoImpl, runtime::{Runtime, RuntimeConfig, RuntimeRunner, memory::Memory}};
+use datex::{crypto::CryptoImpl, runtime::{Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory}};
 use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
@@ -184,16 +185,15 @@ impl JSRuntime {
 
             // Falsify other signature
             let other_sig =
-                crypto.sig_ed25519(&other_pri_key, &data).await.unwrap();
-            let ver = crypto
-                .ver_ed25519(&pub_key, &other_sig, &data)
+                CryptoImpl::sig_ed25519(&other_pri_key, &data).await.unwrap();
+            let ver = CryptoImpl::ver_ed25519(&pub_key, &other_sig, &data)
                 .await
                 .unwrap();
             assert!(!ver);
 
             // ECDH derivation
-            let (ser_pub, ser_pri) = crypto.gen_x25519().await.unwrap();
-            let (cli_pub, cli_pri) = crypto.gen_x25519().await.unwrap();
+            let (ser_pub, ser_pri) = CryptoImpl::gen_x25519().await.unwrap();
+            let (cli_pub, cli_pri) = CryptoImpl::gen_x25519().await.unwrap();
             assert_eq!(ser_pub.len(), 44_usize);
             assert_eq!(ser_pri.len(), 48_usize);
 
@@ -212,13 +212,11 @@ impl JSRuntime {
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];
 
-            let ctr_ciphered = crypto
-                .aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
+            let ctr_ciphered = CryptoImpl::aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
                 .await
                 .unwrap();
 
-            let ctr_deciphered = crypto
-                .aes_ctr_decrypt(&random_bytes, &ctr_iv, &ctr_ciphered)
+            let ctr_deciphered = CryptoImpl::aes_ctr_decrypt(&random_bytes, &ctr_iv, &ctr_ciphered)
                 .await
                 .unwrap();
 
@@ -226,13 +224,11 @@ impl JSRuntime {
             assert_ne!(msg, ctr_ciphered);
 
             // AES key wrapping
-            let wrapped = crypto
-                .key_upwrap(&random_bytes, &random_bytes)
+            let wrapped = CryptoImpl::key_upwrap(&random_bytes, &random_bytes)
                 .await
                 .unwrap();
             let unwrapped =
-                crypto.key_unwrap(&random_bytes, &wrapped).await.unwrap();
-
+                CryptoImpl::key_unwrap(&random_bytes, &wrapped).await.unwrap();
             assert_eq!(random_bytes.to_vec(), unwrapped);
             // assert_ne!(wrapped, unwrapped);
 
@@ -287,10 +283,6 @@ impl JSRuntime {
                 .unwrap(),
         );
         block.to_bytes()
-    }
-
-    pub async fn start(&self) {
-        self.runtime.start().await;
     }
 
     pub async fn execute_with_string_result(

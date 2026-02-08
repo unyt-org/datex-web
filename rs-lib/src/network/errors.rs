@@ -6,6 +6,6 @@ wrap_error_for_js!(
 );
 
 wrap_error_for_js!(
-    JsInterfaceCreateError,
-    datex::network::com_hub::errors::InterfaceCreateError
+    JsComInterfaceCreateError,
+    datex::network::com_hub::errors::ComInterfaceCreateError
 );

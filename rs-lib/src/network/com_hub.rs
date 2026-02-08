@@ -4,22 +4,21 @@ use datex::{
     network::{
         com_hub::{
             ComHub, InterfacePriority,
-            errors::InterfaceCreateError,
-            managers::interfaces_manager::{
+            errors::ComInterfaceCreateError,
+            managers::com_interface_manager::{
                 AsyncComInterfaceImplementationFactoryFn,
                 ComInterfaceAsyncFactoryResult,
             },
         },
         com_interfaces::com_interface::{
-            ComInterfaceUUID, properties::InterfaceProperties,
-            socket::ComInterfaceSocketUUID,
+            ComInterfaceUUID, factory::ComInterfaceConfiguration,
+            properties::ComInterfaceProperties, socket::ComInterfaceSocketUUID,
         },
     },
     runtime::Runtime,
     serde::{
         deserializer::from_value_container, serializer::to_value_container,
     },
-    stdlib::rc::Rc,
     utils::uuid::UUID,
     values::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
@@ -28,7 +27,7 @@ use datex::{
 use js_sys::Uint8Array;
 use log::error;
 use serde_wasm_bindgen::from_value;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, rc::Rc, str::FromStr};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self, Promise};
@@ -69,7 +68,7 @@ impl JSComHub {
         interface_type: String,
         setup_data: ValueContainer,
         priority: Option<u16>,
-    ) -> Result<ComInterfaceUUID, InterfaceCreateError> {
+    ) -> Result<ComInterfaceUUID, ComInterfaceCreateError> {
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
         let interface = com_hub
@@ -77,7 +76,6 @@ impl JSComHub {
                 &interface_type,
                 setup_data,
                 InterfacePriority::from(priority),
-                com_hub.async_context.clone(),
             )
             .await?;
         Ok(interface)
@@ -110,12 +108,12 @@ impl JSComHub {
         let runtime = self.runtime.clone();
         self.com_hub().register_dyn_interface_factory(
             interface_type,
-            Rc::new(move |setup_data, proxy| {
+            Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let runtime = runtime.clone();
                 Box::pin(async move {
                     let base_interface_holder =
-                        BaseInterfaceHandle::create_interface(proxy).await;
+                        BaseInterfaceHandle::create_interface().await;
                     let interface_properties_promise = factory
                         .call2(
                             &JsValue::UNDEFINED,
@@ -127,7 +125,9 @@ impl JSComHub {
                         )
                         .map_err(|e| {
                             error!("Error calling interface factory: {:?}", e);
-                            InterfaceCreateError::InterfaceOpenFailed
+                            ComInterfaceCreateError::connection_error_with_details(
+                                e.as_string().unwrap_or_default()
+                            )
                         })?
                         .unchecked_into::<Promise>();
                     let interface_properties = JsFuture::from(
@@ -136,11 +136,12 @@ impl JSComHub {
                     .await
                     .expect("Failed to get interface properties from promise");
 
-                    cast_from_dif_js_value::<InterfaceProperties>(
+                    let properties = cast_from_dif_js_value::<ComInterfaceProperties>(
                         interface_properties,
                         runtime.memory(),
                     )
-                    .map_err(|e| InterfaceCreateError::InterfaceOpenFailed)
+                    .map_err(|e| ComInterfaceCreateError::SetupDataParseError)?;
+                ComInterfaceConfiguration::new(properties, 1)
                 })
             }),
         );
@@ -166,8 +167,8 @@ impl JSComHub {
         &self,
         interface_uuid: String,
     ) -> Result<(), JsError> {
-        let interface_uuid =
-            ComInterfaceUUID::try_from(interface_uuid).map_err(|e| JsError::new(&format!("{e:?}")))?;
+        let interface_uuid = ComInterfaceUUID::try_from(interface_uuid)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
         let has_interface = { com_hub.has_interface(&interface_uuid) };

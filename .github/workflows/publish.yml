@@ -40,7 +40,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build
-          path: ./src/datex-core
+          path: ./src/datex-web
       # publish to JSR
       - name: Publish package
         run: npx jsr publish
@@ -59,7 +59,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build
-          path: ./src/datex-core
+          path: ./src/datex-web
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:

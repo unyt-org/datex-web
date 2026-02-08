@@ -71,8 +71,8 @@ await Deno.writeTextFile(cargoTomlPath, updatedCargoToml);
 
 // update Cargo.lock
 const updatedCargoLock = cargoLock.replace(
-    new RegExp(`name = "datex-core-js"\\nversion = "${cargoVersion}"`),
-    `name = "datex-core-js"\nversion = "${newVersion}"`,
+    new RegExp(`name = "datex-web"\\nversion = "${cargoVersion}"`),
+    `name = "datex-web"\nversion = "${newVersion}"`,
 );
 await Deno.writeTextFile(cargoLockPath, updatedCargoLock);
 

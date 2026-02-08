@@ -45,7 +45,7 @@
         "@std/fs": "jsr:@std/fs@^1.0.19",
         "@std/uuid": "jsr:@std/uuid@^1.0.9",
         "@unyt/speck": "jsr:@unyt/speck@^0.0.10",
-        "datex-core-js/": "./src/"
+        "datex-web/": "./src/"
     },
     "test": {
         "exclude": [
