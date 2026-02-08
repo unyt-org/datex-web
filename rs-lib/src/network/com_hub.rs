@@ -187,26 +187,25 @@ impl JSComHub {
     /// This does not involve the routing on the ComHub level.
     /// The socket UUID is used to identify the socket to send the block over
     /// The interface UUID is used to identify the interface to send the block over
-    pub async fn send_block(
-        &self,
-        block: Uint8Array,
-        interface_uuid: String,
-        socket_uuid: String,
-    ) -> Result<(), JsError> {
-        let interface_uuid =
-            ComInterfaceUUID(UUID::from_string(interface_uuid));
-        let socket_uuid =
-            ComInterfaceSocketUUID(UUID::from_string(socket_uuid));
-        let block = DXBBlock::from_bytes(block.to_vec().as_slice())
-            .await
-            .map_err(|e| JsError::new(&format!("{e:?}")))?;
-        self.com_hub()
-            .interface_manager()
-            .borrow()
-            .get_interface_by_uuid(&interface_uuid)
-            .send_block(block, socket_uuid);
-        Ok(())
-    }
+    // pub async fn send_block(
+    //     &self,
+    //     block: Uint8Array,
+    //     interface_uuid: String,
+    //     socket_uuid: String,
+    // ) -> Result<(), JsError> {
+    //     let interface_uuid = ComInterfaceUUID::try_from(interface_uuid)
+    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
+    //     let socket_uuid = ComInterfaceSocketUUID::try_from(socket_uuid)
+    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
+    //     let block = DXBBlock::from_bytes(block.to_vec().as_slice())
+    //         .await
+    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
+    //     self.com_hub()
+    //         .interfaces_manager()
+    //         .get_interface_by_uuid(&interface_uuid)
+    //         .send_block(block, socket_uuid);
+    //     Ok(())
+    // }
 
     // pub fn _drain_incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
     //     let mut sections = self
@@ -274,7 +273,7 @@ impl JSComHub {
                 let this = JsValue::NULL;
                 let block_bytes =
                     js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.0.to_string());
+                let socket_uuid = JsValue::from_str(&socket.to_string());
                 let endpoints_array = js_sys::Array::new();
                 for endpoint in endpoints {
                     endpoints_array
@@ -304,7 +303,7 @@ impl JSComHub {
                 let this = JsValue::NULL;
                 let block_bytes =
                     js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.0.to_string());
+                let socket_uuid = JsValue::from_str(&socket.to_string());
                 if let Err(e) = callback.call2(
                     &this,
                     &JsValue::from(block_bytes),
