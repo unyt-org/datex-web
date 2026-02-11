@@ -36,7 +36,7 @@ await build({
 
     package: {
         // package.json properties
-        name: "@unyt/datex",
+        name: "datex",
         version: VERSION,
         license: "MIT",
         repository: {
