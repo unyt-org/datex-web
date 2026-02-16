@@ -1,5 +1,5 @@
-import { interceptAccessors } from "datex-web/dif/utils.ts";
-import { Option } from "datex-web/utils/option.ts";
+import { interceptAccessors } from "datex/dif/utils.ts";
+import { Option } from "datex/utils/option.ts";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert";
 

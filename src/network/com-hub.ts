@@ -2,9 +2,9 @@ import type {
     BaseInterfaceHandle,
     ComHubMetadata,
     JSComHub,
-} from "../datex-web/datex_web_js.d.ts";
+} from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
-import type { InterfaceProperties } from "../datex-web.ts";
+import type { InterfaceProperties } from "../datex.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {

@@ -110,7 +110,6 @@ default = [
     "wasm_webrtc",
     "lsp",                   # Make optional
 ]
-debug = ["datex-core/debug", "datex-core/wasm_runtime"]
 lsp = ["datex-core/lsp_wasm"]
 
 wasm_websocket_server = [] # only required for a backend js runtime

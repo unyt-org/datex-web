@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert/equals";
-import { mapTypeBinding } from "datex-web/lib/js-core-types/map.ts";
-import { Runtime } from "datex-web/runtime/runtime.ts";
-import { DIFUpdateKind } from "datex-web/dif/definitions.ts";
-import { CoreTypeAddress } from "datex-web/dif/core.ts";
+import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
+import { DIFUpdateKind } from "datex/dif/definitions.ts";
+import { CoreTypeAddress } from "datex/dif/core.ts";
 const runtime = new Runtime({ endpoint: "@test" });
 runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 

@@ -1,7 +1,7 @@
 import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert/equals";
-import type { InterfaceProperties } from "datex-web/datex-web.ts";
+import type { InterfaceProperties } from "datex/datex.ts";
 // TODO https://github.com/unyt-org/datex-web/issues/47
 const config: InterfaceProperties = {
     name: "base",

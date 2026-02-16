@@ -1,4 +1,4 @@
-import * as imports from "./datex_core_js.internal.js";
+import * as imports from "./datex_web.internal.js";
 import {
     detectRuntime,
     runtimeInterface,
@@ -9,13 +9,13 @@ const isVite = !!import.meta.env?.MODE;
 if (detectRuntime() == "browser" && isVite) {
     wasmUrl = (await import("./wasm_url.node.js")).default;
 } else {
-    wasmUrl = new URL("datex_core_js.wasm", import.meta.url);
+    wasmUrl = new URL("datex_web.wasm", import.meta.url);
 }
 
 const wasm = (await runtimeInterface.instantiateWebAssembly(wasmUrl, {
-    "./datex_core_js.internal.js": imports,
+    "./datex_web.internal.js": imports,
 })).instance;
-export * from "./datex_core_js.internal.js";
-import { __wbg_set_wasm } from "./datex_core_js.internal.js";
+export * from "./datex_web.internal.js";
+import { __wbg_set_wasm } from "./datex_web.internal.js";
 __wbg_set_wasm(wasm.exports);
 wasm.exports.__wbindgen_start();

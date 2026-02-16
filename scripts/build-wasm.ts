@@ -23,7 +23,7 @@ const flags = parseArgs(Deno.args, {
 // FIXME: "debug" feature is currently also enabled for release builds (debug flags must be used until encryption is implemented)
 const DEFAULT_FLAGS = ["--features", "debug"];
 
-const NAME = "datex_web_js";
+const NAME = "datex_web";
 const outDir = new Path("./src/datex-web");
 try {
     await runBuildCommand({

@@ -34,10 +34,10 @@ if (code !== 0) {
         Deno.exit(0);
     }
 
-    // replace await WebAssembly.instantiateStreaming(fetch(new URL("datex_web_js.wasm",import.meta.url)) with
+    // replace await WebAssembly.instantiateStreaming(fetch(new URL("datex_web.wasm",import.meta.url)) with
     // WebAssembly.instantiate inline
     const wasmFile = new URL(
-        "../src/datex-web/datex_web_js.wasm",
+        "../src/datex/datex_web.wasm",
         import.meta.url,
     );
     const wasmContent = await Deno.readFile(wasmFile);
@@ -49,7 +49,7 @@ if (code !== 0) {
     bundleContent =
         `if (!Uint8Array.fromBase64) Uint8Array.fromBase64 = (base64) => {let binaryString = atob(base64);let bytes = new Uint8Array(binaryString.length);for (let i = 0; i < binaryString.length; i++) {bytes[i] = binaryString.charCodeAt(i);}return bytes.buffer;}\n${bundleContent}`;
     bundleContent = bundleContent.replace(
-        /\b\S+.instantiateWebAssembly\(new URL\("datex_web_js\.wasm",import\.meta\.url\)/gm,
+        /\b\S+.instantiateWebAssembly\(new URL\("datex_web\.wasm",import\.meta\.url\)/gm,
         `WebAssembly.instantiate(Uint8Array.fromBase64("${wasmBase64}")`,
     );
     await Deno.writeTextFile(bundleFile, bundleContent);

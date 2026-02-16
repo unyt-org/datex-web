@@ -16,7 +16,7 @@ import {
     difReferenceToDisplayString,
     difValueContainerToDisplayString,
 } from "../../src/dif/display.ts";
-import { arrayTypeBinding } from "datex-web/lib/js-core-types/array.ts";
+import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 
 const runtime = new Runtime({ endpoint: "@jonas", debug: true });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
