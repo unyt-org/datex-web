@@ -2,3 +2,4 @@
 members = [
   "rs-lib",
 ]
+resolver = "3"

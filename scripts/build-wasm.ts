@@ -17,11 +17,7 @@ const flags = parseArgs(Deno.args, {
     negatable: ["opt"],
 });
 
-// const DEFAULT_FLAGS: string[] = flags.profile === "debug"
-//     ? ["--features", "debug"]
-//     : []; // "--no-default-features"
-// FIXME: "debug" feature is currently also enabled for release builds (debug flags must be used until encryption is implemented)
-const DEFAULT_FLAGS = ["--features", "debug"];
+const DEFAULT_FLAGS: string[] = [];
 
 const NAME = "datex_web";
 const outDir = new Path("./src/datex-web");
