@@ -21,7 +21,7 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
+datex-core = { git = "https://github.com/unyt-org/datex", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
     "std",
     "wasm_runtime",
     "compiler",
@@ -29,9 +29,9 @@ datex-core = { git = "https://github.com/unyt-org/datex-core", branch = "refacto
     "syntax_highlighting_legacy",
     "lsp_wasm",
 ] }
-datex-crypto-facade = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.0.1" }
+datex-crypto-facade = { git = "https://github.com/unyt-org/datex", branch = "refactor/update-loop", version = "0.0.1" }
 
-# datex_macros = { git = "https://github.com/unyt-org/datex-core", branch = "refactor/update-loop", version = "0.1.3", package = "datex_macros" }
+# datex_macros = { git = "https://github.com/unyt-org/datex", branch = "refactor/update-loop", version = "0.1.3", package = "datex_macros" }
 
 async-trait = "0.1.87"
 url = { version = "2.5.7" }

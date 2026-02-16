@@ -5,7 +5,7 @@ rustflags = ["--cfg=web_sys_unstable_apis"]
 test-debug = "test --features debug"
 clippy-debug = "clippy --fix --features debug --target wasm32-unknown-unknown"
 
-[patch."https://github.com/unyt-org/datex-core"]
+[patch."https://github.com/unyt-org/datex"]
 datex = { path = "../datex-core/crates/datex", default-features = false, features = [
     "std",
     "wasm_runtime",
