@@ -24,7 +24,7 @@ use datex_core::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
     },
 };
-use js_sys::Uint8Array;
+use js_sys::{Array, Uint8Array};
 use log::error;
 use serde_wasm_bindgen::from_value;
 use std::{collections::HashMap, rc::Rc, str::FromStr};
@@ -37,8 +37,8 @@ use crate::{
         cast_from_dif_js_value, dif_js_value_to_value_container,
         value_container_to_dif_js_value,
     },
-    network::com_interfaces::base_interface::BaseInterfaceHandle,
 };
+use crate::network::com_interfaces::base_interface::BaseInterfaceHandle;
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -89,10 +89,10 @@ impl JSComHub {
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
         #[cfg(feature = "wasm_websocket_client")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterfaceSetupData>();
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket::websocket_client::WebSocketClientInterfaceSetupDataJS>();
 
         #[cfg(feature = "wasm_serial")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialClientInterfaceSetupDataJS>();
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial::serial_client::SerialClientInterfaceSetupDataJS>();
 
         // #[cfg(feature = "wasm_webrtc")]
         // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
@@ -112,12 +112,9 @@ impl JSComHub {
                 let factory = factory.clone();
                 let runtime = runtime.clone();
                 Box::pin(async move {
-                    let base_interface_holder =
-                        BaseInterfaceHandle::create_interface().await;
-                    let interface_properties_promise = factory
-                        .call2(
+                    let interface_properties_and_init_callback_promise = factory
+                        .call1(
                             &JsValue::UNDEFINED,
-                            &JsValue::from(base_interface_holder),
                             &value_container_to_dif_js_value(
                                 &setup_data,
                                 runtime.memory(),
@@ -130,18 +127,53 @@ impl JSComHub {
                             )
                         })?
                         .unchecked_into::<Promise>();
-                    let interface_properties = JsFuture::from(
-                        interface_properties_promise,
+                    
+                    let interface_properties_and_init_callback = JsFuture::from(
+                        interface_properties_and_init_callback_promise,
                     )
-                    .await
-                    .expect("Failed to get interface properties from promise");
+                        .await
+                        .expect("Failed to get value from promise");
+
+                    // first element is Promise, second is Function
+                    let interface_properties_and_init_callback_array = Array::from(
+                        &interface_properties_and_init_callback,
+                    );
+                    if interface_properties_and_init_callback_array.length() != 2 {
+                        error!("Interface factory promise did not resolve to an array of length 2");
+                        return Err(ComInterfaceCreateError::connection_error_with_details(
+                            "Interface factory promise did not resolve to an array of length 2"
+                        ));
+                    }
 
                     let properties = cast_from_dif_js_value::<ComInterfaceProperties>(
-                        interface_properties,
+                        interface_properties_and_init_callback_array.get(0),
                         runtime.memory(),
                     )
-                    .map_err(|e| ComInterfaceCreateError::SetupDataParseError)?;
-                ComInterfaceConfiguration::new(properties, 1)
+                        .map_err(|_| ComInterfaceCreateError::SetupDataParseError)?;
+                    
+                    let init_callback = interface_properties_and_init_callback_array
+                        .get(1)
+                        .dyn_into::<js_sys::Function>()
+                        .map_err(|e| {
+                            error!("Error casting init callback to function: {:?}", e);
+                            ComInterfaceCreateError::connection_error_with_details(
+                                e.as_string().unwrap_or_default()
+                            )
+                        })?;
+                    
+                    let (base_interface_handle, interface_configuration) =
+                        BaseInterfaceHandle::create_interface(properties).await;
+
+                    // call the init callback with the base interface handle
+                    init_callback.call1(&JsValue::UNDEFINED, &JsValue::from(base_interface_handle))
+                        .map_err(|e| {
+                            error!("Error calling init callback: {:?}", e);
+                            ComInterfaceCreateError::connection_error_with_details(
+                                e.as_string().unwrap_or_default()
+                            )
+                        })?;
+                    
+                    Ok(interface_configuration)
                 })
             }),
         );

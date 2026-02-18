@@ -60,7 +60,7 @@ pub fn execute(datex_script: &str, decompile_options: JsValue) -> String {
         });
         let result = result.unwrap();
         let (result_dxb, _) =
-            compile_template("?", &[result], CompileOptions::default())
+            compile_template("?", &[Some(result)], CompileOptions::default())
                 .unwrap();
 
         decompile_body(
