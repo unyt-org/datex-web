@@ -22,8 +22,7 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 datex-core = { git = "https://github.com/unyt-org/datex", branch = "refactor/update-loop", version = "0.0.8", default-features = false, features = [
-    "std",
-    "wasm_runtime",
+    "target_wasm",
     "compiler",
     "decompiler",
     "syntax_highlighting_legacy",
