@@ -162,7 +162,7 @@ impl BaseInterfaceHandle {
     ) -> Result<String, JsBaseInterfaceError> {
         let (uuid, sender) =
             self.socket_manager.lock().unwrap().register_socket(
-                SocketData {}
+                SocketData {},
                 InterfaceDirection::from_str(&direction.as_str()).map_err(
                     |_| {
                         JsBaseInterfaceError::InvalidInput(format!(

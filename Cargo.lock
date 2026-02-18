@@ -340,7 +340,7 @@ dependencies = [
  "binrw",
  "bytes",
  "cfg-if",
- "datex-crypto-facade 0.0.1",
+ "datex-crypto-facade",
  "datex-crypto-web",
  "datex-macros-internal",
  "foldhash 0.2.0",
@@ -390,18 +390,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "datex-crypto-facade"
-version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop#87d26b7f55f43579fef4c992167be65ae4e13d86"
-dependencies = [
- "bs58",
-]
-
-[[package]]
 name = "datex-crypto-web"
 version = "0.0.1"
 dependencies = [
- "datex-crypto-facade 0.0.1",
+ "datex-crypto-facade",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -422,7 +414,7 @@ version = "0.0.12"
 dependencies = [
  "async-trait",
  "datex-core",
- "datex-crypto-facade 0.0.1 (git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop)",
+ "datex-crypto-facade",
  "futures",
  "futures-channel",
  "futures-timer",

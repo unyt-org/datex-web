@@ -92,7 +92,7 @@ impl JSComHub {
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket_client_js_interface::WebSocketClientJSInterfaceSetupData>();
 
         #[cfg(feature = "wasm_serial")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialInterfaceSetupDataJS>();
+        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial_js_interface::SerialClientInterfaceSetupDataJS>();
 
         // #[cfg(feature = "wasm_webrtc")]
         // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
