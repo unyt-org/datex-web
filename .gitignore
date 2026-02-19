@@ -4,8 +4,8 @@ target
 npm
 .DS_Store
 .idea
-src/datex-web/datex_web_js.wasm
-src/datex-web/datex_web_js.internal.js
+src/datex-web/datex_web.wasm
+src/datex-web/datex_web.internal.js
 rustc-ice*.txt
 /datex.js
 .cargo/config.toml
