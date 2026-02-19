@@ -38,7 +38,7 @@ use crate::{
         value_container_to_dif_js_value,
     },
 };
-use crate::network::com_interfaces::base_interface::BaseInterfaceHandle;
+use crate::network::com_interfaces::base_interface::{create_base_interface_handles, BaseInterfacePublicHandle};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -111,10 +111,14 @@ impl JSComHub {
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let runtime = runtime.clone();
+                
+                let (public_handle, private_handle) = create_base_interface_handles();
+                
                 Box::pin(async move {
-                    let interface_properties_and_init_callback_promise = factory
-                        .call1(
+                    let interface_properties_promise = factory
+                        .call2(
                             &JsValue::UNDEFINED,
+                            &JsValue::from(public_handle),
                             &value_container_to_dif_js_value(
                                 &setup_data,
                                 runtime.memory(),
@@ -128,51 +132,19 @@ impl JSComHub {
                         })?
                         .unchecked_into::<Promise>();
                     
-                    let interface_properties_and_init_callback = JsFuture::from(
-                        interface_properties_and_init_callback_promise,
+                    let interface_properties = JsFuture::from(
+                        interface_properties_promise,
                     )
                         .await
                         .expect("Failed to get value from promise");
 
-                    // first element is Promise, second is Function
-                    let interface_properties_and_init_callback_array = Array::from(
-                        &interface_properties_and_init_callback,
-                    );
-                    if interface_properties_and_init_callback_array.length() != 2 {
-                        error!("Interface factory promise did not resolve to an array of length 2");
-                        return Err(ComInterfaceCreateError::connection_error_with_details(
-                            "Interface factory promise did not resolve to an array of length 2"
-                        ));
-                    }
-
                     let properties = cast_from_dif_js_value::<ComInterfaceProperties>(
-                        interface_properties_and_init_callback_array.get(0),
+                        interface_properties,
                         runtime.memory(),
                     )
                         .map_err(|_| ComInterfaceCreateError::SetupDataParseError)?;
                     
-                    let init_callback = interface_properties_and_init_callback_array
-                        .get(1)
-                        .dyn_into::<js_sys::Function>()
-                        .map_err(|e| {
-                            error!("Error casting init callback to function: {:?}", e);
-                            ComInterfaceCreateError::connection_error_with_details(
-                                e.as_string().unwrap_or_default()
-                            )
-                        })?;
-                    
-                    let (base_interface_handle, interface_configuration) =
-                        BaseInterfaceHandle::create_interface(properties).await;
-
-                    // call the init callback with the base interface handle
-                    init_callback.call1(&JsValue::UNDEFINED, &JsValue::from(base_interface_handle))
-                        .map_err(|e| {
-                            error!("Error calling init callback: {:?}", e);
-                            ComInterfaceCreateError::connection_error_with_details(
-                                e.as_string().unwrap_or_default()
-                            )
-                        })?;
-                    
+                    let interface_configuration = private_handle.create_interface(properties);
                     Ok(interface_configuration)
                 })
             }),
