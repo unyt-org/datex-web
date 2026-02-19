@@ -40,10 +40,8 @@ export class Runtime {
     readonly #comHub: ComHub;
     readonly #difHandler: DIFHandler;
 
-    constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
-        // workaround: temp dif handler without runtime to convert config to DIF
-        const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
-        this.#runtime = create_runtime(configDIF, debug_flags);
+    private constructor(jsRuntime: JSRuntime) {
+        this.#runtime = jsRuntime;
         this.#comHub = new ComHub(this.#runtime.com_hub, this);
         this.#difHandler = new DIFHandler(this.#runtime);
     }
@@ -58,17 +56,10 @@ export class Runtime {
         config: RuntimeConfig,
         debug_flags?: DebugFlags,
     ): Promise<Runtime> {
-        const runtime = new Runtime(config, debug_flags);
-        await runtime.start();
-        return runtime;
-    }
-
-    /**
-     * Starts the runtime.
-     * @returns A promise that resolves when the runtime has started.
-     */
-    public start(): Promise<void> {
-        return this.#runtime.start();
+        // workaround: temp dif handler without runtime to convert config to DIF
+        const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
+        const jsRuntime = await create_runtime(configDIF, debug_flags);
+        return new Runtime(jsRuntime);
     }
 
     /**

@@ -15,7 +15,7 @@ Deno.test("basic lsp", async () => {
         }
     }`;
 
-    const runtime = new Runtime({ endpoint: "@unyt", debug: true });
+    const runtime = await Runtime.create({ endpoint: "@unyt", debug: true });
     const queue = [];
     const send = runtime.startLSP(
         (data: string) => {

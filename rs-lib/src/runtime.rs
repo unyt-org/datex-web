@@ -91,7 +91,7 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub fn run(
+    pub async fn run(
         config: JsValue,
         // debug_flags: Option<JSDebugFlags>,
     ) -> JSRuntime {
@@ -102,7 +102,7 @@ impl JSRuntime {
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         spawn_local(runtime_runner.task_future);
-        return Self::new(runtime_runner.runtime.clone());
+        Self::new(runtime_runner.runtime.clone())
     }
 
     fn new(runtime: Runtime) -> JSRuntime {

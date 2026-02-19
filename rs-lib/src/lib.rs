@@ -36,10 +36,10 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
+pub async fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
     // let debug_flags: Option<JSDebugFlags> =
     //     from_value(debug_flags).unwrap_or_default();
-    JSRuntime::run(config)
+    JSRuntime::run(config).await
 }
 
 /// Executes a Datex script and returns the result as a string.

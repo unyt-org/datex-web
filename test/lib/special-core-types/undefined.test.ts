@@ -7,7 +7,7 @@ import {
 import { JsLibTypeAddress } from "datex/dif/js-lib.ts";
 import { CoreTypeAddress } from "datex/dif/core.ts";
 
-const runtime = new Runtime({ endpoint: "@jonas", debug: true });
+const runtime = await Runtime.create({ endpoint: "@jonas", debug: true });
 
 Deno.test("undefined", () => {
     // convert JS undefined to DIF representation

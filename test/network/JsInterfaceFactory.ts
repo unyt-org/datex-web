@@ -19,7 +19,7 @@ const config: InterfaceProperties = {
 };
 
 Deno.test("construct custom factory", async () => {
-    const runtime = new Runtime({ endpoint: "@unyt", debug: true });
+    const runtime = await Runtime.create({ endpoint: "@unyt", debug: true });
     runtime.comHub.registerInterfaceFactory<InterfaceProperties>({
         interfaceType: "test",
         factory: (handle, setupData) => {
@@ -41,7 +41,7 @@ Deno.test("construct custom factory", async () => {
 // // FIXME rest
 
 // Deno.test("custom properties no reconnect", async () => {
-//     const runtime = new Runtime({ endpoint: "@unyt" });
+//     const runtime = await Runtime.create({ endpoint: "@unyt" });
 
 //     const baseInterface = await runtime.comHub.createInterface<
 //         BaseInterfaceImpl
@@ -50,7 +50,7 @@ Deno.test("construct custom factory", async () => {
 // });
 
 // Deno.test("add interface and sockets", async () => {
-//     const runtime = new Runtime({ endpoint: "@unyt" });
+//     const runtime = await Runtime.create({ endpoint: "@unyt" });
 //     const baseInterface = await runtime.comHub.createInterface<
 //         BaseInterfaceImpl
 //     >("base", config);
@@ -73,7 +73,7 @@ Deno.test("construct custom factory", async () => {
 
 // Deno.test("test receive and send", async () => {
 //     const queue: [data: Uint8Array, socket: string][] = [];
-//     const runtime = new Runtime({ endpoint: "@unyt" });
+//     const runtime = await Runtime.create({ endpoint: "@unyt" });
 //     const baseInterface = await runtime.comHub.createInterface<
 //         BaseInterfaceImpl
 //     >("base", config);

@@ -53,10 +53,12 @@ pub struct JSComHub {
  */
 impl JSComHub {
     pub fn new(runtime: Runtime) -> JSComHub {
-        JSComHub {
+        let com_hub = JSComHub {
             runtime,
             registered_interface_factories: HashMap::new(),
-        }
+        };
+        com_hub.register_default_interface_factories();
+        com_hub
     }
 
     pub fn com_hub(&self) -> Rc<ComHub> {
@@ -111,9 +113,9 @@ impl JSComHub {
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let runtime = runtime.clone();
-                
+
                 let (public_handle, private_handle) = create_base_interface_handles();
-                
+
                 Box::pin(async move {
                     let interface_properties_promise = factory
                         .call2(
@@ -131,7 +133,7 @@ impl JSComHub {
                             )
                         })?
                         .unchecked_into::<Promise>();
-                    
+
                     let interface_properties = JsFuture::from(
                         interface_properties_promise,
                     )
@@ -143,7 +145,7 @@ impl JSComHub {
                         runtime.memory(),
                     )
                         .map_err(|_| ComInterfaceCreateError::SetupDataParseError)?;
-                    
+
                     let interface_configuration = private_handle.create_interface(properties);
                     Ok(interface_configuration)
                 })

@@ -6,7 +6,7 @@ import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
 
 Deno.test("invalid url construct", async () => {
-    const runtime = new Runtime({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: "@unyt" });
     await assertRejects(
         async () =>
             await runtime.comHub.createInterface("websocket-client", {
@@ -17,7 +17,7 @@ Deno.test("invalid url construct", async () => {
 });
 
 Deno.test("invalid url scheme construct", async () => {
-    const runtime = new Runtime({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: "@unyt" });
     await assertRejects(
         async () =>
             await runtime.comHub.createInterface("websocket-client", {
@@ -29,7 +29,7 @@ Deno.test("invalid url scheme construct", async () => {
 
 // FIXME: this test takes very long (1min+), maybe due to auto reconnection attempts?
 // Deno.test("websocket connect fail", async () => {
-//     const runtime = new Runtime({ endpoint: "@unyt" });
+//     const runtime = await Runtime.create({ endpoint: "@unyt" });
 //     await assertRejects(
 //         async () =>
 //             await runtime.comHub.createInterface("websocket-client", {
@@ -49,7 +49,7 @@ Deno.test("websocket basic connect", async () => {
     }
     const port = 8484;
     const mockupServer = createMockupServer(port);
-    const runtime = new Runtime({ endpoint: "@unyt", debug: true });
+    const runtime = await Runtime.create({ endpoint: "@unyt", debug: true });
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const interfaceUUID = await runtime.comHub.createInterface(
         "websocket-client",
@@ -84,7 +84,7 @@ Deno.test("websocket block retrieval", async () => {
     const port = 8485;
     const mockupServer = createMockupServer(port);
 
-    const runtime = new Runtime({ endpoint: "@unyt" }, {
+    const runtime = await Runtime.create({ endpoint: "@unyt" }, {
         allow_unsigned_blocks: true,
     });
     const interfaceUUID = await runtime.comHub.createInterface(

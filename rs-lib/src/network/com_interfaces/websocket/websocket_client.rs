@@ -4,19 +4,17 @@ use std::{cell::RefCell, rc::Rc, sync::Mutex, time::Duration};
 use std::sync::Arc;
 use datex_core::{derive_setup_data, network::{
     com_interfaces::com_interface::{
-        error::ComInterfaceError,
         factory::ComInterfaceAsyncFactory,
     },
 }};
 
-use datex_core::channel::mpsc::{create_unbounded_channel, UnboundedReceiver, UnboundedSender};
+use datex_core::channel::mpsc::{create_unbounded_channel, UnboundedReceiver};
 use datex_core::global::dxb_block::DXBBlock;
 use datex_core::network::com_hub::errors::ComInterfaceCreateError;
 use datex_core::network::com_interfaces::com_interface::factory::{ComInterfaceAsyncFactoryResult, ComInterfaceConfiguration, SendCallback, SendFailure, SocketConfiguration, SocketProperties};
 use datex_core::network::com_interfaces::com_interface::properties::{ComInterfaceProperties, InterfaceDirection};
 use datex_core::network::com_interfaces::default_setup_data::http_common::parse_url;
 use datex_core::network::com_interfaces::default_setup_data::websocket::websocket_client::WebSocketClientInterfaceSetupData;
-use futures::{SinkExt, StreamExt, select};
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;

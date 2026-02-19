@@ -1,7 +1,7 @@
 import type { ComInterfaceFactory } from "../com-hub.ts";
 import type {
-    BaseInterfaceHandle,
-    InterfaceProperties,
+    BaseInterfacePublicHandle,
+    ComInterfaceProperties,
     WebSocketServerInterfaceSetupData,
 } from "../../datex-web/datex_web.d.ts";
 
@@ -10,7 +10,7 @@ import type {
  */
 export function registerWebSocket(
     webSocket: WebSocket,
-    baseInterfaceHandle: BaseInterfaceHandle,
+    baseInterfaceHandle: BaseInterfacePublicHandle,
     closeCallback: (uuid: string) => void,
 ): Promise<string> {
     let uuid: string | null = null;
@@ -28,14 +28,14 @@ export function registerWebSocket(
     }, { once: true });
 
     webSocket.addEventListener("error", () => {
-        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
+        if (uuid) {
             baseInterfaceHandle.removeSocket(uuid);
         }
         reject();
     }, { once: true });
 
     webSocket.addEventListener("close", () => {
-        if (uuid && baseInterfaceHandle.getState() !== "Destroyed") {
+        if (uuid) {
             baseInterfaceHandle.removeSocket(uuid);
             closeCallback(uuid);
         }
@@ -112,7 +112,6 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
             reconnection_config: "NoReconnect",
             auto_identify: true,
             connectable_interfaces: [], // TODO add websocket client connections
-            created_sockets: [],
-        } satisfies InterfaceProperties;
+        } satisfies ComInterfaceProperties;
     },
 };

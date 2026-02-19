@@ -1,10 +1,10 @@
 import type {
-    BaseInterfaceHandle,
+    BaseInterfacePublicHandle,
     ComHubMetadata,
     JSComHub,
 } from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
-import type { InterfaceProperties } from "../datex.ts";
+import type { ComInterfaceProperties } from "../datex.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {
@@ -13,9 +13,9 @@ export type ComInterfaceFactory<SetupData = unknown> = {
 };
 
 export type ComInterfaceFactoryFn<SetupData = unknown> = (
-    handle: BaseInterfaceHandle,
+    handle: BaseInterfacePublicHandle,
     setup_data: SetupData,
-) => InterfaceProperties | Promise<InterfaceProperties>;
+) => ComInterfaceProperties | Promise<ComInterfaceProperties>;
 
 export type ComInterfaceUUID = `com_interface::${string}`;
 export type ComInterfaceSocketUUID = `socket::${string}`;
@@ -39,7 +39,7 @@ export class ComHub {
         this.#jsComHub.register_interface_factory(
             factoryDefinition.interfaceType,
             async (
-                handle: BaseInterfaceHandle,
+                handle: BaseInterfacePublicHandle,
                 setup_data: DIFValueContainer,
             ) => {
                 return this.#runtime.dif.convertJSValueToDIFValueContainer(
@@ -108,22 +108,6 @@ export class ComHub {
             return;
         }
         console.log(trace);
-    }
-
-    /**
-     * @deprecated Use sender of interface instead.
-     * Sends a block of data to a specific interface and socket.
-     * @param block The data block to send.
-     * @param interface_uuid The UUID of the interface to send the block to.
-     * @param socket_uuid The UUID of the socket to send the block to.
-     * @returns A promise that resolves to true if the block was sent successfully, false otherwise.
-     */
-    public sendBlock(
-        block: Uint8Array,
-        interface_uuid: string,
-        socket_uuid: string,
-    ) {
-        this.#jsComHub.send_block(block, interface_uuid, socket_uuid);
     }
 
     /**

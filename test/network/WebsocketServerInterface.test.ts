@@ -7,7 +7,7 @@ import { websocketServerDenoComInterfaceFactory } from "datex/network/interface-
 import { sleep } from "../utils.ts";
 
 Deno.test("add and close interface", async () => {
-    const runtime = new Runtime({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: "@unyt" });
     runtime.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
@@ -36,7 +36,7 @@ Deno.test("connect two runtimes", async () => {
     }
 
     const PORT = 8082;
-    const runtimeA = new Runtime({ endpoint: "@test_a" });
+    const runtimeA = await Runtime.create({ endpoint: "@test_a" });
     runtimeA.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
@@ -46,7 +46,7 @@ Deno.test("connect two runtimes", async () => {
         { bind_address: `0.0.0.0:${PORT}` },
     );
 
-    const runtimeB = new Runtime({ endpoint: "@test_b" });
+    const runtimeB = await Runtime.create({ endpoint: "@test_b" });
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
         { url: `ws://localhost:${PORT}` },
