@@ -53,6 +53,7 @@ specta-typescript = "0.0.9"
 specta = "1.0.5"
 tsify = "0.5.5"
 gloo-timers = "0.3.0"
+cfg-if = "1.0.1"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
@@ -109,6 +110,7 @@ default = [
     "wasm_webrtc",
     "lsp",                   # Make optional
 ]
+debug = []
 lsp = ["datex-core/lsp_wasm"]
 
 wasm_websocket_server = [] # only required for a backend js runtime

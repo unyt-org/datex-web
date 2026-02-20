@@ -12,12 +12,15 @@ Deno.env.set("RUSTFLAGS", RUST_FLAGS.join(" "));
 
 const flags = parseArgs(Deno.args, {
     boolean: ["opt", "inline"],
-    string: ["profile"],
-    default: { "opt": true, "inline": false, "profile": "release" },
+    string: ["profile", "features"],
+    default: { opt: true, inline: false, profile: "release", features: "" },
     negatable: ["opt"],
 });
 
 const DEFAULT_FLAGS: string[] = [];
+if (flags.features) {
+    DEFAULT_FLAGS.push("--features", flags.features);
+}
 
 const NAME = "datex_web";
 const outDir = new Path("./src/datex-web");

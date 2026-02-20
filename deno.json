@@ -16,14 +16,18 @@
         ]
     },
     "tasks": {
-        "build": "deno run -A scripts/build-wasm.ts --profile debug",
+        "debug": "deno run -A scripts/build-wasm.ts --profile debug --features debug",
         "release": "deno run -A scripts/build-wasm.ts --profile release",
-        "debug-no-opt": "deno task build --no-opt",
-        "test": "deno task build && deno test -A",
+        
+        "debug-no-opt": "deno task debug --no-opt",
+        "test": "deno task debug && deno test -A",
         "test-no-build": "deno test -A",
+        
         "build-npm": "deno run -A scripts/build-npm.ts",
         "build-bundle": "deno run -A scripts/build-bundle.ts",
+        
         "serve": "deno run -A https://raw.githubusercontent.com/unyt-org/ts-file-server/main/src/run.ts -w --minify=false --port 8042",
+        
         "fmt": "deno fmt && cargo fmt",
         "lint": "deno lint --fix && cargo clippy --fix --features debug"
     },

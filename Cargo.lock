@@ -417,6 +417,7 @@ name = "datex-web"
 version = "0.0.12"
 dependencies = [
  "async-trait",
+ "cfg-if",
  "datex-core",
  "datex-crypto-facade",
  "futures",

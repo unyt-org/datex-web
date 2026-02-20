@@ -19,7 +19,7 @@ deno task release
 To generate a debug build, run:
 
 ```sh
-deno task build
+deno task debug
 ```
 
 Note that the project is built with **Rust Nightly**

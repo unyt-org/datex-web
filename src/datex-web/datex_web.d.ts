@@ -240,7 +240,16 @@ export class JSComHub {
         setup_data: any,
         priority?: number | null,
     ): Promise<string>;
+    get_trace_string(endpoint: string): Promise<string | undefined>;
+    get_metadata(): any;
     close_interface(interface_uuid: string): void;
+    /**
+     * Send a block to the given interface and socket
+     * This does not involve the routing on the ComHub level.
+     * The socket UUID is used to identify the socket to send the block over
+     * The interface UUID is used to identify the interface to send the block over
+     */
+    get_metadata_string(): string;
     register_interface_factory(interface_type: string, factory: Function): void;
     register_incoming_block_interceptor(callback: Function): void;
     register_outgoing_block_interceptor(callback: Function): void;

@@ -37,8 +37,10 @@ use crate::{
         cast_from_dif_js_value, dif_js_value_to_value_container,
         value_container_to_dif_js_value,
     },
+    network::com_interfaces::base_interface::{
+        BaseInterfacePublicHandle, create_base_interface_handles,
+    },
 };
-use crate::network::com_interfaces::base_interface::{create_base_interface_handles, BaseInterfacePublicHandle};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -246,27 +248,42 @@ impl JSComHub {
     //         .collect::<Vec<_>>()
     // }
 
-    #[cfg(feature = "debug")]
     pub fn get_metadata_string(&self) -> String {
-        let metadata = self.com_hub().get_metadata();
-        metadata.to_string()
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "debug")] {
+                let metadata = self.com_hub().get_metadata();
+                metadata.to_string()
+            } else {
+                unreachable!("Metadata is only available in debug builds")
+            }
+        }
     }
 
-    #[cfg(feature = "debug")]
     pub fn get_metadata(&self) -> JsValue {
-        let metadata = self.com_hub().get_metadata();
-        serde_wasm_bindgen::to_value(&metadata).unwrap()
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "debug")] {
+                let metadata = self.com_hub().get_metadata();
+                serde_wasm_bindgen::to_value(&metadata).unwrap()
+            } else {
+                unreachable!("Metadata is only available in debug builds")
+            }
+        }
     }
 
-    #[cfg(feature = "debug")]
-    pub async fn get_trace_string(&self, endpoint: String) -> Option<String> {
-        let endpoint = Endpoint::from_str(&endpoint);
-        if let Ok(endpoint) = endpoint {
-            let trace = self.com_hub().record_trace(endpoint).await;
-            trace.map(|t| t.to_string())
-        } else {
-            println!("Invalid endpoint: {}", endpoint.unwrap_err());
-            None
+    pub async fn get_trace_string(
+        &self,
+        endpoint: String,
+    ) -> Result<Option<String>, JsError> {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "debug")] {
+                let endpoint = Endpoint::from_str(&endpoint)
+                    .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+                let trace = self.com_hub().record_trace(endpoint).await;
+                Ok(trace.map(|t| t.to_string()))
+            }
+            else {
+                unreachable!("Trace is only available in debug builds")
+            }
         }
     }
 
