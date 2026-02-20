@@ -1,0 +1,16 @@
+[build]
+rustflags = ["--cfg=web_sys_unstable_apis"]
+
+[alias]
+test-debug = "test --features debug"
+clippy-debug = "clippy --fix --features debug --target wasm32-unknown-unknown"
+
+[patch."https://github.com/unyt-org/datex"]
+datex-core = { path = "../datex/crates/datex-core", default-features = false, features = [
+    "std",
+    "wasm_runtime",
+    "compiler",
+    "syntax_highlighting_legacy",
+    "lsp_wasm",
+] }
+datex-crypto-facade = { path = "../datex/crates/datex-crypto-facade" }
