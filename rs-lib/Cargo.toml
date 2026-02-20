@@ -54,6 +54,8 @@ specta = "1.0.5"
 tsify = "0.5.5"
 gloo-timers = "0.3.0"
 cfg-if = "1.0.1"
+console_error_panic_hook = "0.1.7"
+wasm-logger = "0.2.0"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }
@@ -105,7 +107,6 @@ wasm-bindgen-test = "0.3.50"
 [features]
 default = [
     "wasm_websocket_client",
-    "wasm_websocket_server",
     "wasm_serial",
     "wasm_webrtc",
     "lsp",                   # Make optional
@@ -113,7 +114,6 @@ default = [
 debug = []
 lsp = ["datex-core/lsp_wasm"]
 
-wasm_websocket_server = [] # only required for a backend js runtime
 wasm_websocket_client = [] # full support
 wasm_serial = []           # only required for frontend js runtime
 wasm_webrtc = ["uuid"]     # only required for frontend js runtime

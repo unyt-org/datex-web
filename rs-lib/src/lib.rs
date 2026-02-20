@@ -36,7 +36,12 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub async fn create_runtime(config: JsValue, debug_flags: JsValue) -> JSRuntime {
+pub async fn create_runtime(
+    config: JsValue,
+    debug_flags: JsValue,
+) -> JSRuntime {
+    console_error_panic_hook::set_once();
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
     // let debug_flags: Option<JSDebugFlags> =
     //     from_value(debug_flags).unwrap_or_default();
     JSRuntime::run(config).await
