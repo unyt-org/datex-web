@@ -15,6 +15,67 @@ export function execute(datex_script: string, decompile_options: any): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
+export interface DecompileOptions {
+    formatting_options?: FormattingOptions;
+    /**
+     * display slots with generated variable names
+     */
+    resolve_slots?: boolean;
+}
+
+export type IndentType = "Spaces" | "Tabs";
+
+export type FormattingMode = { type: "Compact" } | {
+    type: "Pretty";
+    indent: number;
+    indent_type?: IndentType;
+};
+
+export interface FormattingOptions {
+    mode?: FormattingMode;
+    json_compat?: boolean;
+    colorized?: boolean;
+    add_variant_suffix?: boolean;
+}
+
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
+}
+
+export type Endpoint = string;
+
+export type ComInterfaceUUID = string;
+
+export interface ComHubMetadataInterfaceSocket {
+    uuid: string;
+    direction: InterfaceDirection;
+    endpoint: Endpoint | undefined;
+    properties: DynamicEndpointProperties | undefined;
+}
+
+export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
+    uuid: string;
+    direction: InterfaceDirection;
+}
+
+export interface ComHubMetadataInterface {
+    uuid: string;
+    properties: ComInterfaceProperties;
+    sockets: ComHubMetadataInterfaceSocket[];
+    is_waiting_for_socket_connections: boolean;
+}
+
+export interface ComHubMetadata {
+    endpoint: Endpoint;
+    interfaces: ComHubMetadataInterface[];
+    endpoint_sockets: Map<
+        Endpoint,
+        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
+    >;
+}
+
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export interface ComInterfaceProperties {
@@ -79,97 +140,11 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     };
 };
 
-export interface WebSocketClientInterfaceSetupData {
-    /**
-     * A websocket URL (ws:// or wss://).
-     */
-    url: string;
-}
-
 export type ComInterfaceSocketUUID = string;
-
-export type ComInterfaceUUID = string;
-
-export interface DynamicEndpointProperties {
-    known_since: number;
-    distance: number;
-    is_direct: boolean;
-    channel_factor: number;
-    direction: InterfaceDirection;
-}
-
-export interface DecompileOptions {
-    formatting_options?: FormattingOptions;
-    /**
-     * display slots with generated variable names
-     */
-    resolve_slots?: boolean;
-}
-
-export type IndentType = "Spaces" | "Tabs";
-
-export type FormattingMode = { type: "Compact" } | {
-    type: "Pretty";
-    indent: number;
-    indent_type?: IndentType;
-};
-
-export interface FormattingOptions {
-    mode?: FormattingMode;
-    json_compat?: boolean;
-    colorized?: boolean;
-    add_variant_suffix?: boolean;
-}
 
 export interface TCPServerInterfaceSetupData {
     port: number;
     host: string | undefined;
-}
-
-export type InterfacePriority = "None" | { Priority: number };
-
-export interface TCPClientInterfaceSetupData {
-    address: string;
-}
-
-export interface SerialClientInterfaceSetupData {
-    port_name: string | undefined;
-    baud_rate: number;
-}
-
-export interface ComHubMetadataInterfaceSocket {
-    uuid: string;
-    direction: InterfaceDirection;
-    endpoint: Endpoint | undefined;
-    properties: DynamicEndpointProperties | undefined;
-}
-
-export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
-    uuid: string;
-    direction: InterfaceDirection;
-}
-
-export interface ComHubMetadataInterface {
-    uuid: string;
-    properties: ComInterfaceProperties;
-    sockets: ComHubMetadataInterfaceSocket[];
-    is_waiting_for_socket_connections: boolean;
-}
-
-export interface ComHubMetadata {
-    endpoint: Endpoint;
-    interfaces: ComHubMetadataInterface[];
-    endpoint_sockets: Map<
-        Endpoint,
-        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
-    >;
-}
-
-export interface HTTPClientInterfaceSetupData {
-    /**
-     * A websocket URL (http:// or https://).
-     */
-    url: string;
 }
 
 export interface HTTPServerInterfaceSetupData {
@@ -185,13 +160,14 @@ export interface HTTPServerInterfaceSetupData {
     accept_addresses: AcceptAddress[] | undefined;
 }
 
-export type Endpoint = string;
-
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
+export interface WebSocketClientInterfaceSetupData {
+    /**
+     * A websocket URL (ws:// or wss://).
+     */
+    url: string;
 }
+
+export type InterfacePriority = "None" | { Priority: number };
 
 export type TLSMode = { type: "HandledExternally" } | {
     type: "WithCertificate";
@@ -201,6 +177,30 @@ export type TLSMode = { type: "HandledExternally" } | {
 export interface AcceptAddress {
     address: string;
     tls_mode: TLSMode | undefined;
+}
+
+export interface DynamicEndpointProperties {
+    known_since: number;
+    distance: number;
+    is_direct: boolean;
+    channel_factor: number;
+    direction: InterfaceDirection;
+}
+
+export interface TCPClientInterfaceSetupData {
+    address: string;
+}
+
+export interface HTTPClientInterfaceSetupData {
+    /**
+     * A websocket URL (http:// or https://).
+     */
+    url: string;
+}
+
+export interface SerialClientInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
 }
 
 export interface WebSocketServerInterfaceSetupData {

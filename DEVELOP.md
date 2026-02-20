@@ -23,18 +23,18 @@ deno task build
 ```
 
 Note that the project is built with **Rust Nightly**
-([`rustc 1.91.0-nightly`](https://releases.rs/docs/1.91.0/))
+([`rustc 1.95.0-nightly`](https://releases.rs/docs/1.95.0/))
 
 ---
 
 If you want to build the library with a local version of the
-[`datex`](https://github.com/unyt-org/datex) crate, you can override
-the dependency in a `.cargo/config.toml` file in the project root like this:
+[`datex`](https://github.com/unyt-org/datex) crate, you can override the
+dependency in a `.cargo/config.toml` file in the project root like this:
 
 ```toml
 [patch."https://github.com/unyt-org/datex"]
-datex = { 
-    path = "../datex", # the path to your local datex clone
+datex-core = { 
+    path = "../datex/crates/datex-core", # the path to your local datex clone
     default-features = false, 
     features = [
         ...

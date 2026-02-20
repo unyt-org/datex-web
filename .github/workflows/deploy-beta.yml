@@ -2,86 +2,86 @@ name: Deploy beta
 description: Deploy the latest commit of the selected branch to GitHub Pages and update the "beta" draft release.
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+    contents: write
+    pages: write
+    id-token: write
 
 jobs:
-  release-beta:
-    runs-on: ubuntu-latest
-    name: Release
-    steps:
-      - uses: actions/checkout@v3
+    release-beta:
+        runs-on: ubuntu-latest
+        name: Release
+        steps:
+            - uses: actions/checkout@v3
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+            - name: Set up Deno
+              uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
 
-      - name: Extract version from Cargo.toml
-        id: get_version
-        run: |
-          VERSION=$(grep -E '^version\s*=\s*".*"' ./rs-lib/Cargo.toml | head -n 1 | sed 's/version = "\(.*\)"/\1/')
-          echo "Version found: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_ENV
+            - name: Extract version from Cargo.toml
+              id: get_version
+              run: |
+                  VERSION=$(grep -E '^version\s*=\s*".*"' ./rs-lib/Cargo.toml | head -n 1 | sed 's/version = "\(.*\)"/\1/')
+                  echo "Version found: $VERSION"
+                  echo "version=$VERSION" >> $GITHUB_ENV
 
-      - name: Build
-        run: |
-          deno task release
+            - name: Build
+              run: |
+                  deno task release
 
-      - name: Generate datex.js bundle for pages (without inline WASM)
-        run: |
-          deno task build-bundle
+            - name: Generate datex.js bundle for pages (without inline WASM)
+              run: |
+                  deno task build-bundle
 
-      - name: Set up GitHub Pages directory with datex.js and WASM
-        run: |
-          mkdir -p ./pages
-          cp ./datex.js ./pages/datex.js
-          cp ./src/datex-web/datex_web_js.wasm ./pages/datex_web_js.wasm
+            - name: Set up GitHub Pages directory with datex.js and WASM
+              run: |
+                  mkdir -p ./pages
+                  cp ./datex.js ./pages/datex.js
+                  cp ./src/datex-web/datex_web_js.wasm ./pages/datex_web_js.wasm
 
-      - name: Generate datex.js bundle for release artifact (with inline WASM)
-        run: |
-          deno task build-bundle --inline-wasm
+            - name: Generate datex.js bundle for release artifact (with inline WASM)
+              run: |
+                  deno task build-bundle --inline-wasm
 
-      - name: Create Tag
-        id: create_tag
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag -f beta
-          git push origin -f beta
+            - name: Create Tag
+              id: create_tag
+              run: |
+                  git config user.name "github-actions"
+                  git config user.email "github-actions@github.com"
+                  git tag -f beta
+                  git push origin -f beta
 
-      - name: Create Draft Release
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: true
-          make_latest: false
-          tag_name: "beta"
-          files: ./datex.js
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Create Draft Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  prerelease: true
+                  make_latest: false
+                  tag_name: "beta"
+                  files: ./datex.js
+                  generate_release_notes: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Store commit-hash in pages directory
-        run: |
-          echo "$(git rev-parse HEAD)" > ./pages/commit-hash.txt
+            - name: Store commit-hash in pages directory
+              run: |
+                  echo "$(git rev-parse HEAD)" > ./pages/commit-hash.txt
 
-      - name: Upload build artifacts
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./pages
-          retention-days: 3
-  deploy:
-    needs: release-beta
-    name: Deploy JS to GitHub Pages
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+            - name: Upload build artifacts
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: ./pages
+                  retention-days: 3
+    deploy:
+        needs: release-beta
+        name: Deploy JS to GitHub Pages
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deploy.outputs.page_url }}
 
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+        steps:
+            - id: deploy
+              uses: actions/deploy-pages@v4

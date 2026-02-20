@@ -332,6 +332,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.8"
+source = "git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop#fc258ac48212ee0597de0b9fe58243d082e942f0"
 dependencies = [
  "ariadne",
  "async-select",
@@ -385,6 +386,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.1"
+source = "git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop#fc258ac48212ee0597de0b9fe58243d082e942f0"
 dependencies = [
  "bs58",
 ]
@@ -392,6 +394,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.1"
+source = "git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop#fc258ac48212ee0597de0b9fe58243d082e942f0"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -402,6 +405,7 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
+source = "git+https://github.com/unyt-org/datex?branch=refactor%2Fupdate-loop#fc258ac48212ee0597de0b9fe58243d082e942f0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2306,3 +2310,11 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[patch.unused]]
+name = "datex-core"
+version = "0.0.8"
+
+[[patch.unused]]
+name = "datex-crypto-facade"
+version = "0.0.1"
