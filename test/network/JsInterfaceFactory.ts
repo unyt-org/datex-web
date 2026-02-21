@@ -1,9 +1,9 @@
 import { assert } from "@std/assert/assert";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert/equals";
-import type { InterfaceProperties } from "datex/datex.ts";
+import type { ComInterfaceProperties } from "datex/datex.ts";
 // TODO https://github.com/unyt-org/datex-web/issues/47
-const config: InterfaceProperties = {
+const config: ComInterfaceProperties = {
     name: "base",
     interface_type: "base",
     channel: "test",
@@ -20,14 +20,14 @@ const config: InterfaceProperties = {
 
 Deno.test("construct custom factory", async () => {
     const runtime = await Runtime.create({ endpoint: "@unyt", debug: true });
-    runtime.comHub.registerInterfaceFactory<InterfaceProperties>({
+    runtime.comHub.registerInterfaceFactory<ComInterfaceProperties>({
         interfaceType: "test",
         factory: (handle, setupData) => {
             assert(handle instanceof Object, "Handle should be an object");
             assertEquals(
                 Object.fromEntries(
                     (setupData as unknown as Map<string, unknown>).entries(),
-                ) as unknown as InterfaceProperties,
+                ) as unknown as ComInterfaceProperties,
                 config,
                 "Setup data should match",
             );
