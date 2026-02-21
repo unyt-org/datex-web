@@ -15,6 +15,7 @@ use datex_core::network::com_interfaces::com_interface::factory::{ComInterfaceAs
 use datex_core::network::com_interfaces::com_interface::properties::{ComInterfaceProperties, InterfaceDirection};
 use datex_core::network::com_interfaces::default_setup_data::http_common::parse_url;
 use datex_core::network::com_interfaces::default_setup_data::websocket::websocket_client::WebSocketClientInterfaceSetupData;
+use log::info;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
@@ -44,11 +45,10 @@ impl WebSocketClientInterfaceSetupDataJS {
         let ws = Self::create_websocket_client_connection(
             address.clone(),
         ).await?;
-        let ws_arc = Arc::new(Mutex::new(ws.clone()));
+        let ws_rc = Rc::new(Mutex::new(ws.clone()));
 
         // TODO: cleanup reader task
         let mut reader = Self::create_incoming_data_reader(ws.clone(), None).await;
-
         Ok(
             ComInterfaceConfiguration::new_single_socket(
                 ComInterfaceProperties {
@@ -65,7 +65,7 @@ impl WebSocketClientInterfaceSetupDataJS {
                         }
                     },
                     SendCallback::new_async(move |block: DXBBlock| {
-                        let ws = ws_arc.clone();
+                        let ws = ws_rc.clone();
                         async move {
                             ws
                                 .lock()

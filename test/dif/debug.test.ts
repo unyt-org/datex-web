@@ -2,7 +2,7 @@ import { Runtime } from "datex/runtime/runtime.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { assertEquals, assertNotStrictEquals, assertThrows } from "@std/assert";
 
-const runtime = await Runtime.create({ endpoint: "@jonas", debug: true });
+const runtime = await Runtime.create({ endpoint: "@jonas" });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("detect illegal use of moved original value", () => {

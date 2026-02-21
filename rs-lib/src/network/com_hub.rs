@@ -75,13 +75,16 @@ impl JSComHub {
     ) -> Result<ComInterfaceUUID, ComInterfaceCreateError> {
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
-        let interface = com_hub
+        let (interface, ready_receiver) = com_hub
             .create_interface(
                 &interface_type,
                 setup_data,
                 InterfacePriority::from(priority),
             )
             .await?;
+        if let Some(ready_receiver) = ready_receiver {
+            let _ = ready_receiver.await;
+        }
         Ok(interface)
     }
 }

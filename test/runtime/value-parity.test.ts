@@ -55,7 +55,6 @@ for (const value of TEST_VALUES) {
     Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, async () => {
         const runtime = await Runtime.create({
             endpoint: "@jonas",
-            debug: true,
         });
         const result = runtime.executeSync<typeof value>(
             "?",
