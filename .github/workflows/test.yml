@@ -21,8 +21,8 @@ jobs:
               with:
                   name: build
                   path: |
-                      ./src/datex-web/datex_web_js.internal.js
-                      ./src/datex-web/datex_web_js.wasm
+                      ./src/datex-web/datex_web.internal.js
+                      ./src/datex-web/datex_web.wasm
                   retention-days: 5
 
     test:

@@ -75,7 +75,9 @@ export class ComHub {
         ) as ComInterfaceUUID;
     }
 
-    public async closeInterface(interface_uuid: ComInterfaceUUID): Promise<void> {
+    public async closeInterface(
+        interface_uuid: ComInterfaceUUID,
+    ): Promise<void> {
         await this.#jsComHub.close_interface(interface_uuid);
     }
 

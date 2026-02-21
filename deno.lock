@@ -11,6 +11,7 @@
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/cli@^1.0.23": "1.0.24",
     "jsr:@std/crypto@^1.0.5": "1.0.5",
+    "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
     "jsr:@std/fmt@^1.0.4": "1.0.8",
@@ -62,7 +63,7 @@
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
-        "jsr:@std/encoding",
+        "jsr:@std/encoding@^1.0.6",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"
@@ -73,7 +74,7 @@
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
-        "jsr:@std/encoding",
+        "jsr:@std/encoding@^1.0.6",
         "jsr:@std/fmt@^1.0.4",
         "jsr:@std/fs@^1.0.10",
         "jsr:@std/tar"

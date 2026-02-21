@@ -40,7 +40,7 @@ jobs:
               run: |
                   mkdir -p ./pages
                   cp ./datex.js ./pages/datex.js
-                  cp ./src/datex-web/datex_web_js.wasm ./pages/datex_web_js.wasm
+                  cp ./src/datex-web/datex_web.wasm ./pages/datex_web.wasm
 
             - name: Generate datex.js bundle for release artifact (with inline WASM)
               run: |
