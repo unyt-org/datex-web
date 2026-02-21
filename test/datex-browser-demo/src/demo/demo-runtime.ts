@@ -1,12 +1,12 @@
 import { Runtime, Ref } from "datex";
 
-export const Datex = await Runtime.create(
+export const runtime = await Runtime.create(
     {
         interfaces: [
             {
                 type: "websocket-client",
                 config: {
-                    url: "ws://0.0.0.0:8043",
+                    url: "ws://localhost:8043",
                 }
             }
         ],
@@ -19,9 +19,9 @@ export const Datex = await Runtime.create(
     }
 );
 
-Datex.comHub.printMetadata()
+runtime.comHub.printMetadata()
 
 // @ts-ignore global variable for debugging
-globalThis.Datex = Datex;
+globalThis.Datex = runtime;
 // @ts-ignore global variable for debugging
 globalThis.Ref = Ref;

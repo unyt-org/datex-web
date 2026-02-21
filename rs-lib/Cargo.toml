@@ -114,6 +114,10 @@ default = [
 debug = []
 lsp = ["datex-core/lsp_wasm"]
 
+allow_unsigned_blocks = [
+    "datex-core/allow_unsigned_blocks"
+]
+
 wasm_websocket_client = [] # full support
 wasm_serial = []           # only required for frontend js runtime
 wasm_webrtc = ["uuid"]     # only required for frontend js runtime
