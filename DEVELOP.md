@@ -49,10 +49,10 @@ library, generates the WASM binary and JS glue code, and runs all tests in the
 [`test`](./test/) directory. If you only want to run the tests without
 rebuilding the rust library, you can run `deno task test-no-build`.
 
-## Browser testing
+## Browser demo
 
-You can test the library in the browser by running `deno task serve`. This will
-spin up a web server at `http://localhost:8042/test/browser.html` in your
+You can test the library in the browser by running `deno task browser-demo`. This will
+spin up a web server at `http://localhost:5173/` in your
 browser. A new runtime instance is automatically created and can be accessed in
 the developer console via the global `Datex` variable.
 

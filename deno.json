@@ -26,7 +26,7 @@
         "build-npm": "deno run -A scripts/build-npm.ts",
         "build-bundle": "deno run -A scripts/build-bundle.ts",
 
-        "serve": "deno run -A https://raw.githubusercontent.com/unyt-org/ts-file-server/main/src/run.ts -w --minify=false --port 8042",
+        "browser-demo": "deno task debug-no-opt && deno task build-npm && cd test/datex-browser-demo && npm install && npm run dev",
 
         "fmt": "deno fmt && cargo fmt",
         "lint": "deno lint --fix && cargo clippy --fix --features debug"

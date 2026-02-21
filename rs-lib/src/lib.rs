@@ -17,6 +17,7 @@ use datex_core::{
     decompiler::decompile_body,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 mod runtime;
@@ -38,17 +39,48 @@ extern "C" {
 }
 static INIT: Once = Once::new();
 
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct JSDebugConfig {
+    // optional log level for the runtime, can be "error", "warn", "info", "debug" or "trace"
+    // if not specified, no logs will be printed to the console
+    pub log_level: Option<String>,
+}
+
+impl JSDebugConfig {
+    pub fn get_log_level(&self) -> Option<log::Level> {
+        self.log_level.as_ref().map(|level| match level.to_lowercase().as_str() {
+            "error" => log::Level::Error,
+            "warn" => log::Level::Warn,
+            "info" => log::Level::Info,
+            "debug" => log::Level::Debug,
+            "trace" => log::Level::Trace,
+            _ => {
+                log::warn!(
+                    "Invalid log level '{}', defaulting to 'info'",
+                    level
+                );
+                log::Level::Info
+            }
+        })
+    }
+}
+
 #[wasm_bindgen]
 pub async fn create_runtime(
     config: JsValue,
-    debug_flags: JsValue,
+    debug_config: JsValue,
 ) -> JSRuntime {
+    let debug_config: Option<JSDebugConfig> =
+        from_value(debug_config).unwrap_or_default();
     INIT.call_once(|| {
         console_error_panic_hook::set_once();
-        wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
+        // create a logger that logs to the browser console, with the log level specified in the debug config
+        if let Some(log_level) = debug_config.and_then(|d| d.get_log_level()) {
+            wasm_logger::init(wasm_logger::Config::new(log_level));
+        }
     });
-    // let debug_flags: Option<JSDebugFlags> =
-    //     from_value(debug_flags).unwrap_or_default();
+
     JSRuntime::run(config).await
 }
 

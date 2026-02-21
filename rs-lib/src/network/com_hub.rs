@@ -25,7 +25,7 @@ use datex_core::{
     },
 };
 use js_sys::{Array, Uint8Array};
-use log::error;
+use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{collections::HashMap, rc::Rc, str::FromStr};
 use wasm_bindgen::prelude::*;
@@ -93,7 +93,9 @@ impl JSComHub {
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
         #[cfg(feature = "wasm_websocket_client")]
-        self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket::websocket_client::WebSocketClientInterfaceSetupDataJS>();
+        {
+            self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket::websocket_client::WebSocketClientInterfaceSetupDataJS>();
+        }
 
         #[cfg(feature = "wasm_serial")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial::serial_client::SerialClientInterfaceSetupDataJS>();

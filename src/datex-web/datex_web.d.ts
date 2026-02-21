@@ -4,7 +4,7 @@
 
 export function create_runtime(
     config: any,
-    debug_flags: any,
+    debug_config: any,
 ): Promise<JSRuntime>;
 /**
  * Executes a Datex script and returns the result as a string.
@@ -15,7 +15,28 @@ export function execute(datex_script: string, decompile_options: any): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
-export type ComInterfaceSocketUUID = string;
+export interface DynamicEndpointProperties {
+    known_since: number;
+    distance: number;
+    is_direct: boolean;
+    channel_factor: number;
+    direction: InterfaceDirection;
+}
+
+export type InterfacePriority = "None" | { Priority: number };
+
+export interface HTTPServerInterfaceSetupData {
+    /**
+     * The address to bind the HTTP server to (e.g., \"0.0.0.0:8080\").
+     */
+    bind_address: string;
+    /**
+     * A list of addresses the server should accept connections from,
+     * along with their optional TLS mode.
+     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     */
+    accept_addresses: AcceptAddress[] | undefined;
+}
 
 export interface DecompileOptions {
     formatting_options?: FormattingOptions;
@@ -45,112 +66,11 @@ export interface TCPServerInterfaceSetupData {
     host: string | undefined;
 }
 
-export interface WebSocketClientInterfaceSetupData {
-    /**
-     * A websocket URL (ws:// or wss://).
-     */
-    url: string;
-}
-
-export interface HTTPServerInterfaceSetupData {
-    /**
-     * The address to bind the HTTP server to (e.g., \"0.0.0.0:8080\").
-     */
-    bind_address: string;
-    /**
-     * A list of addresses the server should accept connections from,
-     * along with their optional TLS mode.
-     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
-     */
-    accept_addresses: AcceptAddress[] | undefined;
-}
-
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
-}
-
-export type TLSMode = { type: "HandledExternally" } | {
-    type: "WithCertificate";
-    data: { private_key: number[]; certificate: number[] };
-};
-
-export interface AcceptAddress {
-    address: string;
-    tls_mode: TLSMode | undefined;
-}
-
-export interface WebSocketServerInterfaceSetupData {
-    /**
-     * The address to bind the WebSocket server to (e.g., \"0.0.0.0:8080\").
-     */
-    bind_address: string;
-    /**
-     * A list of addresses the server should accept connections from,
-     * along with their optional TLS mode.
-     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
-     */
-    accept_addresses: AcceptAddress[] | undefined;
-}
-
-export interface ComHubMetadataInterfaceSocket {
-    uuid: string;
-    direction: InterfaceDirection;
-    endpoint: Endpoint | undefined;
-    properties: DynamicEndpointProperties | undefined;
-}
-
-export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
-    uuid: string;
-    direction: InterfaceDirection;
-}
-
-export interface ComHubMetadataInterface {
-    uuid: string;
-    properties: ComInterfaceProperties;
-    sockets: ComHubMetadataInterfaceSocket[];
-    is_waiting_for_socket_connections: boolean;
-}
-
-export interface ComHubMetadata {
-    endpoint: Endpoint;
-    interfaces: ComHubMetadataInterface[];
-    endpoint_sockets: Map<
-        Endpoint,
-        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
-    >;
-}
-
-export type ComInterfaceUUID = string;
-
-export type Endpoint = string;
-
-export type InterfacePriority = "None" | { Priority: number };
-
 export interface TCPClientInterfaceSetupData {
     address: string;
 }
 
-export interface DynamicEndpointProperties {
-    known_since: number;
-    distance: number;
-    is_direct: boolean;
-    channel_factor: number;
-    direction: InterfaceDirection;
-}
-
-export interface HTTPClientInterfaceSetupData {
-    /**
-     * A websocket URL (http:// or https://).
-     */
-    url: string;
-}
-
-export interface SerialClientInterfaceSetupData {
-    port_name: string | undefined;
-    baud_rate: number;
-}
+export type ComInterfaceSocketUUID = string;
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
@@ -215,6 +135,86 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
         attempts: number;
     };
 };
+
+export interface HTTPClientInterfaceSetupData {
+    /**
+     * A websocket URL (http:// or https://).
+     */
+    url: string;
+}
+
+export type ComInterfaceUUID = string;
+
+export interface WebSocketClientInterfaceSetupData {
+    /**
+     * A websocket URL (ws:// or wss://).
+     */
+    url: string;
+}
+
+export interface ComHubMetadataInterfaceSocket {
+    uuid: string;
+    direction: InterfaceDirection;
+    endpoint: Endpoint | undefined;
+    properties: DynamicEndpointProperties | undefined;
+}
+
+export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
+    uuid: string;
+    direction: InterfaceDirection;
+}
+
+export interface ComHubMetadataInterface {
+    uuid: string;
+    properties: ComInterfaceProperties;
+    sockets: ComHubMetadataInterfaceSocket[];
+    is_waiting_for_socket_connections: boolean;
+}
+
+export interface ComHubMetadata {
+    endpoint: Endpoint;
+    interfaces: ComHubMetadataInterface[];
+    endpoint_sockets: Map<
+        Endpoint,
+        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
+    >;
+}
+
+export interface SerialClientInterfaceSetupData {
+    port_name: string | undefined;
+    baud_rate: number;
+}
+
+export type Endpoint = string;
+
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
+}
+
+export type TLSMode = { type: "HandledExternally" } | {
+    type: "WithCertificate";
+    data: { private_key: number[]; certificate: number[] };
+};
+
+export interface AcceptAddress {
+    address: string;
+    tls_mode: TLSMode | undefined;
+}
+
+export interface WebSocketServerInterfaceSetupData {
+    /**
+     * The address to bind the WebSocket server to (e.g., \"0.0.0.0:8080\").
+     */
+    bind_address: string;
+    /**
+     * A list of addresses the server should accept connections from,
+     * along with their optional TLS mode.
+     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     */
+    accept_addresses: AcceptAddress[] | undefined;
+}
 
 export class BaseInterfacePublicHandle {
     private constructor();

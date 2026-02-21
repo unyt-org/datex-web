@@ -18,16 +18,16 @@ import { unimplemented } from "../utils/exceptions.ts";
 const VERSION: string = "0.0.12";
 
 /** debug flags for the runtime */
-interface DebugFlags {
-    allow_unsigned_blocks?: boolean;
-    enable_deterministic_behavior?: boolean;
+interface DebugConfig {
+    // optional log level for internal runtime logs, if not set, no logs are printed
+    log_level?: "error" | "warn" | "info" | "debug" | "trace" | null;
 }
 
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
-    debug?: boolean;
+    env?: Record<string, string>;
 };
 
 /**
@@ -49,16 +49,16 @@ export class Runtime {
     /**
      * Creates a new Runtime instance.
      * @param config Runtime configuration
-     * @param debug_flags Debug flags for the runtime
+     * @param debugConfig Debug flags for the runtime
      * @returns A promise that resolves to the created Runtime instance
      */
     public static async create(
         config: RuntimeConfig,
-        debug_flags?: DebugFlags,
+        debugConfig?: DebugConfig,
     ): Promise<Runtime> {
         // workaround: temp dif handler without runtime to convert config to DIF
         const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
-        const jsRuntime = await create_runtime(configDIF, debug_flags);
+        const jsRuntime = await create_runtime(configDIF, debugConfig);
         return new Runtime(jsRuntime);
     }
 

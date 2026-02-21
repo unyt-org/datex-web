@@ -67,9 +67,6 @@ Deno.test("websocket basic connect", async () => {
     runtime.comHub.printMetadata();
     await using _ = await mockupServer;
 
-    // TODO: why sleep needed here?
-    // await sleep(100);
-
     await runtime.comHub.closeInterface(interfaceUUID);
 });
 

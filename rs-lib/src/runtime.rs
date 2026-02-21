@@ -43,6 +43,7 @@ use js_sys::Function;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, sync::Arc};
+use log::info;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -91,18 +92,19 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub async fn run(
-        config: JsValue,
-        // debug_flags: Option<JSDebugFlags>,
-    ) -> JSRuntime {
+    pub async fn run(config: JsValue) -> JSRuntime {
         // NOTE: mock memory is used here, since we don't have an initialized runtime yet - so no pointers can be resolved during config parsing
         // We must think about a better way to handle this in the future
         let config: RuntimeConfig =
             cast_from_dif_js_value(config, &RefCell::new(Memory::default()))
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
-        spawn_local(runtime_runner.task_future);
-        Self::new(runtime_runner.runtime.clone())
+        // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
+        let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
+        spawn_local(async {
+            runtime_runner.run_forever(async |_| {}).await;
+        });
+        js_runtime
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
