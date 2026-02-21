@@ -51,10 +51,10 @@ rebuilding the rust library, you can run `deno task test-no-build`.
 
 ## Browser demo
 
-You can test the library in the browser by running `deno task browser-demo`. This will
-spin up a web server at `http://localhost:5173/` in your
-browser. A new runtime instance is automatically created and can be accessed in
-the developer console via the global `Datex` variable.
+You can test the library in the browser by running `deno task browser-demo`.
+This will spin up a web server at `http://localhost:5173/` in your browser. A
+new runtime instance is automatically created and can be accessed in the
+developer console via the global `Datex` variable.
 
 ## Creating a new release
 

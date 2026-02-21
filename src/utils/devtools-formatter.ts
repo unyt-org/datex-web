@@ -1,14 +1,13 @@
-import {Endpoint} from "../lib/special-core-types/endpoint.ts";
-import {Ref} from "../refs/ref.ts";
+import { Endpoint } from "../lib/special-core-types/endpoint.ts";
+import { Ref } from "../refs/ref.ts";
 
 // @ts-ignore devtoolsFormatters
 globalThis.devtoolsFormatters = [
     {
         header(obj: unknown) {
             if (obj instanceof Endpoint) {
-                return ["span", {style: 'color: #58d452'}, obj.toString()];
-            }
-            else if (obj instanceof Ref) {
+                return ["span", { style: "color: #58d452" }, obj.toString()];
+            } else if (obj instanceof Ref) {
                 return [
                     "span",
                     {},
@@ -17,25 +16,25 @@ globalThis.devtoolsFormatters = [
                         {},
                         [
                             "span",
-                            {style: 'color: #1279d5'},
-                            "&mut "
+                            { style: "color: #1279d5" },
+                            "&mut ",
                         ],
                         [
                             "span",
                             {},
                             // TODO: only proof of concept, syntax highlighting does not match JS
-                            obj.value
-                        ]
-                    ]
+                            obj.value,
+                        ],
+                    ],
                 ];
             }
-            return null;  // fall back to default
+            return null; // fall back to default
         },
-        hasBody(obj: unknown) {
+        hasBody(_: unknown) {
             return false;
         },
-        body(obj: unknown) {
+        body(_: unknown) {
             return null;
-        }
-    }
+        },
+    },
 ];

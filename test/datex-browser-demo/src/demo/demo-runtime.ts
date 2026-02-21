@@ -1,4 +1,4 @@
-import { Runtime, Ref } from "datex";
+import { Ref, Runtime } from "datex";
 
 export const runtime = await Runtime.create(
     {
@@ -7,19 +7,19 @@ export const runtime = await Runtime.create(
                 type: "websocket-client",
                 config: {
                     url: "ws://localhost:8043",
-                }
-            }
+                },
+            },
         ],
         env: {
             "example": "42",
-        }
+        },
     },
     {
-        log_level: "warn"
-    }
+        log_level: "warn",
+    },
 );
 
-runtime.comHub.printMetadata()
+runtime.comHub.printMetadata();
 
 // @ts-ignore global variable for debugging
 globalThis.Datex = runtime;

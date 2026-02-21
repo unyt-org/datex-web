@@ -3,7 +3,7 @@ export type MockupServerInstance = {
     nextMessage: () => Promise<void>;
     [Symbol.asyncDispose]: () => Promise<void>;
     send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void;
-}
+};
 export const createMockupServer = (port = 9999) => {
     const receiveQueue: Uint8Array[] = [];
     return new Promise<MockupServerInstance>((resolve, reject) => {

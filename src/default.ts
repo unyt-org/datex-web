@@ -12,7 +12,7 @@
  * ```
  */
 
-import {Runtime, type RuntimeConfig} from "./runtime/runtime.ts";
+import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 
 /**
  * The default configuration for the Datex runtime.

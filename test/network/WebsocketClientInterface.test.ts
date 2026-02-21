@@ -1,10 +1,11 @@
-import { assert, assertRejects, assertThrows } from "@std/assert";
-import {createMockupServer, MockupServerInstance} from "./WebsocketMockupServer.ts";
+import { assert, assertRejects } from "@std/assert";
+import {
+    createMockupServer,
+    type MockupServerInstance,
+} from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
-import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
-import {ComInterfaceUUID} from "../../src/network/com-hub.ts";
 
 Deno.test("invalid url construct", async () => {
     const runtime = await Runtime.create({ endpoint: "@unyt" });
@@ -51,12 +52,14 @@ Deno.test("websocket basic connect", async () => {
         return;
     }
     const port = 8484;
-    const runtime = await Runtime.create({ endpoint: "@unyt" }, {log_level: "debug"});
+    const runtime = await Runtime.create({ endpoint: "@unyt" }, {
+        log_level: "debug",
+    });
 
     let mockupServer: MockupServerInstance;
 
     // run mockup server and interface creation in parallel
-    let res = await Promise.race([
+    const res = await Promise.race([
         createMockupServer(port).then(async (server) => {
             mockupServer = server;
             // timeout after 1s
