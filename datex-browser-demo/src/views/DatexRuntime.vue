@@ -53,7 +53,6 @@ const comHubStatus = ref(runtime.comHub.getMetadata());
 setInterval(() => {
   comHubStatus.value = runtime.comHub.getMetadata();
 }, 500);
-console.log(comHubStatus.value)
 
 </script>
 
