@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+
+@theme {
+    --color-endpoint: #58d452;
+    --color-black: #050505;
+}
+
+body {
+    background-color: var(--color-black);
+    color: var(--color-gray-200);
+}
