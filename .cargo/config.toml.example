@@ -7,9 +7,9 @@ clippy-debug = "clippy --fix --features debug --target wasm32-unknown-unknown"
 
 [patch."https://github.com/unyt-org/datex"]
 datex-core = { path = "../datex/crates/datex-core", default-features = false, features = [
-    "std",
-    "wasm_runtime",
+    ""target_wasm",
     "compiler",
+    "decompiler",
     "syntax_highlighting_legacy",
     "lsp_wasm",
 ] }
