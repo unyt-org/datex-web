@@ -19,7 +19,7 @@ const config: ComInterfaceProperties = {
 };
 
 Deno.test("construct custom factory", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt", debug: true });
+    const runtime = await Runtime.create({ endpoint: "@unyt" });
     runtime.comHub.registerInterfaceFactory<ComInterfaceProperties>({
         interfaceType: "test",
         factory: (handle, setupData) => {

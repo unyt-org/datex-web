@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 @theme {
     --color-endpoint: #58d452;
     --color-black: #050505;
