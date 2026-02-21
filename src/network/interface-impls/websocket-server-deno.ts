@@ -80,6 +80,10 @@ export const websocketServerDenoComInterfaceFactory: ComInterfaceFactory<
 
         // cleanup handler
         baseInterfaceHandle.onClosed(async () => {
+            for (const socket of sockets.values()) {
+                socket.close();
+            }
+            sockets.clear();
             await server.shutdown();
         });
 
