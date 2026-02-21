@@ -171,7 +171,7 @@ impl JSComHub {
         Ok(interface.to_string())
     }
 
-    pub fn close_interface(
+    pub async fn close_interface(
         &self,
         interface_uuid: String,
     ) -> Result<(), JsError> {
@@ -183,6 +183,7 @@ impl JSComHub {
         if has_interface {
             com_hub
                 .remove_interface(interface_uuid.clone())
+                .await
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
             Ok(())
         } else {

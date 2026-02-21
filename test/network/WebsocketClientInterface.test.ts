@@ -68,9 +68,9 @@ Deno.test("websocket basic connect", async () => {
     await using _ = await mockupServer;
 
     // TODO: why sleep needed here?
-    await sleep(100);
+    // await sleep(100);
 
-    runtime.comHub.closeInterface(interfaceUUID);
+    await runtime.comHub.closeInterface(interfaceUUID);
 });
 
 Deno.test("websocket block retrieval", async () => {
@@ -112,5 +112,5 @@ Deno.test("websocket block retrieval", async () => {
     // assertEquals(incoming_block, block);
 
     runtime.comHub.printMetadata();
-    runtime.comHub.closeInterface(interfaceUUID);
+    await runtime.comHub.closeInterface(interfaceUUID);
 });

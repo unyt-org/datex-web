@@ -23,7 +23,7 @@ Deno.test("add and close interface", async () => {
         uuid.validate(serverInterfaceUUID.replace("com_interface::", "")),
         "Invalid UUID format",
     );
-    runtime.comHub.closeInterface(serverInterfaceUUID);
+    await runtime.comHub.closeInterface(serverInterfaceUUID);
 });
 
 Deno.test("connect two runtimes", async () => {
@@ -79,8 +79,8 @@ Deno.test("connect two runtimes", async () => {
     assertEquals(clientSocketMetadata.properties!.is_direct, true);
     assertEquals(clientSocketMetadata.properties!.distance, 1);
 
-    runtimeA.comHub.closeInterface(serverInterfaceUUID);
-    runtimeB.comHub.closeInterface(clientInterfaceUUID);
+    await runtimeA.comHub.closeInterface(serverInterfaceUUID);
+    await runtimeB.comHub.closeInterface(clientInterfaceUUID);
 });
 
 Deno.test("send data between two runtimes", async () => {
@@ -117,6 +117,6 @@ Deno.test("send data between two runtimes", async () => {
     const res = await runtimeA.executeWithStringResult("@test_b :: 1 + 2");
     assert(res === "3", "Expected result from remote execution to be 3");
 
-    runtimeA.comHub.closeInterface(serverInterfaceUUID);
-    runtimeB.comHub.closeInterface(clientInterfaceUUID);
+    await runtimeA.comHub.closeInterface(serverInterfaceUUID);
+    await runtimeB.comHub.closeInterface(clientInterfaceUUID);
 });

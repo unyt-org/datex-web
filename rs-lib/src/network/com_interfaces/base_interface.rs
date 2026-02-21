@@ -75,6 +75,14 @@ pub struct BaseInterfacePrivateHandle {
     callbacks: Rc<RefCell<BaseInterfaceCallbacks>>,
 }
 
+impl Drop for BaseInterfacePrivateHandle {
+    fn drop(&mut self) {
+        if let Some(ref close_callback) = self.callbacks.borrow_mut().on_closed {
+            let _ = close_callback.call0(&JsValue::NULL);
+        }
+    }
+}
+
 pub fn create_base_interface_handles() -> (BaseInterfacePublicHandle, BaseInterfacePrivateHandle) {
     let (socket_create_sender, socket_create_receiver) =
         create_unbounded_channel::<CreateSocketData>();
@@ -107,9 +115,7 @@ impl BaseInterfacePrivateHandle {
                     let uuid = data.socket_properties.uuid();
                     let uuid_string = uuid.to_string();
                     let uuid_string_clone = uuid_string.clone();
-
                     let callbacks = self.callbacks.clone();
-                    let callbacks_2 = self.callbacks.clone();
 
                     yield Ok(SocketConfiguration::new_in_out(
                         data.socket_properties,
@@ -117,14 +123,6 @@ impl BaseInterfacePrivateHandle {
                             let mut data_receiver = data.data_receiver;
                             while let Some(data) = data_receiver.next().await {
                                 yield Ok(data);
-                            }
-
-                            // Data receiver stream ended, socket is closed
-                            if let Some(ref cb) = callbacks_2.borrow().on_closed {
-                                let _ = cb.call1(
-                                    &JsValue::NULL,
-                                    &JsValue::from_str(uuid_string.as_str()),
-                                );
                             }
                         },
                         SendCallback::new_sync(move |block| {
