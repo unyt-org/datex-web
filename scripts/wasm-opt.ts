@@ -1,0 +1,173 @@
+// Copyright 2018-2025 the Deno authors. MIT license.
+
+import { UntarStream } from "@std/tar/untar-stream";
+import * as colors from "@std/fmt/colors";
+import { createTempFileSync } from "@david/temp";
+import { Path } from "@david/path";
+
+const wasmOptFileName = Deno.build.os === "windows"
+    ? "wasm-opt.exe"
+    : "wasm-opt";
+const tag = "version_121";
+
+export async function runWasmOpt(inputFilePath: Path) {
+    const binPath = await getWasmOptBinaryPath();
+    using outputTempFile = createTempFileSync();
+    const p = new Deno.Command(binPath.toString(), {
+        args: ["-Oz", inputFilePath.toString(), "-o", outputTempFile.toString()],
+        stdin: "inherit",
+        stderr: "inherit",
+        stdout: "inherit",
+    }).spawn();
+
+    const status = await p.status;
+
+    if (!status.success) {
+        throw new Error(`error executing wasmopt`);
+    }
+
+    // move output temp file to original file path
+    inputFilePath.writeSync(outputTempFile.readBytesSync());
+    // remove the output temp file
+    outputTempFile.removeSync();
+}
+
+async function fetchWithRetries(url: URL | string, maxRetries = 5) {
+    let sleepMs = 250;
+    let iterationCount = 0;
+    while (true) {
+        iterationCount++;
+        try {
+            const res = await fetch(url);
+            if (res.ok || iterationCount > maxRetries) {
+                return res;
+            }
+        } catch (err) {
+            if (iterationCount > maxRetries) {
+                throw err;
+            }
+        }
+        console.warn(`Failed fetching. Retrying in ${sleepMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, sleepMs));
+        sleepMs = Math.min(sleepMs * 2, 10_000);
+    }
+}
+
+async function getWasmOptBinaryPath() {
+    const cacheDirPathText = cacheDir();
+    if (!cacheDirPathText) {
+        throw new Error("Could not find cache directory.");
+    }
+    const cacheDirPath = new Path(cacheDirPathText);
+    const tempDirPath = cacheDirPath.join("wasmbuild", tag);
+    const wasmOptExePath = tempDirPath.join(
+        `binaryen-${tag}/bin`,
+        wasmOptFileName,
+    );
+
+    if (!wasmOptExePath.existsSync()) {
+        await downloadBinaryen(tempDirPath);
+        if (!wasmOptExePath.existsSync()) {
+            throw new Error(
+                `For some reason the wasm-opt executable did not exist after downloading at ${wasmOptExePath}.`,
+            );
+        }
+    }
+
+    return wasmOptExePath;
+}
+
+async function downloadBinaryen(tempPath: Path) {
+    console.log(
+        `${colors.bold(colors.green("Downloading"))} wasm-opt binary...`,
+    );
+
+    const response = await fetchWithRetries(binaryenUrl());
+    const entries = response.body!
+        .pipeThrough(new DecompressionStream("gzip"))
+        .pipeThrough(new UntarStream());
+
+    for await (const entry of entries) {
+        if (
+            entry.path.endsWith(wasmOptFileName) ||
+            entry.path.endsWith(".dylib")
+        ) {
+            const filePath = tempPath.join(entry.path);
+            filePath.parentOrThrow().ensureDirSync();
+            using file = filePath.openSync({
+                create: true,
+                write: true,
+                mode: 0o755,
+            });
+            await entry.readable?.pipeTo(file.writable);
+        } else {
+            await entry.readable?.cancel();
+        }
+    }
+}
+
+function binaryenUrl() {
+    function getOs() {
+        switch (Deno.build.os) {
+            case "linux":
+                return "linux";
+            case "darwin":
+                return "macos";
+            case "windows":
+                return "windows";
+            default:
+                throw new Error("Unsupported OS");
+        }
+    }
+
+    const os = getOs();
+    const arch = {
+        "x86_64": "x86_64",
+        "aarch64": "arm64",
+    }[Deno.build.arch];
+    return new URL(
+        `https://github.com/WebAssembly/binaryen/releases/download/${tag}/binaryen-${tag}-${arch}-${os}.tar.gz`,
+    );
+}
+
+// MIT License - Copyright (c) justjavac.
+// https://github.com/justjavac/deno_dirs/blob/e8c001bbef558f08fd486d444af391729b0b8068/cache_dir/mod.ts
+function cacheDir(): string | undefined {
+    switch (Deno.build.os) {
+        case "linux": {
+            const xdg = Deno.env.get("XDG_CACHE_HOME");
+            if (xdg) return xdg;
+
+            const home = Deno.env.get("HOME");
+            if (home) return `${home}/.cache`;
+            break;
+        }
+
+        case "darwin": {
+            const home = Deno.env.get("HOME");
+            if (home) return `${home}/Library/Caches`;
+            break;
+        }
+
+        case "windows":
+            return Deno.env.get("LOCALAPPDATA") ?? undefined;
+    }
+
+    return undefined;
+}
+
+
+export async function optimizeWasmFile(filePath: string) {
+    try {
+        console.log(
+            `${colors.bold(colors.green("Optimizing"))} .wasm file...`,
+        );
+        await runWasmOpt(new Path(filePath));
+    } catch (err) {
+        console.error(
+            `${colors.bold(colors.red("Error"))} ` +
+            `running wasm-opt failed. Maybe skip with --skip-opt?\n\n${err}`,
+        );
+        Deno.exit(1);
+    }
+}

@@ -1,6 +1,7 @@
 import { format } from "@std/fmt/bytes";
 import { parseArgs } from "@std/cli/parse-args";
 import { dedent } from "@qnighy/dedent";
+import { optimizeWasmFile } from "./wasm-opt.ts";
 
 const RUST_FLAGS = ["--cfg=web_sys_unstable_apis", "-Awarnings"];
 Deno.env.set("RUSTFLAGS", RUST_FLAGS.join(" "));
@@ -31,6 +32,10 @@ await generateJsMainFile({
     name,
     outDir,
 });
+
+if (flags.opt) {
+    await optimizeWasmFile(outDir + `/${name}.wasm`)
+}
 
 const wasmFilePath = `${outDir}/${name}.wasm`;
 const fileSize = (await Deno.stat(wasmFilePath))!.size;
