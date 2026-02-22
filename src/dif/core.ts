@@ -33,8 +33,7 @@ export const CoreTypeAddress = {
 /**
  * Type representing the unique pointer addresses of core types.
  */
-export type CoreTypeAddress =
-    typeof CoreTypeAddress[keyof typeof CoreTypeAddress];
+export type CoreTypeAddress = typeof CoreTypeAddress[keyof typeof CoreTypeAddress];
 
 /**
  * Mapping of core type address ranges for categorization.

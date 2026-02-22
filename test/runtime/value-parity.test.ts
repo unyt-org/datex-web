@@ -44,11 +44,7 @@ const TEST_VALUES = [
 const valueTypeCounter = new Map<string, number>();
 for (const value of TEST_VALUES) {
     // class name or primitive type
-    const valueType = value === null
-        ? "null"
-        : typeof value === "undefined"
-        ? "undefined"
-        : value?.constructor.name;
+    const valueType = value === null ? "null" : typeof value === "undefined" ? "undefined" : value?.constructor.name;
     // increment counter for this type
     const count = valueTypeCounter.get(valueType) || 0;
     valueTypeCounter.set(valueType, count + 1);

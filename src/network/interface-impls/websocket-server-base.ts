@@ -1,16 +1,16 @@
-import type {ComInterfaceFactory} from "../com-hub.ts";
-import type {
-    WebSocketServerInterfaceSetupData,
-} from "../../datex.ts";
+import type { ComInterfaceFactory } from "../com-hub.ts";
+import type { WebSocketServerInterfaceSetupData } from "../../datex.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
  * @param serverFactory
  */
-export function createWebsocketServerComInterfaceFactory(serverFactory: (setupData: WebSocketServerInterfaceSetupData) => AsyncGenerator<WebSocket>): ComInterfaceFactory<WebSocketServerInterfaceSetupData> {
+export function createWebsocketServerComInterfaceFactory(
+    serverFactory: (setupData: WebSocketServerInterfaceSetupData) => AsyncGenerator<WebSocket>,
+): ComInterfaceFactory<WebSocketServerInterfaceSetupData> {
     return {
         interfaceType: "websocket-server",
-        factory: setupData => {
+        factory: (setupData) => {
             // FIXME: workaround, convert map to object if map provided as setupData
             if (setupData instanceof Map) {
                 setupData = Object.fromEntries(
@@ -39,8 +39,8 @@ export function createWebsocketServerComInterfaceFactory(serverFactory: (setupDa
                 new_sockets_iterator: async function* () {
                     await using test = {
                         async [Symbol.asyncDispose]() {
-                            console.log("TEST DISPOSED")
-                        }
+                            console.log("TEST DISPOSED");
+                        },
                     };
 
                     for await (const socket of server) {
@@ -59,14 +59,13 @@ export function createWebsocketServerComInterfaceFactory(serverFactory: (setupDa
                             send_callback: (data: Uint8Array) => {
                                 socket.send(data);
                             },
-                        }
+                        };
                     }
                 }(),
-            }
+            };
         },
-    }
+    };
 }
-
 
 /**
  * Utility function that returns an async generator yielding ArrayBuffers from a WebSocket

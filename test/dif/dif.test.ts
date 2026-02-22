@@ -12,10 +12,7 @@ import {
 import { CoreTypeAddress } from "../../src/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
-import {
-    difReferenceToDisplayString,
-    difValueContainerToDisplayString,
-} from "../../src/dif/display.ts";
+import { difReferenceToDisplayString, difValueContainerToDisplayString } from "../../src/dif/display.ts";
 import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 
 const runtime = await Runtime.create({ endpoint: "@jonas" });

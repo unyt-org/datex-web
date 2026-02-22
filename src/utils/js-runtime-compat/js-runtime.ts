@@ -12,10 +12,7 @@
  * - Browser
  */
 
-import type {
-    JsRuntimeInterface,
-    JSRuntimeType,
-} from "./js-runtime-interface.ts";
+import type { JsRuntimeInterface, JSRuntimeType } from "./js-runtime-interface.ts";
 
 import BrowserRuntimeInterface from "./runtimes/browser.ts";
 

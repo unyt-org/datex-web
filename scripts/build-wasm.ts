@@ -26,7 +26,7 @@ await runWasmBindgen({
     name,
     profile,
     outDir,
-})
+});
 
 await generateJsMainFile({
     name,
@@ -34,13 +34,12 @@ await generateJsMainFile({
 });
 
 if (flags.opt) {
-    await optimizeWasmFile(outDir + `/${name}.wasm`)
+    await optimizeWasmFile(outDir + `/${name}.wasm`);
 }
 
 const wasmFilePath = `${outDir}/${name}.wasm`;
 const fileSize = (await Deno.stat(wasmFilePath))!.size;
 console.info(`✅ Build complete: (${format(fileSize)})`);
-
 
 /**
  * Run cargo build with the appropriate flags to build the wasm module, then run wasm-bindgen to generate the JS bindings
@@ -63,14 +62,12 @@ async function runCargoBuildCommand(args: {
             console.error(`adding wasm32-unknown-unknown target failed`);
             Deno.exit(1);
         }
-    }
-    catch (error) {
+    } catch (error) {
         if (error instanceof Deno.errors.NotFound) {
             console.info(
                 `rustup not found. Ensure wasm32-unknown-unknown installed manually.`,
             );
-        }
-        else {
+        } else {
             throw error;
         }
     }
@@ -102,7 +99,7 @@ async function runCargoBuildCommand(args: {
 }
 
 async function runWasmBindgen(args: {
-    name: string,
+    name: string;
     outDir: string;
     profile: "release" | "debug";
 }) {
@@ -154,7 +151,7 @@ async function runWasmBindgen(args: {
 }
 
 async function generateJsMainFile(args: {
-    name: string,
+    name: string;
     outDir: string;
 }) {
     const jsFile = dedent`

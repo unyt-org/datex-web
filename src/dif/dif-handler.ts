@@ -412,9 +412,7 @@ export class DIFHandler {
             return Endpoint.get(value.value as string) as T;
         } else if (type === CoreTypeAddress.list) {
             return this.promiseAllOrSync(
-                (value.value as DIFArray).map((v) =>
-                    this.resolveDIFValueContainer(v)
-                ),
+                (value.value as DIFArray).map((v) => this.resolveDIFValueContainer(v)),
             ) as T | Promise<T>;
         } // map types are resolved from a DIFObject (aka JS Map) or Array of key-value pairs to a JS object
         else if (type === CoreTypeAddress.map) {
@@ -680,9 +678,7 @@ export class DIFHandler {
     public convertToDIFValues<T extends unknown[]>(
         values: T | null,
     ): DIFValueContainer[] | null {
-        return values?.map((value) =>
-            this.convertJSValueToDIFValueContainer(value)
-        ) ||
+        return values?.map((value) => this.convertJSValueToDIFValueContainer(value)) ||
             null;
     }
 
@@ -721,12 +717,11 @@ export class DIFHandler {
         if (bindJSValue && !(wrappedValue instanceof Ref)) {
             typeBinding = this.type_registry.getTypeBinding(allowedType);
             if (typeBinding) {
-                const { value, metadata: newMetadata } =
-                    (typeBinding as TypeBinding<T & WeakKey>)
-                        .bindValue(
-                            wrappedValue,
-                            pointerAddress,
-                        );
+                const { value, metadata: newMetadata } = (typeBinding as TypeBinding<T & WeakKey>)
+                    .bindValue(
+                        wrappedValue,
+                        pointerAddress,
+                    );
                 metadata = newMetadata;
                 wrappedValue = value;
             }
@@ -916,8 +911,7 @@ export class DIFHandler {
      */
     public createTransparentReference<
         V,
-        M extends DIFReferenceMutability =
-            typeof DIFReferenceMutability.Mutable,
+        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
     >(
         value: V,
         allowedType: DIFTypeDefinition | null = null,
@@ -1150,9 +1144,7 @@ export class DIFHandler {
             };
         } else if (Array.isArray(value)) {
             return {
-                value: value.map((v) =>
-                    this.convertJSValueToDIFValueContainer(v)
-                ),
+                value: value.map((v) => this.convertJSValueToDIFValueContainer(v)),
             };
         } else if (value instanceof Map) {
             const map: [DIFValueContainer, DIFValueContainer][] = value
@@ -1302,9 +1294,7 @@ export class DIFHandler {
         deleteCount: number,
         items: V[],
     ) {
-        const difItems = items.map((item) =>
-            this.convertJSValueToDIFValueContainer(item)
-        );
+        const difItems = items.map((item) => this.convertJSValueToDIFValueContainer(item));
         const update: DIFUpdateData = {
             kind: DIFUpdateKind.ListSplice,
             start,
@@ -1327,8 +1317,7 @@ type WidenLiteral<T> = T extends string ? string
 
 type IsRef<T> = T extends Ref<unknown> ? true : false;
 type ContainsRef<T> = IsRef<T> extends true ? true
-    : T extends object
-        ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
+    : T extends object ? { [K in keyof T]: ContainsRef<T[K]> }[keyof T] extends true ? true
         : false
     : false;
 
@@ -1349,8 +1338,8 @@ type IsPlainObject<T> = T extends Builtins ? false
     : T extends object ? true
     : false;
 
-type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
-    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends Ref<infer U>
+    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
     : AssignableRef<U>
     : IsPlainObject<T> extends true ? (
             ContainsRef<T> extends true
@@ -1361,12 +1350,11 @@ type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends
         )
     : T;
 
-export type PointerOut<V, M extends DIFReferenceMutability> = V extends
-    Ref<infer U> ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+export type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
+    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
     : AssignableRef<U>
     : IsPlainObject<V> extends true ? (
-            M extends typeof DIFReferenceMutability.Immutable
-                ? { readonly [K in keyof V]: V[K] }
+            M extends typeof DIFReferenceMutability.Immutable ? { readonly [K in keyof V]: V[K] }
                 : { [K in keyof V]: V[K] }
             // ContainsRef<V> extends true
             //     ? M extends typeof DIFReferenceMutability.Immutable

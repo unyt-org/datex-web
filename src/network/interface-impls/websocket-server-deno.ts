@@ -1,5 +1,5 @@
 import type { WebSocketServerInterfaceSetupData } from "../../datex.ts";
-import {createWebsocketServerComInterfaceFactory} from "./websocket-server-base.ts";
+import { createWebsocketServerComInterfaceFactory } from "./websocket-server-base.ts";
 
 function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): AsyncGenerator<WebSocket> {
     const [hostname, maybe_port] = setupData.bind_address.split(":");
@@ -9,7 +9,7 @@ function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): AsyncG
         let server: Deno.HttpServer;
         const socketStream = new ReadableStream<WebSocket>({
             start(controller) {
-                server = Deno.serve({port, hostname}, (req) => {
+                server = Deno.serve({ port, hostname }, (req) => {
                     if (req.headers.get("upgrade") != "websocket") {
                         return new Response(null, { status: 501 });
                     }

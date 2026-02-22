@@ -9,5 +9,4 @@ import type { JsRuntimeInterface } from "./js-runtime-interface.ts";
 import BrowserRuntimeInterface from "./runtimes/browser.ts";
 
 /** The runtime interface for the current runtime environment */
-export const runtimeInterface: JsRuntimeInterface =
-    new BrowserRuntimeInterface();
+export const runtimeInterface: JsRuntimeInterface = new BrowserRuntimeInterface();

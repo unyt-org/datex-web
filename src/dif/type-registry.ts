@@ -1,14 +1,6 @@
 import { DEBUG_MODE } from "../global.ts";
-import {
-    type DIFTypeDefinition,
-    type DIFUpdateData,
-    DIFUpdateKind,
-} from "./definitions.ts";
-import {
-    type CustomReferenceMetadata,
-    type DIFHandler,
-    IS_PROXY_ACCESS,
-} from "./dif-handler.ts";
+import { type DIFTypeDefinition, type DIFUpdateData, DIFUpdateKind } from "./definitions.ts";
+import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "./dif-handler.ts";
 
 type ImplMethod = {
     name: string;
@@ -278,9 +270,7 @@ export class TypeBinding<
                         value,
                         difUpdateData.start,
                         difUpdateData.delete_count,
-                        difUpdateData.items.map((item) =>
-                            this.#difHandler.resolveDIFValueContainerSync(item)
-                        ),
+                        difUpdateData.items.map((item) => this.#difHandler.resolveDIFValueContainerSync(item)),
                     );
                 }
             });

@@ -7,22 +7,17 @@
 
 <img align="right" src="assets/datex-logo-light.svg" width="150px" alt="The DATEX logo">
 
-The DATEX Web Library for JavaScript (DATEX Web) is based on the
-[DATEX](https://github.com/unyt-org/datex) Rust library and provides a
-high-level API for working with DATEX in JavaScript and TypeScript. DATEX is
-developed and maintained by the [unyt.org](https://unyt.org) organization and
-community.
+The DATEX Web Library for JavaScript (DATEX Web) is based on the [DATEX](https://github.com/unyt-org/datex) Rust library
+and provides a high-level API for working with DATEX in JavaScript and TypeScript. DATEX is developed and maintained by
+the [unyt.org](https://unyt.org) organization and community.
 
-You can find the legacy version of the DATEX Core library _(implemented in
-TypeScript)_ at
-[unyt-org/datex-core-js-legacy](https://github.com/unyt-org/datex-core-js-legacy).
-The legacy version is still maintained and supported until this library reaches
-feature parity.
+You can find the legacy version of the DATEX Core library _(implemented in TypeScript)_ at
+[unyt-org/datex-core-js-legacy](https://github.com/unyt-org/datex-core-js-legacy). The legacy version is still
+maintained and supported until this library reaches feature parity.
 
 ## Contributing
 
-We welcome every contribution!<br> Please take a look at the
-[development guidelines](./DEVELOP.md) and the unyt.org
+We welcome every contribution!<br> Please take a look at the [development guidelines](./DEVELOP.md) and the unyt.org
 [contribution guidlines](https://github.com/unyt-org/.github/blob/main/CONTRIBUTING.md).
 
 [Twitter badge]: https://img.shields.io/twitter/follow/unytorg.svg?style=social&label=Follow

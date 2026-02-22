@@ -1,6 +1,8 @@
 import type {
     BaseInterfacePublicHandle,
-    ComHubMetadata, ComInterfaceConfiguration, InterfaceDirection,
+    ComHubMetadata,
+    ComInterfaceConfiguration,
+    InterfaceDirection,
     JSComHub,
 } from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
@@ -18,7 +20,6 @@ export type ComInterfaceFactoryFn<SetupData = unknown> = (
 
 export type ComInterfaceUUID = `com_interface::${string}`;
 export type ComInterfaceSocketUUID = `socket::${string}`;
-
 
 /**
  * Communication hub for managing communication interfaces.

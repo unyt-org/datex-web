@@ -1,8 +1,5 @@
 import { assert, assertRejects } from "@std/assert";
-import {
-    createMockupServer,
-    type MockupServerInstance,
-} from "./WebsocketMockupServer.ts";
+import { createMockupServer, type MockupServerInstance } from "./WebsocketMockupServer.ts";
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { sleep } from "../utils.ts";
 import { isNodeOrBun } from "../is-node.ts";

@@ -5,9 +5,7 @@ import * as colors from "@std/fmt/colors";
 import { createTempFileSync } from "@david/temp";
 import { Path } from "@david/path";
 
-const wasmOptFileName = Deno.build.os === "windows"
-    ? "wasm-opt.exe"
-    : "wasm-opt";
+const wasmOptFileName = Deno.build.os === "windows" ? "wasm-opt.exe" : "wasm-opt";
 const tag = "version_121";
 
 export async function runWasmOpt(inputFilePath: Path) {
@@ -156,7 +154,6 @@ function cacheDir(): string | undefined {
     return undefined;
 }
 
-
 export async function optimizeWasmFile(filePath: string) {
     try {
         console.log(
@@ -166,7 +163,7 @@ export async function optimizeWasmFile(filePath: string) {
     } catch (err) {
         console.error(
             `${colors.bold(colors.red("Error"))} ` +
-            `running wasm-opt failed. Maybe skip with --skip-opt?\n\n${err}`,
+                `running wasm-opt failed. Maybe skip with --skip-opt?\n\n${err}`,
         );
         Deno.exit(1);
     }

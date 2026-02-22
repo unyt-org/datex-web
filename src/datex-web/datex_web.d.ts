@@ -217,10 +217,14 @@ export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export type InterfacePriority = "None" | { Priority: number };
 
-export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | { ReconnectWithTimeout: { timeout: { secs: number; nanos: number } } } | { ReconnectWithTimeoutAndAttempts: { timeout: { secs: number; nanos: number }; attempts: number } };
+export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
+    ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
+} | { ReconnectWithTimeoutAndAttempts: { timeout: { secs: number; nanos: number }; attempts: number } };
 
-export type TLSMode = { type: "HandledExternally" } | { type: "WithCertificate"; data: { private_key: number[]; certificate: number[] } };
-
+export type TLSMode = { type: "HandledExternally" } | {
+    type: "WithCertificate";
+    data: { private_key: number[]; certificate: number[] };
+};
 
 export class BaseInterfacePublicHandle {
     private constructor();
@@ -273,8 +277,16 @@ export class JSRuntime {
     dif(): RuntimeDIFHandle;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
     execute_sync(script: string, dif_values?: any[] | null): any;
-    execute_sync_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): string;
-    execute_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): Promise<string>;
+    execute_sync_with_string_result(
+        script: string,
+        dif_values: any[] | null | undefined,
+        decompile_options: any,
+    ): string;
+    execute_with_string_result(
+        script: string,
+        dif_values: any[] | null | undefined,
+        decompile_options: any,
+    ): Promise<string>;
     /**
      * Start the LSP server, returning a JS function to send messages to Rust
      */
