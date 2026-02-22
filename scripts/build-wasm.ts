@@ -1,68 +1,135 @@
-import { runBuildCommand } from "@deno/wasmbuild";
-import { Path } from "@david/path";
 import { format } from "@std/fmt/bytes";
 import { parseArgs } from "@std/cli/parse-args";
 import { dedent } from "@qnighy/dedent";
 
 const RUST_FLAGS = ["--cfg=web_sys_unstable_apis", "-Awarnings"];
-const PREVIOUS_RUSTFLAGS = Deno.env.has("RUSTFLAGS")
-    ? Deno.env.get("RUSTFLAGS")
-    : null;
 Deno.env.set("RUSTFLAGS", RUST_FLAGS.join(" "));
 
 const flags = parseArgs(Deno.args, {
-    boolean: ["opt", "inline"],
+    boolean: ["opt"],
     string: ["profile", "features"],
-    default: { opt: true, inline: false, profile: "release", features: "" },
+    default: { opt: true, profile: "release", features: "" },
     negatable: ["opt"],
 });
 
-const DEFAULT_FLAGS: string[] = [];
-if (flags.features) {
-    DEFAULT_FLAGS.push("--features", flags.features);
-}
+const name = "datex_web";
+const outDir = "./src/datex-web";
+const profile = flags.profile === "release" ? "release" : "debug";
 
-const NAME = "datex_web";
-const outDir = new Path("./src/datex-web");
-try {
-    await runBuildCommand({
-        isOpt: flags.opt,
-        outDir,
-        profile: flags.profile === "release" ? "release" : "debug",
-        kind: "build",
-        inline: flags.inline,
-        bindingJsFileExt: "js",
-        project: "datex-web",
-        cargoFlags: DEFAULT_FLAGS,
-    });
-} catch (e) {
-    console.error(`❌ Build failed:`, e);
-    Deno.exit(1);
-} finally {
-    if (PREVIOUS_RUSTFLAGS === null) {
-        Deno.env.delete("RUSTFLAGS");
-    } else {
-        Deno.env.set("RUSTFLAGS", PREVIOUS_RUSTFLAGS ?? "");
+await runCargoBuildCommand({
+    profile,
+    cargoFlags: flags.features ? ["--features", flags.features] : [],
+});
+
+await runWasmBindgen({
+    name,
+    profile,
+    outDir,
+})
+
+await generateJsMainFile({
+    name,
+    outDir,
+});
+
+const wasmFilePath = `${outDir}/${name}.wasm`;
+const fileSize = (await Deno.stat(wasmFilePath))!.size;
+console.info(`✅ Build complete: (${format(fileSize)})`);
+
+
+/**
+ * Run cargo build with the appropriate flags to build the wasm module, then run wasm-bindgen to generate the JS bindings
+ * @param args
+ */
+async function runCargoBuildCommand(args: {
+    profile: "release" | "debug";
+    cargoFlags: string[];
+}) {
+    const cargoBuildCmd = [
+        "build",
+        "--lib",
+        "--target",
+        "wasm32-unknown-unknown",
+        ...args.cargoFlags,
+    ];
+
+    if (args.profile === "release") {
+        cargoBuildCmd.push("--release");
+    }
+
+    const cargoBuildProcess = new Deno.Command("cargo", {
+        args: cargoBuildCmd,
+        env: {
+            RUSTFLAGS: Deno.env.get("RUSTFLAGS") ?? "",
+        },
+    }).spawn();
+
+    const res = await cargoBuildProcess.status;
+    if (!res.success) {
+        console.error(`❌ Cargo build failed.`);
+        Deno.exit(1);
     }
 }
 
-if (!flags.inline) {
+async function runWasmBindgen(args: {
+    name: string,
+    outDir: string;
+    profile: "release" | "debug";
+}) {
+    const wasmBindgenCmd = [
+        `target/wasm32-unknown-unknown/${args.profile}/${args.name}.wasm`,
+        "--target",
+        "bundler",
+        "--out-dir",
+        args.outDir.toString(),
+        "--omit-default-module-path",
+    ];
+
+    const wasmBindgenProcess = new Deno.Command("wasm-bindgen", {
+        args: wasmBindgenCmd,
+    }).spawn();
+
+    const res = await wasmBindgenProcess.status;
+    if (!res.success) {
+        console.error(`❌ wasm-bindgen failed.`);
+        Deno.exit(1);
+    }
+
+    // rename x_bg.js to x.internal.js
+    const jsBgFilePath = `${args.outDir}/${args.name}_bg.js`;
+    const jsInternalFilePath = `${args.outDir}/${args.name}.internal.js`;
+    await Deno.rename(jsBgFilePath, jsInternalFilePath);
+
+    // rename x_bg.wasm to x.wasm
+    const wasmFilePath = `${args.outDir}/${args.name}_bg.wasm`;
+    const wasmDestFilePath = `${args.outDir}/${args.name}.wasm`;
+    await Deno.rename(wasmFilePath, wasmDestFilePath);
+
+    // rename x_bg.wasm.d.ts to x.wasm.d.ts
+    const dtsFilePath = `${args.outDir}/${args.name}_bg.wasm.d.ts`;
+    const dtsDestFilePath = `${args.outDir}/${args.name}.wasm.d.ts`;
+    await Deno.rename(dtsFilePath, dtsDestFilePath);
+}
+
+async function generateJsMainFile(args: {
+    name: string,
+    outDir: string;
+}) {
     const jsFile = dedent`
-        import * as imports from "./${NAME}.internal.js";
+        import * as imports from "./${args.name}.internal.js";
         import { runtimeInterface } from "../utils/js-runtime-compat/js-runtime.ts";
         const wasm = (await runtimeInterface.instantiateWebAssembly(
-            new URL("${NAME}.wasm", import.meta.url),
+            new URL("${args.name}.wasm", import.meta.url),
             {
-                "./${NAME}.internal.js": imports,
+                "./${args.name}_bg.js": imports,
             },
         )).instance;
-        export * from "./${NAME}.internal.js";
-        import { __wbg_set_wasm } from "./${NAME}.internal.js";
+        export * from "./${args.name}.internal.js";
+        import { __wbg_set_wasm } from "./${args.name}.internal.js";
         __wbg_set_wasm(wasm.exports);
         wasm.exports.__wbindgen_start();
-`.trimStart();
+    `.trimStart();
 
-    await outDir.resolve(`${NAME}.js`).writeText(jsFile);
+    const jsFilePath = `${args.outDir}/${args.name}.js`;
+    await Deno.writeTextFile(jsFilePath, jsFile);
 }
-const fileSize = (await outDir.resolve(`${NAME}.wasm`).stat())!.size;
-console.info(`✅ Build complete: (${format(fileSize)})`);

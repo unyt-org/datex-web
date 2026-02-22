@@ -5,6 +5,7 @@ npm
 .DS_Store
 .idea
 src/datex-web/datex_web.wasm
+src/datex-web/datex_web.wasm.d.ts
 src/datex-web/datex_web.internal.js
 rustc-ice*.txt
 /datex.js

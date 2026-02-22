@@ -13,7 +13,7 @@ if (detectRuntime() == "browser" && isVite) {
 }
 
 const wasm = (await runtimeInterface.instantiateWebAssembly(wasmUrl, {
-    "./datex_web.internal.js": imports,
+    "./datex_web_bg.js": imports,
 })).instance;
 export * from "./datex_web.internal.js";
 import { __wbg_set_wasm } from "./datex_web.internal.js";

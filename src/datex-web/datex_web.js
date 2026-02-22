@@ -3,7 +3,7 @@ import { runtimeInterface } from "../utils/js-runtime-compat/js-runtime.ts";
 const wasm = (await runtimeInterface.instantiateWebAssembly(
     new URL("datex_web.wasm", import.meta.url),
     {
-        "./datex_web.internal.js": imports,
+        "./datex_web_bg.js": imports,
     },
 )).instance;
 export * from "./datex_web.internal.js";
