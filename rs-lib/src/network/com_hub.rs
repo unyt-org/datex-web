@@ -71,6 +71,7 @@ impl Drop for JSAsyncGenerator {
 
 impl AsyncDrop for JSAsyncGenerator {
     async fn drop(self: Pin<&mut Self>) {
+        info!("ASYNC DROP!!!");
         match self.0.return_(&JsValue::UNDEFINED) {
             Ok(promise) => {
                 if let Err(e) = JsFuture::from(promise).await {
@@ -160,6 +161,8 @@ impl JSComHub {
 
                     let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration)
                         .map_err(|e| {
+                            error!("Error parse_com_interface_configuration: {:?}", e);
+
                             ComInterfaceCreateError::connection_error_with_details(
                                 e.to_string()
                             )
@@ -220,8 +223,8 @@ impl JSComHub {
             .map(|v| v.as_bool())?;
 
         // get new_sockets_iterator from interface_configuration
-        let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())?
-            .dyn_into::<js_sys::AsyncGenerator>()?;
+        let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())
+            .and_then(|v| v.dyn_into::<js_sys::AsyncGenerator>())?;
 
         Ok((properties, has_single_socket.unwrap_or_default(), new_sockets_iterator))
     }

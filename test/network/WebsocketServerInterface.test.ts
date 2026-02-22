@@ -15,6 +15,7 @@ Deno.test("add and close interface", async () => {
         "websocket-server",
         { bind_address: "0.0.0.0:1234" },
     );
+
     assert(
         serverInterfaceUUID.startsWith("com_interface::"),
         "Invalid interface UUID",
@@ -23,6 +24,7 @@ Deno.test("add and close interface", async () => {
         uuid.validate(serverInterfaceUUID.replace("com_interface::", "")),
         "Invalid UUID format",
     );
+    await sleep(2000);
     await runtime.comHub.closeInterface(serverInterfaceUUID);
 });
 

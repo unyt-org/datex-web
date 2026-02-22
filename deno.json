@@ -21,7 +21,7 @@
         "debug-unsecure": "deno run -A scripts/build-wasm.ts --profile debug --features debug,allow_unsigned_blocks",
 
         "debug-no-opt": "deno task debug --no-opt",
-        "test": "deno task debug && deno test -A",
+        "test": "deno task debug-no-opt && deno test -A",
         "test-no-build": "deno test -A",
 
         "build-npm": "deno run -A scripts/build-npm.ts",

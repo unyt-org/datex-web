@@ -1,12 +1,5 @@
-import type {
-    BaseInterfacePublicHandle,
-    ComHubMetadata,
-    ComInterfaceConfiguration,
-    InterfaceDirection,
-    JSComHub,
-} from "../datex-web/datex_web.d.ts";
+import type { ComHubMetadata, ComInterfaceConfiguration, JSComHub } from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
-import type { ComInterfaceProperties } from "../datex.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
 export type ComInterfaceFactory<SetupData = unknown> = {

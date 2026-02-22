@@ -37,9 +37,9 @@ export function createWebsocketServerComInterfaceFactory(
                 },
                 has_single_socket: false,
                 new_sockets_iterator: async function* () {
-                    await using test = {
+                    await using _ = {
                         async [Symbol.asyncDispose]() {
-                            console.log("TEST DISPOSED");
+                            await console.log("TEST DISPOSED");
                         },
                     };
 

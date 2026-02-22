@@ -145,9 +145,23 @@ async function runWasmBindgen(args: {
     await Deno.rename(wasmFilePath, wasmDestFilePath);
 
     // rename x_bg.wasm.d.ts to x.wasm.d.ts
-    const dtsFilePath = `${args.outDir}/${args.name}_bg.wasm.d.ts`;
+    const dtsWasmFilePath = `${args.outDir}/${args.name}_bg.wasm.d.ts`;
     const dtsDestFilePath = `${args.outDir}/${args.name}.wasm.d.ts`;
-    await Deno.rename(dtsFilePath, dtsDestFilePath);
+    await Deno.rename(dtsWasmFilePath, dtsDestFilePath);
+
+    const dtsFilePath = `${args.outDir}/${args.name}.d.ts`;
+
+    // add ignore comments to the top of the generated files
+    const dtsFileContent = await Deno.readTextFile(dtsFilePath);
+    await Deno.writeTextFile(
+        dtsFilePath,
+        `// @generated file from wasmbuild -- do not edit\n// deno-lint-ignore-file\n// deno-fmt-ignore-file\n\n${dtsFileContent}`,
+    );
+    const jsInternalFileContent = await Deno.readTextFile(jsInternalFilePath);
+    await Deno.writeTextFile(
+        jsInternalFilePath,
+        `// @generated file from wasmbuild -- do not edit\n// deno-lint-ignore-file\n// deno-fmt-ignore-file\n\n${jsInternalFileContent}`,
+    );
 }
 
 async function generateJsMainFile(args: {
