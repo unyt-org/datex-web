@@ -106,6 +106,18 @@ async function runWasmBindgen(args: {
     outDir: string;
     profile: "release" | "debug";
 }) {
+    // make sure wasm-bindgen cli is installed
+    const wasmBindgenInstallProcess = new Deno.Command("cargo", {
+        args: ["install", "wasm-bindgen-cli"],
+    }).spawn();
+    const installRes = await wasmBindgenInstallProcess.status;
+    if (!installRes.success) {
+        console.error(
+            `❌ Installing wasm-bindgen-cli failed. Ensure it is installed globally with "cargo install wasm-bindgen-cli"`,
+        );
+        Deno.exit(1);
+    }
+
     const wasmBindgenCmd = [
         `target/wasm32-unknown-unknown/${args.profile}/${args.name}.wasm`,
         "--target",
