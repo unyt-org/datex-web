@@ -27,6 +27,9 @@ use datex_core::{
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{collections::HashMap, rc::Rc, str::FromStr};
+use std::future::AsyncDrop;
+use std::ops::Deref;
+use std::pin::Pin;
 use datex_core::network::com_interfaces::com_interface::factory::{NewSocketsIterator, SocketProperties};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, JsFuture};
@@ -49,6 +52,36 @@ use crate::js_utils::to_js_value;
 pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
+}
+
+// wrapper around AsyncGenerator that implements Drop
+#[derive(Debug)]
+pub struct JSAsyncGenerator(pub js_sys::AsyncGenerator);
+impl Deref for JSAsyncGenerator {
+    type Target = js_sys::AsyncGenerator;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Drop for JSAsyncGenerator {
+    fn drop(&mut self) { }
+}
+
+impl AsyncDrop for JSAsyncGenerator {
+    async fn drop(self: Pin<&mut Self>) {
+        match self.0.return_(&JsValue::UNDEFINED) {
+            Ok(promise) => {
+                if let Err(e) = JsFuture::from(promise).await {
+                    error!("Error awaiting async generator return promise: {:?}", e);
+                }
+            }
+            Err(e) => {
+                error!("Error calling async generator return: {:?}", e);
+            }
+        }
+    }
 }
 
 /**
@@ -132,6 +165,8 @@ impl JSComHub {
                             )
                         })?;
 
+                    let new_sockets_generator = JSAsyncGenerator(new_sockets_generator);
+
                     info!("configuration properties: {:#?}", properties);
                     info!("has_single_socket: {:#?}", has_single_socket);
                     info!("new_sockets_iterator: {:#?}", new_sockets_generator);
@@ -141,30 +176,30 @@ impl JSComHub {
                         has_single_socket,
                         async gen move {
                             // TODO:
-                            // loop {
-                                // info!("next socket");
-                                // let next_socket = match new_sockets_generator.next() {
-                                //     Ok(promise) => match JsFuture::from(promise).await {
-                                //         Ok(result) => result,
-                                //         Err(e) => {
-                                //             error!("Error awaiting next socket promise: {:?}", e);
-                                //             return yield Err(());
-                                //         }
-                                //     },
-                                //     Err(e) => {
-                                //         error!("Error getting next socket: {:?}", e);
-                                //         return yield Err(());
-                                //     }
-                                // };
-                                //
-                                //
-                                // if next_socket.done() {
-                                //     info!("No more sockets to accept, generator is done");
-                                //     return;
-                                // }
-                                //
-                                // info!("Received new socket configuration: {:#?}", next_socket.value());
-                            // }
+                            loop {
+                                info!("next socket");
+                                let next_socket = match new_sockets_generator.next(&JsValue::UNDEFINED) {
+                                    Ok(promise) => match JsFuture::from(promise).await {
+                                        Ok(result) => result,
+                                        Err(e) => {
+                                            error!("Error awaiting next socket promise: {:?}", e);
+                                            return yield Err(());
+                                        }
+                                    },
+                                    Err(e) => {
+                                        error!("Error getting next socket: {:?}", e);
+                                        return yield Err(());
+                                    }
+                                };
+
+
+                                if next_socket.done() {
+                                    info!("No more sockets to accept, generator is done");
+                                    return;
+                                }
+
+                                info!("Received new socket configuration: {:#?}", next_socket.value());
+                            }
                         }
                     ))
                 })
