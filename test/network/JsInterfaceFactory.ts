@@ -1,22 +1,18 @@
-import { assert } from "@std/assert/assert";
-import { Runtime } from "../../src/runtime/runtime.ts";
-import { assertEquals } from "@std/assert/equals";
-import type { ComInterfaceProperties } from "datex/datex.ts";
 // TODO https://github.com/unyt-org/datex-web/issues/47
-const config: ComInterfaceProperties = {
-    name: "base",
-    interface_type: "base",
-    channel: "test",
-    direction: "InOut",
-    round_trip_time: 5,
-    max_bandwidth: 1,
-    continuous_connection: true,
-    allow_redirects: true,
-    is_secure_channel: true,
-    reconnection_config: "NoReconnect",
-    auto_identify: false,
-    connectable_interfaces: undefined,
-};
+// const config: ComInterfaceProperties = {
+//     name: "base",
+//     interface_type: "base",
+//     channel: "test",
+//     direction: "InOut",
+//     round_trip_time: 5,
+//     max_bandwidth: 1,
+//     continuous_connection: true,
+//     allow_redirects: true,
+//     is_secure_channel: true,
+//     reconnection_config: "NoReconnect",
+//     auto_identify: false,
+//     connectable_interfaces: undefined,
+// };
 
 // FIXME
 // Deno.test("construct custom factory", async () => {
