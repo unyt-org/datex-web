@@ -5,7 +5,6 @@ import type { ComInterfaceFactory } from "../com-hub.ts";
 function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): AsyncGenerator<WebSocket> {
     const [hostname, maybe_port] = setupData.bind_address.split(":");
     const port = maybe_port ? parseInt(maybe_port) : undefined;
-    console.log("DENO 1");
     return async function* () {
         let server: Deno.HttpServer;
         const socketStream = new ReadableStream<WebSocket>({

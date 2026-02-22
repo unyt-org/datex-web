@@ -24,7 +24,7 @@ Deno.test("add and close interface", async () => {
         uuid.validate(serverInterfaceUUID.replace("com_interface::", "")),
         "Invalid UUID format",
     );
-    await sleep(2000);
+    await sleep(500);
     await runtime.comHub.closeInterface(serverInterfaceUUID);
 });
 

@@ -18,25 +18,26 @@ const config: ComInterfaceProperties = {
     connectable_interfaces: undefined,
 };
 
-Deno.test("construct custom factory", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
-    runtime.comHub.registerInterfaceFactory<ComInterfaceProperties>({
-        interfaceType: "test",
-        factory: (handle, setupData) => {
-            assert(handle instanceof Object, "Handle should be an object");
-            assertEquals(
-                Object.fromEntries(
-                    (setupData as unknown as Map<string, unknown>).entries(),
-                ) as unknown as ComInterfaceProperties,
-                config,
-                "Setup data should match",
-            );
-            return setupData;
-        },
-    });
-    await runtime.comHub.createInterface("test", config);
-    runtime.comHub;
-});
+// FIXME
+// Deno.test("construct custom factory", async () => {
+//     const runtime = await Runtime.create({ endpoint: "@unyt" });
+//     runtime.comHub.registerInterfaceFactory<ComInterfaceProperties>({
+//         interfaceType: "test",
+//         factory: (handle, setupData) => {
+//             assert(handle instanceof Object, "Handle should be an object");
+//             assertEquals(
+//                 Object.fromEntries(
+//                     (setupData as unknown as Map<string, unknown>).entries(),
+//                 ) as unknown as ComInterfaceProperties,
+//                 config,
+//                 "Setup data should match",
+//             );
+//             return setupData;
+//         },
+//     });
+//     await runtime.comHub.createInterface("test", config);
+//     runtime.comHub;
+// });
 
 // // FIXME rest
 

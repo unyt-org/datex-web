@@ -66,7 +66,9 @@ impl Deref for JSAsyncGenerator {
 }
 
 impl Drop for JSAsyncGenerator {
-    fn drop(&mut self) { }
+    fn drop(&mut self) {
+        info!("sync drop!!!!")
+    }
 }
 
 impl AsyncDrop for JSAsyncGenerator {
@@ -223,8 +225,9 @@ impl JSComHub {
             .map(|v| v.as_bool())?;
 
         // get new_sockets_iterator from interface_configuration
+        // NOTE: dyn_into does not work here, maybe a bug in js_sys?
         let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())
-            .and_then(|v| v.dyn_into::<js_sys::AsyncGenerator>())?;
+            .map(|v| v.unchecked_into::<js_sys::AsyncGenerator>())?;
 
         Ok((properties, has_single_socket.unwrap_or_default(), new_sockets_iterator))
     }
