@@ -1,5 +1,5 @@
 import type { ComInterfaceFactory } from "../com-hub.ts";
-import type {SocketConfiguration, WebSocketServerInterfaceSetupData} from "../../datex.ts";
+import type { SocketConfiguration, WebSocketServerInterfaceSetupData } from "../../datex.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
@@ -50,8 +50,8 @@ export function createWebsocketServerComInterfaceFactory(
                                     socket.send(data);
                                 },
                             });
-                        }
-                    })
+                        },
+                    }),
                 ),
             };
         },
@@ -62,7 +62,7 @@ export function createWebsocketServerComInterfaceFactory(
  * Utility function that returns an async generator yielding ArrayBuffers from a WebSocket
  */
 async function createSocketDataIterator(webSocket: WebSocket): Promise<ReadableStream<ArrayBuffer>> {
-    const {promise, resolve, reject} = Promise.withResolvers<void>();
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
     webSocket.addEventListener("open", () => resolve(), { once: true });
     webSocket.addEventListener("error", (event) => reject(new Error(`WebSocket error: ${event}`)), { once: true });
     // wait until the socket is open before starting to yield messages

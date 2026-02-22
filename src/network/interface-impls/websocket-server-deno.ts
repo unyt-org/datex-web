@@ -19,7 +19,7 @@ function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): Readab
                     const { socket, response } = Deno.upgradeWebSocket(req);
                     controller.enqueue(socket);
                     return response;
-                }
+                },
             );
         },
         async cancel() {
