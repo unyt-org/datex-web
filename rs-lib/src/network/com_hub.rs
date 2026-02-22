@@ -140,30 +140,31 @@ impl JSComHub {
                         properties,
                         has_single_socket,
                         async gen move {
-                            loop {
-                                info!("next socket");
-                                let next_socket = match new_sockets_generator.next() {
-                                    Ok(promise) => match JsFuture::from(promise).await {
-                                        Ok(result) => result,
-                                        Err(e) => {
-                                            error!("Error awaiting next socket promise: {:?}", e);
-                                            return yield Err(());
-                                        }
-                                    },
-                                    Err(e) => {
-                                        error!("Error getting next socket: {:?}", e);
-                                        return yield Err(());
-                                    }
-                                };
-
-
-                                if next_socket.done() {
-                                    info!("No more sockets to accept, generator is done");
-                                    return;
-                                }
-
-                                info!("Received new socket configuration: {:#?}", next_socket.value());
-                            }
+                            // TODO:
+                            // loop {
+                                // info!("next socket");
+                                // let next_socket = match new_sockets_generator.next() {
+                                //     Ok(promise) => match JsFuture::from(promise).await {
+                                //         Ok(result) => result,
+                                //         Err(e) => {
+                                //             error!("Error awaiting next socket promise: {:?}", e);
+                                //             return yield Err(());
+                                //         }
+                                //     },
+                                //     Err(e) => {
+                                //         error!("Error getting next socket: {:?}", e);
+                                //         return yield Err(());
+                                //     }
+                                // };
+                                //
+                                //
+                                // if next_socket.done() {
+                                //     info!("No more sockets to accept, generator is done");
+                                //     return;
+                                // }
+                                //
+                                // info!("Received new socket configuration: {:#?}", next_socket.value());
+                            // }
                         }
                     ))
                 })
