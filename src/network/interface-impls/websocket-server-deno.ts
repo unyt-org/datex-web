@@ -9,7 +9,6 @@ function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): AsyncG
         let server: Deno.HttpServer;
         const socketStream = new ReadableStream<WebSocket>({
             start(controller) {
-                console.log("deno start");
                 server = Deno.serve({ port, hostname }, (req) => {
                     if (req.headers.get("upgrade") != "websocket") {
                         return new Response(null, { status: 501 });
@@ -20,6 +19,7 @@ function denoServerFactory(setupData: WebSocketServerInterfaceSetupData): AsyncG
                 });
             },
             async cancel() {
+                console.log("shutting down server...");
                 await server.shutdown();
             },
         });

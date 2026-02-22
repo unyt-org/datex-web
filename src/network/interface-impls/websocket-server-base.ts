@@ -44,6 +44,8 @@ export function createWebsocketServerComInterfaceFactory(
                     };
 
                     for await (const socket of server) {
+                        const iterator = await createSocketDataIterator(socket);
+
                         yield {
                             properties: {
                                 direction: "InOut",
@@ -52,11 +54,11 @@ export function createWebsocketServerComInterfaceFactory(
                                 direct_endpoint: undefined,
                             },
                             iterator: async function* () {
-                                for await (const data of createSocketDataIterator(socket)) {
+                                for await (const data of iterator) {
                                     yield data;
                                 }
                             }(),
-                            send_callback: (data: Uint8Array) => {
+                            send_callback: (data: ArrayBuffer) => {
                                 socket.send(data);
                             },
                         };
@@ -70,9 +72,24 @@ export function createWebsocketServerComInterfaceFactory(
 /**
  * Utility function that returns an async generator yielding ArrayBuffers from a WebSocket
  */
-function createSocketDataIterator(webSocket: WebSocket): AsyncGenerator<ArrayBuffer> {
+async function createSocketDataIterator(webSocket: WebSocket): Promise<AsyncGenerator<ArrayBuffer>> {
+    const {promise, resolve, reject} = Promise.withResolvers<void>();
+    webSocket.addEventListener("open", () => resolve(), { once: true });
+    webSocket.addEventListener("error", (event) => reject(new Error(`WebSocket error: ${event}`)), { once: true });
+    // wait until the socket is open before starting to yield messages
+    if (webSocket.readyState === WebSocket.OPEN) {
+        resolve();
+    } else if (webSocket.readyState === WebSocket.CLOSED || webSocket.readyState === WebSocket.CLOSING) {
+        reject(new Error("WebSocket is already closed"));
+    } else {
+        // otherwise, wait for the open event
+        console.log("Waiting for WebSocket to open...");
+    }
+    await promise;
+
     const messageStream = new ReadableStream<ArrayBuffer>({
         start(controller) {
+
             webSocket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
                 // ignore if not ArrayBuffer
                 if (!(event.data instanceof ArrayBuffer)) {

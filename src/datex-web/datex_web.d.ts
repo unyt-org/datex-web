@@ -167,7 +167,7 @@ export interface SocketConfiguration {
      * A callback that is called by the com hub to send data through the socket
      * This can be either a synchronous or asynchronous callback depending on the interface implementation
      */
-    send_callback: (data: Uint8Array) => void;
+    send_callback: (data: ArrayBuffer) => void;
 }
 
 export interface SocketProperties {
@@ -245,12 +245,6 @@ export class JSComHub {
     close_interface(interface_uuid: string): Promise<void>;
     create_interface(interface_type: string, setup_data: any, priority?: number | null): Promise<string>;
     get_metadata(): any;
-    /**
-     * Send a block to the given interface and socket
-     * This does not involve the routing on the ComHub level.
-     * The socket UUID is used to identify the socket to send the block over
-     * The interface UUID is used to identify the interface to send the block over
-     */
     get_metadata_string(): string;
     get_trace_string(endpoint: string): Promise<string | undefined>;
     register_default_interface_factories(): void;

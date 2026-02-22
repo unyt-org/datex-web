@@ -30,11 +30,11 @@ use std::{collections::HashMap, rc::Rc, str::FromStr};
 use std::future::AsyncDrop;
 use std::ops::Deref;
 use std::pin::Pin;
-use datex_core::network::com_interfaces::com_interface::factory::{NewSocketsIterator, SocketProperties};
+use datex_core::network::com_interfaces::com_interface::factory::{NewSocketsIterator, SendCallback, SendFailure, SendSuccess, SocketConfiguration, SocketProperties};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, JsFuture};
 use web_sys::js_sys::{self};
-use js_sys::{Object, Promise, Reflect};
+use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 
 use crate::{
     js_utils::{
@@ -70,6 +70,15 @@ impl Drop for JSAsyncGenerator {
         info!("sync drop!!!!")
     }
 }
+
+#[derive(Debug)]
+pub struct TestDrop {pub name: String}
+impl Drop for TestDrop {
+    fn drop(&mut self) {
+        info!("TestDrop was dropped!: {}", self.name);
+    }
+}
+
 
 impl AsyncDrop for JSAsyncGenerator {
     async fn drop(self: Pin<&mut Self>) {
@@ -170,19 +179,16 @@ impl JSComHub {
                             )
                         })?;
 
-                    let new_sockets_generator = JSAsyncGenerator(new_sockets_generator);
-
-                    info!("configuration properties: {:#?}", properties);
-                    info!("has_single_socket: {:#?}", has_single_socket);
-                    info!("new_sockets_iterator: {:#?}", new_sockets_generator);
-
                     Ok(ComInterfaceConfiguration::new_maybe_single_socket(
                         properties,
                         has_single_socket,
                         async gen move {
+                            let test = TestDrop { name: "test1".to_string() };
+
                             // TODO:
                             loop {
-                                info!("next socket");
+                                info!("test: {:#?}", test);
+
                                 let next_socket = match new_sockets_generator.next(&JsValue::UNDEFINED) {
                                     Ok(promise) => match JsFuture::from(promise).await {
                                         Ok(result) => result,
@@ -203,7 +209,62 @@ impl JSComHub {
                                     return;
                                 }
 
-                                info!("Received new socket configuration: {:#?}", next_socket.value());
+                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&next_socket.value()) {
+                                    Ok(result) => result,
+                                    Err(e) => {
+                                        error!("Error parse_socket_configuration: {:?}", e);
+                                        return yield Err(());
+                                    }
+                                };
+                                let send_callback = Rc::new(send_callback);
+
+                                info!("Received new socket configuration: {:#?}", socket_properties);
+
+                                yield Ok(SocketConfiguration::new_in_out(
+                                    socket_properties,
+                                    async gen move {
+                                        loop {
+                                            let next_block = match socket_iterator.next(&JsValue::UNDEFINED) {
+                                                Ok(promise) => match JsFuture::from(promise).await {
+                                                    Ok(result) => result,
+                                                    Err(e) => {
+                                                        error!("Error awaiting next block promise: {:?}", e);
+                                                        return yield Err(());
+                                                    }
+                                                },
+                                                Err(e) => {
+                                                    error!("Error getting next block: {:?}", e);
+                                                    return yield Err(());
+                                                }
+                                            };
+
+                                            if next_block.done() {
+                                                info!("No more blocks to receive, generator is done");
+                                                return;
+                                            }
+                                            let block_bytes = match next_block.value().dyn_into::<js_sys::ArrayBuffer>() {
+                                                Ok(bytes) => bytes,
+                                                Err(e) => {
+                                                    error!("Error converting block to Uint8Array: {:?}", e);
+                                                    return yield Err(());
+                                                }
+                                            };
+                                            let block_bytes = js_sys::Uint8Array::new(&block_bytes).to_vec();
+                                            yield Ok(block_bytes);
+                                        }
+                                    },
+                                    SendCallback::new_async(move |dxb_block| {
+                                        let send_callback = send_callback.clone();
+                                        async move {
+                                            send_callback.call1(&JsValue::UNDEFINED, &JsValue::from(dxb_block.to_bytes()))
+                                                .map_err(|e| {
+                                                    error!("Error calling send callback: {:?}", e);
+                                                    SendFailure(Box::new(dxb_block))
+                                                })
+                                                .map(|_| ())
+                                        }
+                                    })
+                                ));
                             }
                         }
                     ))
@@ -214,7 +275,7 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-    ) -> Result<(ComInterfaceProperties, bool, js_sys::AsyncGenerator), serde_wasm_bindgen::Error> {
+    ) -> Result<(ComInterfaceProperties, bool, JSAsyncGenerator), serde_wasm_bindgen::Error> {
         let properties = Reflect::get(interface_configuration, &"properties".into())
             .and_then(|v| v.dyn_into::<Object>())?;
 
@@ -229,21 +290,34 @@ impl JSComHub {
         let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())
             .map(|v| v.unchecked_into::<js_sys::AsyncGenerator>())?;
 
-        Ok((properties, has_single_socket.unwrap_or_default(), new_sockets_iterator))
+        Ok((properties, has_single_socket.unwrap_or_default(), JSAsyncGenerator(new_sockets_iterator)))
     }
 
-    fn parse_socket_properties(
-        socket_properties: &JsValue,
-    ) -> Result<SocketProperties, serde_wasm_bindgen::Error> {
+    fn parse_socket_configuration(
+        socket_configuration: &JsValue,
+    ) -> Result<(SocketProperties, JSAsyncGenerator, Function), serde_wasm_bindgen::Error> {
+        let properties = Reflect::get(socket_configuration, &"properties".into())
+            .and_then(|v| v.dyn_into::<Object>())?;
+
+        // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
         Reflect::set(
-            socket_properties,
+            &properties,
             &"uuid".into(),
             &ComInterfaceSocketUUID::new().to_string().into(),
         )?;
 
-        let properties: SocketProperties = from_value(socket_properties.into())?;
+        let properties: SocketProperties = from_value(properties.into())?;
 
-        Ok(properties)
+        // get iterator from socket_configuration
+        // NOTE: dyn_into does not work here, maybe a bug in js_sys?
+        let iterator = Reflect::get(socket_configuration, &"iterator".into())
+            .map(|v| v.unchecked_into::<js_sys::AsyncGenerator>())?;
+
+        // get send_callback
+        let send_callback = Reflect::get(socket_configuration, &"send_callback".into())
+            .and_then(|v| v.dyn_into::<Function>())?;
+
+        Ok((properties, JSAsyncGenerator(iterator), send_callback))
     }
 }
 
@@ -310,63 +384,6 @@ impl JSComHub {
             Err(JsError::new("Failed to find interface"))
         }
     }
-
-    /// Send a block to the given interface and socket
-    /// This does not involve the routing on the ComHub level.
-    /// The socket UUID is used to identify the socket to send the block over
-    /// The interface UUID is used to identify the interface to send the block over
-    // pub async fn send_block(
-    //     &self,
-    //     block: Uint8Array,
-    //     interface_uuid: String,
-    //     socket_uuid: String,
-    // ) -> Result<(), JsError> {
-    //     let interface_uuid = ComInterfaceUUID::try_from(interface_uuid)
-    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
-    //     let socket_uuid = ComInterfaceSocketUUID::try_from(socket_uuid)
-    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
-    //     let block = DXBBlock::from_bytes(block.to_vec().as_slice())
-    //         .await
-    //         .map_err(|e| JsError::new(&format!("{e:?}")))?;
-    //     self.com_hub()
-    //         .interfaces_manager()
-    //         .get_interface_by_uuid(&interface_uuid)
-    //         .send_block(block, socket_uuid);
-    //     Ok(())
-    // }
-
-    // pub fn _drain_incoming_blocks(&self) -> Vec<js_sys::Uint8Array> {
-    //     let mut sections = self
-    //         .com_hub()
-    //         .block_handler
-    //         .incoming_sections_queue
-    //         .borrow_mut();
-    //     let sections = sections.drain(..).collect::<Vec<_>>();
-
-    //     let mut blocks = vec![];
-
-    //     for section in sections {
-    //         match section {
-    //             IncomingSection::SingleBlock(block) => {
-    //                 blocks.push(block.clone());
-    //             }
-    //             _ => {
-    //                 panic!("Expected single block, but got block stream");
-    //             }
-    //         }
-    //     }
-
-    //     blocks
-    //         .iter()
-    //         .map(|(block, ..)| {
-    //             let bytes = block.clone().unwrap().to_bytes().unwrap();
-    //             let entry =
-    //                 js_sys::Uint8Array::new_with_length(bytes.len() as u32);
-    //             entry.copy_from(&bytes);
-    //             entry
-    //         })
-    //         .collect::<Vec<_>>()
-    // }
 
     pub fn get_metadata_string(&self) -> String {
         cfg_if::cfg_if! {
