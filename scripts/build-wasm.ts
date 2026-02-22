@@ -45,6 +45,31 @@ async function runCargoBuildCommand(args: {
     profile: "release" | "debug";
     cargoFlags: string[];
 }) {
+    // first ensure rustup wasm32-unknown-unknown is installed
+    try {
+        const rustupAddWasm = new Deno.Command("rustup", {
+            args: ["target", "add", "wasm32-unknown-unknown"],
+        });
+        console.log(
+            `Ensuring wasm32-unknown-unknown target installed...`,
+        );
+        const rustupAddWasmOutput = await rustupAddWasm.output();
+        if (!rustupAddWasmOutput.success) {
+            console.error(`adding wasm32-unknown-unknown target failed`);
+            Deno.exit(1);
+        }
+    }
+    catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+            console.info(
+                `rustup not found. Ensure wasm32-unknown-unknown installed manually.`,
+            );
+        }
+        else {
+            throw error;
+        }
+    }
+
     const cargoBuildCmd = [
         "build",
         "--lib",
