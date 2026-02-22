@@ -24,13 +24,14 @@ use datex_core::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
     },
 };
-use js_sys::{Array, Uint8Array};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{collections::HashMap, rc::Rc, str::FromStr};
+use datex_core::network::com_interfaces::com_interface::factory::{NewSocketsIterator, SocketProperties};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::{JsFuture, future_to_promise};
-use web_sys::js_sys::{self, Promise};
+use wasm_bindgen_futures::{future_to_promise, JsFuture};
+use web_sys::js_sys::{self};
+use js_sys::{Object, Promise, Reflect};
 
 use crate::{
     js_utils::{
@@ -41,13 +42,13 @@ use crate::{
         BaseInterfacePublicHandle, create_base_interface_handles,
     },
 };
+use crate::js_utils::to_js_value;
 
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
-    registered_interface_factories: HashMap<String, js_sys::Function>,
 }
 
 /**
@@ -57,7 +58,6 @@ impl JSComHub {
     pub fn new(runtime: Runtime) -> JSComHub {
         let com_hub = JSComHub {
             runtime,
-            registered_interface_factories: HashMap::new(),
         };
         com_hub.register_default_interface_factories();
         com_hub
@@ -87,6 +87,122 @@ impl JSComHub {
         }
         Ok(interface)
     }
+
+    // NOTE: must be separate internal funciton since async gen block does not work in combination with
+    // wasm_bindgen macro
+    fn register_interface_factory_internal(
+        &self,
+        interface_type: String,
+        factory: js_sys::Function,
+    ) {
+        let runtime = self.runtime.clone();
+        self.com_hub().register_dyn_interface_factory(
+            interface_type,
+            Rc::new(move |setup_data| {
+                let factory = factory.clone();
+                let runtime = runtime.clone();
+
+                Box::pin(async move {
+                    let interface_configuration_promise = factory
+                        .call1(
+                            &JsValue::UNDEFINED,
+                            &value_container_to_dif_js_value(
+                                &setup_data,
+                                runtime.memory(),
+                            ),
+                        )
+                        .map_err(|e| {
+                            error!("Error calling interface factory: {:?}", e);
+                            ComInterfaceCreateError::connection_error_with_details(
+                                e.as_string().unwrap_or_default()
+                            )
+                        })?
+                        .unchecked_into::<Promise>();
+
+                    let interface_configuration = JsFuture::from(
+                        interface_configuration_promise,
+                    )
+                        .await
+                        .expect("Failed to get value from promise");
+
+                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration)
+                        .map_err(|e| {
+                            ComInterfaceCreateError::connection_error_with_details(
+                                e.to_string()
+                            )
+                        })?;
+
+                    info!("configuration properties: {:#?}", properties);
+                    info!("has_single_socket: {:#?}", has_single_socket);
+                    info!("new_sockets_iterator: {:#?}", new_sockets_generator);
+
+                    Ok(ComInterfaceConfiguration::new_maybe_single_socket(
+                        properties,
+                        has_single_socket,
+                        async gen move {
+                            loop {
+                                info!("next socket");
+                                let next_socket = match new_sockets_generator.next() {
+                                    Ok(promise) => match JsFuture::from(promise).await {
+                                        Ok(result) => result,
+                                        Err(e) => {
+                                            error!("Error awaiting next socket promise: {:?}", e);
+                                            return yield Err(());
+                                        }
+                                    },
+                                    Err(e) => {
+                                        error!("Error getting next socket: {:?}", e);
+                                        return yield Err(());
+                                    }
+                                };
+
+
+                                if next_socket.done() {
+                                    info!("No more sockets to accept, generator is done");
+                                    return;
+                                }
+
+                                info!("Received new socket configuration: {:#?}", next_socket.value());
+                            }
+                        }
+                    ))
+                })
+            }),
+        );
+    }
+
+    fn parse_com_interface_configuration(
+        interface_configuration: &JsValue,
+    ) -> Result<(ComInterfaceProperties, bool, js_sys::AsyncGenerator), serde_wasm_bindgen::Error> {
+        let properties = Reflect::get(interface_configuration, &"properties".into())
+            .and_then(|v| v.dyn_into::<Object>())?;
+
+        let properties: ComInterfaceProperties = from_value(properties.into())?;
+
+        // get bool has_single_socket from interface_configuration
+        let has_single_socket = Reflect::get(interface_configuration, &"has_single_socket".into())
+            .map(|v| v.as_bool())?;
+
+        // get new_sockets_iterator from interface_configuration
+        let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())?
+            .dyn_into::<js_sys::AsyncGenerator>()?;
+
+        Ok((properties, has_single_socket.unwrap_or_default(), new_sockets_iterator))
+    }
+
+    fn parse_socket_properties(
+        socket_properties: &JsValue,
+    ) -> Result<SocketProperties, serde_wasm_bindgen::Error> {
+        Reflect::set(
+            socket_properties,
+            &"uuid".into(),
+            &ComInterfaceSocketUUID::new().to_string().into(),
+        )?;
+
+        let properties: SocketProperties = from_value(socket_properties.into())?;
+
+        Ok(properties)
+    }
 }
 
 /**
@@ -112,53 +228,9 @@ impl JSComHub {
         interface_type: String,
         factory: js_sys::Function,
     ) {
-        self.registered_interface_factories
-            .insert(interface_type.clone(), factory.clone());
-        let runtime = self.runtime.clone();
-        self.com_hub().register_dyn_interface_factory(
-            interface_type,
-            Rc::new(move |setup_data| {
-                let factory = factory.clone();
-                let runtime = runtime.clone();
-
-                let (public_handle, private_handle) = create_base_interface_handles();
-
-                Box::pin(async move {
-                    let interface_properties_promise = factory
-                        .call2(
-                            &JsValue::UNDEFINED,
-                            &JsValue::from(public_handle),
-                            &value_container_to_dif_js_value(
-                                &setup_data,
-                                runtime.memory(),
-                            ),
-                        )
-                        .map_err(|e| {
-                            error!("Error calling interface factory: {:?}", e);
-                            ComInterfaceCreateError::connection_error_with_details(
-                                e.as_string().unwrap_or_default()
-                            )
-                        })?
-                        .unchecked_into::<Promise>();
-
-                    let interface_properties = JsFuture::from(
-                        interface_properties_promise,
-                    )
-                        .await
-                        .expect("Failed to get value from promise");
-
-                    let properties = cast_from_dif_js_value::<ComInterfaceProperties>(
-                        interface_properties,
-                        runtime.memory(),
-                    )
-                        .map_err(|_| ComInterfaceCreateError::SetupDataParseError)?;
-
-                    let interface_configuration = private_handle.create_interface(properties);
-                    Ok(interface_configuration)
-                })
-            }),
-        );
+       self.register_interface_factory_internal(interface_type, factory);
     }
+
 
     pub async fn create_interface(
         &self,

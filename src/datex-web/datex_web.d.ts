@@ -2,10 +2,7 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function create_runtime(
-    config: any,
-    debug_config: any,
-): Promise<JSRuntime>;
+export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
 /**
  * Executes a Datex script and returns the result as a string.
  */
@@ -15,6 +12,10 @@ export function execute(datex_script: string, decompile_options: any): string;
  * Does not return the result of the script, but only indicates success or failure.
  */
 export function execute_internal(datex_script: string): boolean;
+export interface TCPClientInterfaceSetupData {
+    address: string;
+}
+
 export interface DynamicEndpointProperties {
     known_since: number;
     distance: number;
@@ -23,34 +24,31 @@ export interface DynamicEndpointProperties {
     direction: InterfaceDirection;
 }
 
+export interface WebSocketClientInterfaceSetupData {
+    /**
+     * A websocket URL (ws:// or wss://).
+     */
+    url: string;
+}
+
 export type InterfacePriority = "None" | { Priority: number };
 
-export interface ComHubMetadataInterfaceSocket {
-    uuid: string;
-    direction: InterfaceDirection;
-    endpoint: Endpoint | undefined;
-    properties: DynamicEndpointProperties | undefined;
+export interface RuntimeConfigInterface {
+    type: string;
+    config: unknown;
+    priority?: InterfacePriority;
 }
 
-export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
-    uuid: string;
-    direction: InterfaceDirection;
-}
+export type ComInterfaceUUID = string;
 
-export interface ComHubMetadataInterface {
-    uuid: string;
-    properties: ComInterfaceProperties;
-    sockets: ComHubMetadataInterfaceSocket[];
-    is_waiting_for_socket_connections: boolean;
-}
+export type TLSMode = { type: "HandledExternally" } | {
+    type: "WithCertificate";
+    data: { private_key: number[]; certificate: number[] };
+};
 
-export interface ComHubMetadata {
-    endpoint: Endpoint;
-    interfaces: ComHubMetadataInterface[];
-    endpoint_sockets: Map<
-        Endpoint,
-        [ComInterfaceSocketUUID, DynamicEndpointProperties][]
-    >;
+export interface AcceptAddress {
+    address: string;
+    tls_mode: TLSMode | undefined;
 }
 
 export interface SerialClientInterfaceSetupData {
@@ -58,21 +56,41 @@ export interface SerialClientInterfaceSetupData {
     baud_rate: number;
 }
 
-export interface TCPClientInterfaceSetupData {
-    address: string;
+export interface SocketProperties {
+    direction: InterfaceDirection;
+    channel_factor: number;
+    direct_endpoint: Endpoint | undefined;
+    connection_timestamp: number;
+    uuid?: ComInterfaceSocketUUID;
 }
 
-export interface HTTPServerInterfaceSetupData {
+export interface SocketConfiguration {
+    properties: SocketProperties;
     /**
-     * The address to bind the HTTP server to (e.g., \"0.0.0.0:8080\").
+     * An asynchronous iterator that yields incoming data from the socket as Vec<u8>
+     * It is driven by the com hub to receive data from the socket
      */
-    bind_address: string;
+    iterator: AsyncGenerator<ArrayBuffer>;
     /**
-     * A list of addresses the server should accept connections from,
-     * along with their optional TLS mode.
-     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     * A callback that is called by the com hub to send data through the socket
+     * This can be either a synchronous or asynchronous callback depending on the interface implementation
      */
-    accept_addresses: AcceptAddress[] | undefined;
+    send_callback: (data: Uint8Array) => void;
+}
+
+export interface ComInterfaceConfiguration {
+    uuid?: ComInterfaceUUID;
+    /**
+     * The properties of the interface instance
+     */
+    properties: ComInterfaceProperties;
+    /**
+     * Indicates that this interface only establishes a single socket connection
+     * And stops the sockets iterator after yielding the first socket configuration.
+     * When set to true, the first socket connection is awaited on interface creation.
+     */
+    has_single_socket: boolean;
+    new_sockets_iterator: AsyncGenerator<SocketConfiguration>;
 }
 
 export interface WebSocketServerInterfaceSetupData {
@@ -95,42 +113,7 @@ export interface HTTPClientInterfaceSetupData {
     url: string;
 }
 
-export interface WebSocketClientInterfaceSetupData {
-    /**
-     * A websocket URL (ws:// or wss://).
-     */
-    url: string;
-}
-
 export type Endpoint = string;
-
-export interface DecompileOptions {
-    formatting_options?: FormattingOptions;
-    /**
-     * display slots with generated variable names
-     */
-    resolve_slots?: boolean;
-}
-
-export type IndentType = "Spaces" | "Tabs";
-
-export type FormattingMode = { type: "Compact" } | {
-    type: "Pretty";
-    indent: number;
-    indent_type?: IndentType;
-};
-
-export interface FormattingOptions {
-    mode?: FormattingMode;
-    json_compat?: boolean;
-    colorized?: boolean;
-    add_variant_suffix?: boolean;
-}
-
-export interface TCPServerInterfaceSetupData {
-    port: number;
-    host: string | undefined;
-}
 
 export type InterfaceDirection = "In" | "Out" | "InOut";
 
@@ -189,29 +172,68 @@ export interface ComInterfaceProperties {
 
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | {
     ReconnectWithTimeout: { timeout: { secs: number; nanos: number } };
-} | {
-    ReconnectWithTimeoutAndAttempts: {
-        timeout: { secs: number; nanos: number };
-        attempts: number;
-    };
-};
+} | { ReconnectWithTimeoutAndAttempts: { timeout: { secs: number; nanos: number }; attempts: number } };
 
-export interface RuntimeConfigInterface {
-    type: string;
-    config: unknown;
-    priority?: InterfacePriority;
+export interface DecompileOptions {
+    formatting_options?: FormattingOptions;
+    /**
+     * display slots with generated variable names
+     */
+    resolve_slots?: boolean;
 }
 
-export type ComInterfaceUUID = string;
+export type IndentType = "Spaces" | "Tabs";
 
-export type TLSMode = { type: "HandledExternally" } | {
-    type: "WithCertificate";
-    data: { private_key: number[]; certificate: number[] };
-};
+export type FormattingMode = { type: "Compact" } | { type: "Pretty"; indent: number; indent_type?: IndentType };
 
-export interface AcceptAddress {
-    address: string;
-    tls_mode: TLSMode | undefined;
+export interface FormattingOptions {
+    mode?: FormattingMode;
+    json_compat?: boolean;
+    colorized?: boolean;
+    add_variant_suffix?: boolean;
+}
+
+export interface TCPServerInterfaceSetupData {
+    port: number;
+    host: string | undefined;
+}
+
+export interface ComHubMetadataInterfaceSocket {
+    uuid: string;
+    direction: InterfaceDirection;
+    endpoint: Endpoint | undefined;
+    properties: DynamicEndpointProperties | undefined;
+}
+
+export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
+    uuid: string;
+    direction: InterfaceDirection;
+}
+
+export interface ComHubMetadataInterface {
+    uuid: string;
+    properties: ComInterfaceProperties;
+    sockets: ComHubMetadataInterfaceSocket[];
+    is_waiting_for_socket_connections: boolean;
+}
+
+export interface ComHubMetadata {
+    endpoint: Endpoint;
+    interfaces: ComHubMetadataInterface[];
+    endpoint_sockets: Map<Endpoint, [ComInterfaceSocketUUID, DynamicEndpointProperties][]>;
+}
+
+export interface HTTPServerInterfaceSetupData {
+    /**
+     * The address to bind the HTTP server to (e.g., \"0.0.0.0:8080\").
+     */
+    bind_address: string;
+    /**
+     * A list of addresses the server should accept connections from,
+     * along with their optional TLS mode.
+     * E.g., [(\"example.com\", Some(TLSMode::WithCertificate { ... })), (\"example.org:1234\", None)]
+     */
+    accept_addresses: AcceptAddress[] | undefined;
 }
 
 export type ComInterfaceSocketUUID = string;
@@ -224,11 +246,7 @@ export class BaseInterfacePublicHandle {
     removeSocket(socket_uuid: string): void;
     onClosed(cb: Function): void;
     onReceive(cb: Function): void;
-    registerSocket(
-        direction: string,
-        channel_factor: number,
-        direct_endpoint?: string | null,
-    ): string;
+    registerSocket(direction: string, channel_factor: number, direct_endpoint?: string | null): string;
     destroy(): void;
 }
 export class JSComHub {
@@ -236,11 +254,7 @@ export class JSComHub {
     free(): void;
     [Symbol.dispose](): void;
     close_interface(interface_uuid: string): Promise<void>;
-    create_interface(
-        interface_type: string,
-        setup_data: any,
-        priority?: number | null,
-    ): Promise<string>;
+    create_interface(interface_type: string, setup_data: any, priority?: number | null): Promise<string>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
     get_metadata(): any;
     /**
@@ -272,10 +286,7 @@ export class JSRuntime {
     ): Promise<string>;
     execute(script: string, dif_values?: any[] | null): Promise<any>;
     execute_sync(script: string, dif_values?: any[] | null): any;
-    _create_block(
-        body: Uint8Array | null | undefined,
-        receivers: string[],
-    ): Uint8Array;
+    _create_block(body: Uint8Array | null | undefined, receivers: string[]): Uint8Array;
     value_to_string(dif_value: any, decompile_options: any): string;
     execute_sync_with_string_result(
         script: string,
@@ -299,12 +310,7 @@ export class RuntimeDIFHandle {
     free(): void;
     [Symbol.dispose](): void;
     create_pointer(value: any, allowed_type: any, mutability: number): string;
-    observe_pointer(
-        transceiver_id: number,
-        address: string,
-        observe_options: any,
-        callback: Function,
-    ): number;
+    observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
     unobserve_pointer(address: string, observer_id: number): void;
     /**
      * Resolve a pointer address, returning a Promise
@@ -312,11 +318,7 @@ export class RuntimeDIFHandle {
      * If the pointer is not in memory, it will be loaded first
      */
     resolve_pointer_address(address: string): any;
-    update_observer_options(
-        address: string,
-        observer_id: number,
-        observe_options: any,
-    ): void;
+    update_observer_options(address: string, observer_id: number, observe_options: any): void;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */

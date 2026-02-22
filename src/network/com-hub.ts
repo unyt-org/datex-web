@@ -1,6 +1,6 @@
 import type {
     BaseInterfacePublicHandle,
-    ComHubMetadata,
+    ComHubMetadata, ComInterfaceConfiguration, InterfaceDirection,
     JSComHub,
 } from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
@@ -13,12 +13,12 @@ export type ComInterfaceFactory<SetupData = unknown> = {
 };
 
 export type ComInterfaceFactoryFn<SetupData = unknown> = (
-    handle: BaseInterfacePublicHandle,
     setup_data: SetupData,
-) => ComInterfaceProperties | Promise<ComInterfaceProperties>;
+) => ComInterfaceConfiguration | Promise<ComInterfaceConfiguration>;
 
 export type ComInterfaceUUID = `com_interface::${string}`;
 export type ComInterfaceSocketUUID = `socket::${string}`;
+
 
 /**
  * Communication hub for managing communication interfaces.
@@ -38,20 +38,9 @@ export class ComHub {
     ) {
         this.#jsComHub.register_interface_factory(
             factoryDefinition.interfaceType,
-            async (
-                handle: BaseInterfacePublicHandle,
-                setup_data: DIFValueContainer,
-            ) => {
-                return this.#runtime.dif.convertJSValueToDIFValueContainer(
-                    factoryDefinition.factory(
-                        handle,
-                        await this.#runtime.dif.resolveDIFValueContainer<
-                            SetupData
-                        >(
-                            setup_data,
-                        ),
-                    ),
-                );
+            async (setupData: DIFValueContainer) => {
+                const setupDataJS = await this.#runtime.dif.resolveDIFValueContainer<SetupData>(setupData);
+                return factoryDefinition.factory(setupDataJS);
             },
         );
     }

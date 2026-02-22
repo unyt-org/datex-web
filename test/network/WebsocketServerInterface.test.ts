@@ -7,7 +7,7 @@ import { websocketServerDenoComInterfaceFactory } from "datex/network/interface-
 import { sleep } from "../utils.ts";
 
 Deno.test("add and close interface", async () => {
-    const runtime = await Runtime.create({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: "@unyt" }, {log_level: 'debug'});
     runtime.comHub.registerInterfaceFactory(
         websocketServerDenoComInterfaceFactory,
     );
