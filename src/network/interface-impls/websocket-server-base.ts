@@ -1,12 +1,12 @@
 import type { ComInterfaceFactory } from "../com-hub.ts";
-import type { WebSocketServerInterfaceSetupData } from "../../datex.ts";
+import type {SocketConfiguration, WebSocketServerInterfaceSetupData} from "../../datex.ts";
 
 /**
  * Utility function to create a WebSocket server communication interface factory from a given server factory function.
  * @param serverFactory
  */
 export function createWebsocketServerComInterfaceFactory(
-    serverFactory: (setupData: WebSocketServerInterfaceSetupData) => AsyncGenerator<WebSocket>,
+    serverFactory: (setupData: WebSocketServerInterfaceSetupData) => ReadableStream<WebSocket>,
 ): ComInterfaceFactory<WebSocketServerInterfaceSetupData> {
     return {
         interfaceType: "websocket-server",
@@ -17,9 +17,7 @@ export function createWebsocketServerComInterfaceFactory(
                     Array.from(setupData.entries()),
                 ) as unknown as WebSocketServerInterfaceSetupData;
             }
-            const server = serverFactory(setupData);
 
-            // TODO: set properties
             return {
                 properties: {
                     interface_type: "websocket-server",
@@ -36,34 +34,25 @@ export function createWebsocketServerComInterfaceFactory(
                     connectable_interfaces: [], // TODO add websocket client connections
                 },
                 has_single_socket: false,
-                new_sockets_iterator: async function* () {
-                    await using _ = {
-                        async [Symbol.asyncDispose]() {
-                            await console.log("TEST DISPOSED");
-                        },
-                    };
-
-                    for await (const socket of server) {
-                        const iterator = await createSocketDataIterator(socket);
-
-                        yield {
-                            properties: {
-                                direction: "InOut",
-                                channel_factor: 1,
-                                connection_timestamp: Date.now(),
-                                direct_endpoint: undefined,
-                            },
-                            iterator: async function* () {
-                                for await (const data of iterator) {
-                                    yield data;
-                                }
-                            }(),
-                            send_callback: (data: ArrayBuffer) => {
-                                socket.send(data);
-                            },
-                        };
-                    }
-                }(),
+                new_sockets_iterator: serverFactory(setupData).pipeThrough(
+                    new TransformStream<WebSocket, SocketConfiguration>({
+                        async transform(socket, controller) {
+                            const incoming_data_stream = await createSocketDataIterator(socket);
+                            controller.enqueue({
+                                properties: {
+                                    direction: "InOut",
+                                    channel_factor: 1,
+                                    connection_timestamp: Date.now(),
+                                    direct_endpoint: undefined,
+                                },
+                                iterator: incoming_data_stream,
+                                send_callback: (data: ArrayBuffer) => {
+                                    socket.send(data);
+                                },
+                            });
+                        }
+                    })
+                ),
             };
         },
     };
@@ -72,7 +61,7 @@ export function createWebsocketServerComInterfaceFactory(
 /**
  * Utility function that returns an async generator yielding ArrayBuffers from a WebSocket
  */
-async function createSocketDataIterator(webSocket: WebSocket): Promise<AsyncGenerator<ArrayBuffer>> {
+async function createSocketDataIterator(webSocket: WebSocket): Promise<ReadableStream<ArrayBuffer>> {
     const {promise, resolve, reject} = Promise.withResolvers<void>();
     webSocket.addEventListener("open", () => resolve(), { once: true });
     webSocket.addEventListener("error", (event) => reject(new Error(`WebSocket error: ${event}`)), { once: true });
@@ -87,9 +76,10 @@ async function createSocketDataIterator(webSocket: WebSocket): Promise<AsyncGene
     }
     await promise;
 
-    const messageStream = new ReadableStream<ArrayBuffer>({
-        start(controller) {
+    let closed = false;
 
+    return new ReadableStream<ArrayBuffer>({
+        start(controller) {
             webSocket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
                 // ignore if not ArrayBuffer
                 if (!(event.data instanceof ArrayBuffer)) {
@@ -102,17 +92,12 @@ async function createSocketDataIterator(webSocket: WebSocket): Promise<AsyncGene
                 controller.error(new Error("WebSocket error"));
             };
             webSocket.onclose = () => {
-                controller.close();
+                if (!closed) controller.close();
             };
         },
         cancel() {
             webSocket.close();
+            closed = true;
         },
     });
-
-    return (async function* () {
-        for await (const chunk of messageStream) {
-            yield chunk;
-        }
-    })();
 }

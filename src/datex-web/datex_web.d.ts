@@ -35,7 +35,7 @@ export interface ComHubMetadataInterfaceSocketWithoutEndpoint {
 }
 
 export interface ComInterfaceConfiguration {
-    uuid?: ComInterfaceUUID;
+    uuid?: never;
     /**
      * The properties of the interface instance
      */
@@ -46,7 +46,11 @@ export interface ComInterfaceConfiguration {
      * When set to true, the first socket connection is awaited on interface creation.
      */
     has_single_socket: boolean;
-    new_sockets_iterator: AsyncGenerator<SocketConfiguration>;
+    new_sockets_iterator: ReadableStream<SocketConfiguration>;
+    /**
+     * An optional asynchronous callback that is called by the com hub when the interface is closed
+     */
+    close_async_callback?: never;
 }
 
 export interface ComInterfaceProperties {
@@ -162,12 +166,16 @@ export interface SocketConfiguration {
      * An asynchronous iterator that yields incoming data from the socket as Vec<u8>
      * It is driven by the com hub to receive data from the socket
      */
-    iterator: AsyncGenerator<ArrayBuffer>;
+    iterator: ReadableStream<ArrayBuffer>;
     /**
      * A callback that is called by the com hub to send data through the socket
      * This can be either a synchronous or asynchronous callback depending on the interface implementation
      */
     send_callback: (data: ArrayBuffer) => void;
+    /**
+     * An optional asynchronous callback that is called by the com hub when the socket is closed
+     */
+    close_async_callback?: never;
 }
 
 export interface SocketProperties {

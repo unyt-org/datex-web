@@ -49,13 +49,11 @@ Deno.test("connect two runtimes", async () => {
         "websocket-server",
         { bind_address: `0.0.0.0:${PORT}` },
     );
-    console.log("server done")
 
     const clientInterfaceUUID = await runtimeB.comHub.createInterface(
         "websocket-client",
         { url: `ws://localhost:${PORT}` },
     );
-    console.log("client connected")
 
     await sleep(100);
 

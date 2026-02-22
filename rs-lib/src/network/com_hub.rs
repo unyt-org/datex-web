@@ -26,11 +26,9 @@ use datex_core::{
 };
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
-use std::{collections::HashMap, rc::Rc, str::FromStr};
-use std::future::AsyncDrop;
+use std::{rc::Rc, str::FromStr};
 use std::ops::Deref;
-use std::pin::Pin;
-use datex_core::network::com_interfaces::com_interface::factory::{NewSocketsIterator, SendCallback, SendFailure, SendSuccess, SocketConfiguration, SocketProperties};
+use datex_core::network::com_interfaces::com_interface::factory::{SendCallback, SendFailure, SendSuccess, SocketConfiguration, SocketProperties};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, JsFuture};
 use web_sys::js_sys::{self};
@@ -38,7 +36,7 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 
 use crate::{
     js_utils::{
-        cast_from_dif_js_value, dif_js_value_to_value_container,
+        dif_js_value_to_value_container,
         value_container_to_dif_js_value,
     },
     network::com_interfaces::base_interface::{
@@ -55,46 +53,23 @@ pub struct JSComHub {
 }
 
 // wrapper around AsyncGenerator that implements Drop
-#[derive(Debug)]
-pub struct JSAsyncGenerator(pub js_sys::AsyncGenerator);
-impl Deref for JSAsyncGenerator {
-    type Target = js_sys::AsyncGenerator;
+#[derive(Debug, Clone)]
+pub struct JsReadableStream(pub web_sys::ReadableStream);
+impl Deref for JsReadableStream {
+    type Target = web_sys::ReadableStream;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl Drop for JSAsyncGenerator {
-    fn drop(&mut self) {
-        info!("sync drop!!!!")
-    }
-}
-
-#[derive(Debug)]
-pub struct TestDrop {pub name: String}
-impl Drop for TestDrop {
-    fn drop(&mut self) {
-        info!("TestDrop was dropped!: {}", self.name);
-    }
-}
-
-
-impl AsyncDrop for JSAsyncGenerator {
-    async fn drop(self: Pin<&mut Self>) {
-        info!("ASYNC DROP!!!");
-        match self.0.return_(&JsValue::UNDEFINED) {
-            Ok(promise) => {
-                if let Err(e) = JsFuture::from(promise).await {
-                    error!("Error awaiting async generator return promise: {:?}", e);
-                }
-            }
-            Err(e) => {
-                error!("Error calling async generator return: {:?}", e);
-            }
-        }
-    }
-}
+// TODO: implement AsyncDrop for JsReadableStream
+// currently, theres a bug that does not call drop using the unstable async_drop feature
+// impl Drop for JsReadableStream {
+//     fn drop(&mut self) {
+//         info!("sync drop!!!!")
+//     }
+// }
 
 /**
  * Internal impl of the JSRuntime, not exposed to JavaScript
@@ -179,37 +154,28 @@ impl JSComHub {
                             )
                         })?;
 
-                    Ok(ComInterfaceConfiguration::new_maybe_single_socket(
+                    let new_sockets_reader = new_sockets_generator.get_reader()
+                        .unchecked_into::<web_sys::ReadableStreamDefaultReader>();
+                    let new_sockets_reader_clone = new_sockets_reader.clone();
+
+                    Ok(ComInterfaceConfiguration::new(
                         properties,
                         has_single_socket,
                         async gen move {
-                            let test = TestDrop { name: "test1".to_string() };
-
-                            // TODO:
                             loop {
-                                info!("test: {:#?}", test);
-
-                                let next_socket = match new_sockets_generator.next(&JsValue::UNDEFINED) {
-                                    Ok(promise) => match JsFuture::from(promise).await {
-                                        Ok(result) => result,
-                                        Err(e) => {
-                                            error!("Error awaiting next socket promise: {:?}", e);
-                                            return yield Err(());
-                                        }
-                                    },
+                                let read_result = match JsFuture::from(new_sockets_reader.read()).await {
+                                    Ok(result) => result,
                                     Err(e) => {
-                                        error!("Error getting next socket: {:?}", e);
+                                        error!("Error awaiting next socket promise: {:?}", e);
                                         return yield Err(());
                                     }
-                                };
+                                }.unchecked_into::<web_sys::ReadableStreamReadResult>();
 
-
-                                if next_socket.done() {
-                                    info!("No more sockets to accept, generator is done");
+                                if let Some(done) = read_result.get_done() && done {
                                     return;
                                 }
 
-                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&next_socket.value()) {
+                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&read_result.get_value()) {
                                     Ok(result) => result,
                                     Err(e) => {
                                         error!("Error parse_socket_configuration: {:?}", e);
@@ -217,32 +183,26 @@ impl JSComHub {
                                     }
                                 };
                                 let send_callback = Rc::new(send_callback);
+                                let socket_data_reader = socket_iterator.get_reader()
+                                    .unchecked_into::<web_sys::ReadableStreamDefaultReader>();
+                                let socket_data_reader_clone = socket_data_reader.clone();
 
-                                info!("Received new socket configuration: {:#?}", socket_properties);
-
-                                yield Ok(SocketConfiguration::new_in_out(
+                                yield Ok(SocketConfiguration::new(
                                     socket_properties,
-                                    async gen move {
+                                    Some(async gen move {
                                         loop {
-                                            let next_block = match socket_iterator.next(&JsValue::UNDEFINED) {
-                                                Ok(promise) => match JsFuture::from(promise).await {
-                                                    Ok(result) => result,
-                                                    Err(e) => {
-                                                        error!("Error awaiting next block promise: {:?}", e);
-                                                        return yield Err(());
-                                                    }
-                                                },
+                                            let read_result = match JsFuture::from(socket_data_reader.read()).await {
+                                                Ok(result) => result,
                                                 Err(e) => {
-                                                    error!("Error getting next block: {:?}", e);
+                                                    error!("Error awaiting next block promise: {:?}", e);
                                                     return yield Err(());
                                                 }
-                                            };
+                                            }.unchecked_into::<web_sys::ReadableStreamReadResult>();
 
-                                            if next_block.done() {
-                                                info!("No more blocks to receive, generator is done");
+                                            if let Some(done) = read_result.get_done() && done {
                                                 return;
                                             }
-                                            let block_bytes = match next_block.value().dyn_into::<js_sys::ArrayBuffer>() {
+                                            let block_bytes = match read_result.get_value().dyn_into::<js_sys::ArrayBuffer>() {
                                                 Ok(bytes) => bytes,
                                                 Err(e) => {
                                                     error!("Error converting block to Uint8Array: {:?}", e);
@@ -252,8 +212,8 @@ impl JSComHub {
                                             let block_bytes = js_sys::Uint8Array::new(&block_bytes).to_vec();
                                             yield Ok(block_bytes);
                                         }
-                                    },
-                                    SendCallback::new_async(move |dxb_block| {
+                                    }),
+                                    Some(SendCallback::new_async(move |dxb_block| {
                                         let send_callback = send_callback.clone();
                                         async move {
                                             send_callback.call1(&JsValue::UNDEFINED, &JsValue::from(dxb_block.to_bytes()))
@@ -263,10 +223,16 @@ impl JSComHub {
                                                 })
                                                 .map(|_| ())
                                         }
+                                    })),
+                                    Some(async move || {
+                                        let _ = JsFuture::from(socket_data_reader_clone.cancel()).await;
                                     })
                                 ));
                             }
-                        }
+                        },
+                        Some(async move || {
+                            let _ = JsFuture::from(new_sockets_reader_clone.cancel()).await;
+                        })
                     ))
                 })
             }),
@@ -275,7 +241,7 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-    ) -> Result<(ComInterfaceProperties, bool, JSAsyncGenerator), serde_wasm_bindgen::Error> {
+    ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), serde_wasm_bindgen::Error> {
         let properties = Reflect::get(interface_configuration, &"properties".into())
             .and_then(|v| v.dyn_into::<Object>())?;
 
@@ -288,14 +254,14 @@ impl JSComHub {
         // get new_sockets_iterator from interface_configuration
         // NOTE: dyn_into does not work here, maybe a bug in js_sys?
         let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())
-            .map(|v| v.unchecked_into::<js_sys::AsyncGenerator>())?;
+            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
-        Ok((properties, has_single_socket.unwrap_or_default(), JSAsyncGenerator(new_sockets_iterator)))
+        Ok((properties, has_single_socket.unwrap_or_default(), JsReadableStream(new_sockets_iterator)))
     }
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-    ) -> Result<(SocketProperties, JSAsyncGenerator, Function), serde_wasm_bindgen::Error> {
+    ) -> Result<(SocketProperties, JsReadableStream, Function), serde_wasm_bindgen::Error> {
         let properties = Reflect::get(socket_configuration, &"properties".into())
             .and_then(|v| v.dyn_into::<Object>())?;
 
@@ -311,13 +277,13 @@ impl JSComHub {
         // get iterator from socket_configuration
         // NOTE: dyn_into does not work here, maybe a bug in js_sys?
         let iterator = Reflect::get(socket_configuration, &"iterator".into())
-            .map(|v| v.unchecked_into::<js_sys::AsyncGenerator>())?;
+            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
         // get send_callback
         let send_callback = Reflect::get(socket_configuration, &"send_callback".into())
             .and_then(|v| v.dyn_into::<Function>())?;
 
-        Ok((properties, JSAsyncGenerator(iterator), send_callback))
+        Ok((properties, JsReadableStream(iterator), send_callback))
     }
 }
 

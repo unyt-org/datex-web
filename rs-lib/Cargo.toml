@@ -82,6 +82,7 @@ features = [
     "WritableStream",
     "SerialOptions",
     "ReadableStreamDefaultReader",
+    "ReadableStreamReadResult",
     "WritableStreamDefaultWriter",
     "EventTarget",
     "MessageEvent",

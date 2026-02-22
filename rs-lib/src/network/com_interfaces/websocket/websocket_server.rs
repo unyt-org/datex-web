@@ -91,7 +91,7 @@ impl WebSocketServerInterfaceSetupDataJS {
             .map_err(ComInterfaceCreateError::invalid_setup_data)?;
         let (accept_tx, mut accept_rx) =
             create_unbounded_channel::<WebSocket>();
-        Ok(ComInterfaceConfiguration::new(
+        Ok(ComInterfaceConfiguration::new_multi_socket(
             ComInterfaceProperties {
                 name: Some(addr.to_string()),
                 connectable_interfaces:

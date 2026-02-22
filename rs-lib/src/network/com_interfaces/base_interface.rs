@@ -108,7 +108,7 @@ impl BaseInterfacePrivateHandle {
         mut self,
         properties: ComInterfaceProperties,
     ) -> ComInterfaceConfiguration {
-        ComInterfaceConfiguration::new(
+        ComInterfaceConfiguration::new_multi_socket(
             properties,
             async gen move {
                 while let Some(data) = self.socket_create_receiver.next().await {

@@ -2,7 +2,6 @@
 #![feature(iter_from_coroutine)]
 #![feature(gen_blocks)]
 #![feature(async_iterator)]
-#![feature(async_drop)]
 
 // FIXME no-std
 
