@@ -39,11 +39,7 @@ use crate::{
         dif_js_value_to_value_container,
         value_container_to_dif_js_value,
     },
-    network::com_interfaces::base_interface::{
-        BaseInterfacePublicHandle, create_base_interface_handles,
-    },
 };
-use crate::js_utils::to_js_value;
 
 #[wasm_bindgen]
 #[derive(Clone)]

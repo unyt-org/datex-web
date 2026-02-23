@@ -234,18 +234,6 @@ export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | { Reconnec
 export type TLSMode = { type: "HandledExternally" } | { type: "WithCertificate"; data: { private_key: number[]; certificate: number[] } };
 
 
-export class BaseInterfacePublicHandle {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-    destroy(): void;
-    onClosed(cb: Function): void;
-    onReceive(cb: Function): void;
-    registerSocket(direction: string, channel_factor: number, direct_endpoint?: string | null): string;
-    removeSocket(socket_uuid: string): void;
-    sendBlock(socket_uuid: string, data: Uint8Array): void;
-}
-
 export class JSComHub {
     private constructor();
     free(): void;
