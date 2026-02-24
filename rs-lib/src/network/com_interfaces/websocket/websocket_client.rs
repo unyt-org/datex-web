@@ -1,26 +1,46 @@
+use datex_core::{
+    derive_setup_data,
+    network::com_interfaces::com_interface::factory::ComInterfaceAsyncFactory,
+};
 use futures_channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
-use std::{cell::RefCell, rc::Rc, sync::Mutex, time::Duration};
-use std::sync::Arc;
-use datex_core::{derive_setup_data, network::{
-    com_interfaces::com_interface::{
-        factory::ComInterfaceAsyncFactory,
-    },
-}};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
-use datex_core::channel::mpsc::{create_unbounded_channel, UnboundedReceiver};
-use datex_core::global::dxb_block::DXBBlock;
-use datex_core::network::com_hub::errors::ComInterfaceCreateError;
-use datex_core::network::com_interfaces::com_interface::factory::{ComInterfaceAsyncFactoryResult, ComInterfaceConfiguration, SendCallback, SendFailure, SocketConfiguration, SocketProperties};
-use datex_core::network::com_interfaces::com_interface::properties::{ComInterfaceProperties, InterfaceDirection};
-use datex_core::network::com_interfaces::default_setup_data::http_common::parse_url;
-use datex_core::network::com_interfaces::default_setup_data::websocket::websocket_client::WebSocketClientInterfaceSetupData;
+use datex_core::{
+    channel::mpsc::{UnboundedReceiver, create_unbounded_channel},
+    global::dxb_block::DXBBlock,
+    network::{
+        com_hub::errors::ComInterfaceCreateError,
+        com_interfaces::{
+            com_interface::{
+                factory::{
+                    ComInterfaceAsyncFactoryResult, ComInterfaceConfiguration,
+                    SendCallback, SendFailure, SocketConfiguration,
+                    SocketProperties,
+                },
+                properties::{ComInterfaceProperties, InterfaceDirection},
+            },
+            default_setup_data::{
+                http_common::parse_url,
+                websocket::websocket_client::WebSocketClientInterfaceSetupData,
+            },
+        },
+    },
+};
 use log::info;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
 
-derive_setup_data!(WebSocketClientInterfaceSetupDataJS, WebSocketClientInterfaceSetupData);
+derive_setup_data!(
+    WebSocketClientInterfaceSetupDataJS,
+    WebSocketClientInterfaceSetupData
+);
 
 impl WebSocketClientInterfaceSetupDataJS {
     const OPEN_TIMEOUT_MS: Duration = Duration::from_secs(15);
@@ -42,41 +62,39 @@ impl WebSocketClientInterfaceSetupDataJS {
             ));
         }
 
-        let ws = Self::create_websocket_client_connection(
-            address.clone(),
-        ).await?;
+        let ws =
+            Self::create_websocket_client_connection(address.clone()).await?;
         let ws_rc = Rc::new(Mutex::new(ws.clone()));
 
         // TODO: cleanup reader task
-        let mut reader = Self::create_incoming_data_reader(ws.clone(), None).await;
-        Ok(
-            ComInterfaceConfiguration::new_single_socket(
-                ComInterfaceProperties {
-                    name: Some(self.url.clone()),
-                    ..Self::get_default_properties()
+        let mut reader =
+            Self::create_incoming_data_reader(ws.clone(), None).await;
+        Ok(ComInterfaceConfiguration::new_single_socket(
+            ComInterfaceProperties {
+                name: Some(self.url.clone()),
+                ..Self::get_default_properties()
+            },
+            SocketConfiguration::new_in_out(
+                SocketProperties::new(InterfaceDirection::InOut, 1),
+                async gen move {
+                    loop {
+                        while let Some(data) = reader.next().await {
+                            yield Ok(data);
+                        }
+                    }
                 },
-                SocketConfiguration::new_in_out(
-                    SocketProperties::new(InterfaceDirection::InOut, 1),
-                    async gen move {
-                        loop {
-                            while let Some(data) = reader.next().await {
-                                yield Ok(data);
-                            }
-                        }
-                    },
-                    SendCallback::new_async(move |block: DXBBlock| {
-                        let ws = ws_rc.clone();
-                        async move {
-                            ws
-                                .lock()
-                                .unwrap()
-                                .send_with_u8_array(&block.to_bytes()).map_err(|_| SendFailure(Box::new(block)))?;
-                            Ok(())
-                        }
-                    })
-                )
-            )
-        )
+                SendCallback::new_async(move |block: DXBBlock| {
+                    let ws = ws_rc.clone();
+                    async move {
+                        ws.lock()
+                            .unwrap()
+                            .send_with_u8_array(&block.to_bytes())
+                            .map_err(|_| SendFailure(Box::new(block)))?;
+                        Ok(())
+                    }
+                }),
+            ),
+        ))
     }
 
     // TODO: reimplement using abstraction of ReconnectingWebSocket
@@ -206,7 +224,7 @@ impl WebSocketClientInterfaceSetupDataJS {
                     let _ = tx.send(
                         ComInterfaceCreateError::connection_error_with_details(
                             e.to_string(),
-                        )
+                        ),
                     );
                 }
             });
@@ -222,7 +240,7 @@ impl WebSocketClientInterfaceSetupDataJS {
                     let _ = tx.send(
                         ComInterfaceCreateError::connection_error_with_details(
                             "Closed before open",
-                        )
+                        ),
                     );
                 }
             });

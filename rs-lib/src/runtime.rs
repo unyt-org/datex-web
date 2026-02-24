@@ -40,10 +40,10 @@ use datex_core::{
     },
 };
 use js_sys::Function;
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, sync::Arc};
-use log::info;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -101,14 +101,17 @@ impl JSRuntime {
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
         let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
-        
-        let (initialized_sender, initialized_receiver) = futures::channel::oneshot::channel();
-        
+
+        let (initialized_sender, initialized_receiver) =
+            futures::channel::oneshot::channel();
+
         spawn_local(async {
-            runtime_runner.run_forever(async |_| {
-                // Runtime is initialized and ready to use, we can now resolve the promise and return the JSRuntime instance to JavaScript
-                let _ = initialized_sender.send(());
-            }).await;
+            runtime_runner
+                .run_forever(async |_| {
+                    // Runtime is initialized and ready to use, we can now resolve the promise and return the JSRuntime instance to JavaScript
+                    let _ = initialized_sender.send(());
+                })
+                .await;
         });
         initialized_receiver.await.unwrap();
         js_runtime
