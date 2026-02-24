@@ -1,2 +1,2 @@
-#[cfg(feature = "wasm_serial")]
+#[cfg(feature = "serial-client")]
 pub mod serial_client;

@@ -11,8 +11,13 @@ use datex_core::{
             },
         },
         com_interfaces::com_interface::{
-            ComInterfaceUUID, factory::ComInterfaceConfiguration,
-            properties::ComInterfaceProperties, socket::ComInterfaceSocketUUID,
+            ComInterfaceUUID,
+            factory::{
+                ComInterfaceConfiguration, SendCallback, SendFailure,
+                SendSuccess, SocketConfiguration, SocketProperties,
+            },
+            properties::ComInterfaceProperties,
+            socket::ComInterfaceSocketUUID,
         },
     },
     runtime::Runtime,
@@ -24,21 +29,16 @@ use datex_core::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
     },
 };
+use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
-use std::{rc::Rc, str::FromStr};
-use std::ops::Deref;
-use datex_core::network::com_interfaces::com_interface::factory::{SendCallback, SendFailure, SendSuccess, SocketConfiguration, SocketProperties};
+use std::{ops::Deref, rc::Rc, str::FromStr};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::{future_to_promise, JsFuture};
+use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
-use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 
-use crate::{
-    js_utils::{
-        dif_js_value_to_value_container,
-        value_container_to_dif_js_value,
-    },
+use crate::js_utils::{
+    dif_js_value_to_value_container, value_container_to_dif_js_value,
 };
 
 #[wasm_bindgen]
@@ -72,9 +72,7 @@ impl Deref for JsReadableStream {
  */
 impl JSComHub {
     pub fn new(runtime: Runtime) -> JSComHub {
-        let com_hub = JSComHub {
-            runtime,
-        };
+        let com_hub = JSComHub { runtime };
         com_hub.register_default_interface_factories();
         com_hub
     }
@@ -237,29 +235,45 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-    ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), serde_wasm_bindgen::Error> {
-        let properties = Reflect::get(interface_configuration, &"properties".into())
-            .and_then(|v| v.dyn_into::<Object>())?;
+    ) -> Result<
+        (ComInterfaceProperties, bool, JsReadableStream),
+        serde_wasm_bindgen::Error,
+    > {
+        let properties =
+            Reflect::get(interface_configuration, &"properties".into())
+                .and_then(|v| v.dyn_into::<Object>())?;
 
         let properties: ComInterfaceProperties = from_value(properties.into())?;
 
         // get bool has_single_socket from interface_configuration
-        let has_single_socket = Reflect::get(interface_configuration, &"has_single_socket".into())
-            .map(|v| v.as_bool())?;
+        let has_single_socket =
+            Reflect::get(interface_configuration, &"has_single_socket".into())
+                .map(|v| v.as_bool())?;
 
         // get new_sockets_iterator from interface_configuration
         // NOTE: dyn_into does not work here, maybe a bug in js_sys?
-        let new_sockets_iterator = Reflect::get(interface_configuration, &"new_sockets_iterator".into())
-            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
+        let new_sockets_iterator = Reflect::get(
+            interface_configuration,
+            &"new_sockets_iterator".into(),
+        )
+        .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
-        Ok((properties, has_single_socket.unwrap_or_default(), JsReadableStream(new_sockets_iterator)))
+        Ok((
+            properties,
+            has_single_socket.unwrap_or_default(),
+            JsReadableStream(new_sockets_iterator),
+        ))
     }
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-    ) -> Result<(SocketProperties, JsReadableStream, Function), serde_wasm_bindgen::Error> {
-        let properties = Reflect::get(socket_configuration, &"properties".into())
-            .and_then(|v| v.dyn_into::<Object>())?;
+    ) -> Result<
+        (SocketProperties, JsReadableStream, Function),
+        serde_wasm_bindgen::Error,
+    > {
+        let properties =
+            Reflect::get(socket_configuration, &"properties".into())
+                .and_then(|v| v.dyn_into::<Object>())?;
 
         // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
         Reflect::set(
@@ -272,12 +286,14 @@ impl JSComHub {
 
         // get iterator from socket_configuration
         // NOTE: dyn_into does not work here, maybe a bug in js_sys?
-        let iterator = Reflect::get(socket_configuration, &"iterator".into())
-            .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
+        let iterator =
+            Reflect::get(socket_configuration, &"iterator".into())
+                .map(|v| v.unchecked_into::<web_sys::ReadableStream>())?;
 
         // get send_callback
-        let send_callback = Reflect::get(socket_configuration, &"send_callback".into())
-            .and_then(|v| v.dyn_into::<Function>())?;
+        let send_callback =
+            Reflect::get(socket_configuration, &"send_callback".into())
+                .and_then(|v| v.dyn_into::<Function>())?;
 
         Ok((properties, JsReadableStream(iterator), send_callback))
     }
@@ -289,15 +305,15 @@ impl JSComHub {
 #[wasm_bindgen]
 impl JSComHub {
     pub fn register_default_interface_factories(&self) {
-        #[cfg(feature = "wasm_websocket_client")]
+        #[cfg(feature = "websocket-client")]
         {
             self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::websocket::websocket_client::WebSocketClientInterfaceSetupDataJS>();
         }
 
-        #[cfg(feature = "wasm_serial")]
+        #[cfg(feature = "serial-client")]
         self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::serial::serial_client::SerialClientInterfaceSetupDataJS>();
 
-        // #[cfg(feature = "wasm_webrtc")]
+        // #[cfg(feature = "webrtc")]
         // self.com_hub().register_async_interface_factory::<crate::network::com_interfaces::webrtc_js_interface::WebRTCJSInterface>();
     }
 
@@ -306,9 +322,8 @@ impl JSComHub {
         interface_type: String,
         factory: js_sys::Function,
     ) {
-       self.register_interface_factory_internal(interface_type, factory);
+        self.register_interface_factory_internal(interface_type, factory);
     }
-
 
     pub async fn create_interface(
         &self,
