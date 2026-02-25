@@ -347,8 +347,9 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.8"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.8#106bc5c3464d6df4e03083660b74b3fa237ee9e4"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6324622757bf96a6facaf4a9c1c5b42a90878afe431bf02d1a8710ea95bacced"
 dependencies = [
  "ariadne",
  "async-select",
@@ -402,7 +403,8 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.8#106bc5c3464d6df4e03083660b74b3fa237ee9e4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8871b51b760cdf5a7c3fd2f4244391eda4a4a43e6fadd65d9651bac731934a0"
 dependencies = [
  "bs58",
 ]
@@ -410,7 +412,8 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.8#106bc5c3464d6df4e03083660b74b3fa237ee9e4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc433cd04b23788f3fddbe9997c27252361cabcfbae50710a4a71b2ca9b09489"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -421,7 +424,8 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.8#106bc5c3464d6df4e03083660b74b3fa237ee9e4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6717768303603f37c8d6fd393ae7da7b78ae33b1ad0d6980253fa19005d0b84"
 dependencies = [
  "proc-macro2",
  "quote",
