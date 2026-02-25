@@ -15,7 +15,6 @@ You can find the legacy version of the DATEX Core library _(implemented in TypeS
 [unyt-org/datex-core-js-legacy](https://github.com/unyt-org/datex-core-js-legacy). The legacy version is still
 maintained and supported until this library reaches feature parity.
 
-
 ## Contributing
 
 We welcome every contribution!<br> Please take a look at the [development guidelines](./DEVELOP.md) and the unyt.org
