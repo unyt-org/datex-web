@@ -1,6 +1,6 @@
 [package]
 name = "datex-web"
-version = "0.0.12"
+version = "0.0.13"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
