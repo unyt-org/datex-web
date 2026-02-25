@@ -2,7 +2,7 @@ import type {
     ComHubMetadata,
     ComInterfaceConfiguration,
     JSComHub,
-    NetworkTraceResult
+    NetworkTraceResult,
 } from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
 import type { Runtime } from "../runtime/runtime.ts";
