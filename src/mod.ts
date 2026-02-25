@@ -11,7 +11,7 @@
  * export const runtime: Runtime = await Runtime.create({
  *    interfaces: [{
  *         type: "websocket-client",
- *         config: { address: "wss://example.unyt.land" },
+ *         config: { url: "wss://example.unyt.land" },
  *     }],
  * });
  *

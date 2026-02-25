@@ -5,8 +5,8 @@
     "exports": {
         ".": "./src/mod.ts",
         "./default": "./src/default.ts",
-        "./interface-impls/webrtc": "./src/network/interface-impls/webrtc.ts",
-        "./interface-impls/websocket-server-deno": "./src/network/interface-impls/websocket-server-deno.ts"
+        "./interfaces/websocket-server-base": "./src/network/interfaces/websocket-server-base.ts",
+        "./interfaces/websocket-server-deno": "./src/network/interfaces/websocket-server-deno.ts"
     },
     "compilerOptions": {
         "noImplicitOverride": true,

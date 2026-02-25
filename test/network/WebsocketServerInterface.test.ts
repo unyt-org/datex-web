@@ -3,7 +3,7 @@ import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
 import * as uuid from "@std/uuid";
 import { isNodeOrBun } from "../is-node.ts";
-import { websocketServerDenoComInterfaceFactory } from "datex/network/interface-impls/websocket-server-deno.ts";
+import { websocketServerDenoComInterfaceFactory } from "datex/network/interfaces/websocket-server-deno.ts";
 import { sleep } from "../utils.ts";
 
 Deno.test("add and close interface", async () => {

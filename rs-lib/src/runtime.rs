@@ -54,24 +54,6 @@ pub struct JSRuntime {
     pub com_hub: JSComHub,
 }
 
-// #[derive(Serialize, Deserialize, Default)]
-// pub struct JSDebugFlags {
-//     pub allow_unsigned_blocks: Option<bool>,
-//     pub enable_deterministic_behavior: Option<bool>,
-// }
-
-// #[cfg(feature = "debug")]
-// impl From<JSDebugFlags> for DebugFlags {
-//     fn from(val: JSDebugFlags) -> Self {
-//         DebugFlags {
-//             allow_unsigned_blocks: val.allow_unsigned_blocks.unwrap_or(false),
-//             enable_deterministic_behavior: val
-//                 .enable_deterministic_behavior
-//                 .unwrap_or(false),
-//         }
-//     }
-// }
-
 #[derive(Debug, PartialEq)]
 enum ConversionError {
     InvalidValue,
@@ -93,8 +75,6 @@ impl JSRuntime {
     }
 
     pub async fn run(config: JsValue) -> JSRuntime {
-        // NOTE: mock memory is used here, since we don't have an initialized runtime yet - so no pointers can be resolved during config parsing
-        // We must think about a better way to handle this in the future
         let config: RuntimeConfig =
             cast_from_dif_js_value(config, &RefCell::new(Memory::default()))
                 .unwrap();
