@@ -23,7 +23,7 @@ const TEXT_INPUTS = [
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
 
-const runtime = new Runtime({ endpoint: "@jonas" });
+const runtime = await Runtime.create({ endpoint: "@jonas" });
 
 for (const input of TEXT_INPUTS) {
     Deno.test(`JSON parse compatibility for input: ${input}`, () => {

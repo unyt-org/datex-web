@@ -1,7 +1,9 @@
 use futures::{AsyncRead, AsyncWrite, StreamExt};
 use futures_channel::mpsc;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 pub struct Writer {
     tx: mpsc::UnboundedSender<Vec<u8>>,

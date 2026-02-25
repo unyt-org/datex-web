@@ -1,1 +1,1 @@
-export { default } from "./datex_core_js.wasm?url";
+export { default } from "./datex_web.wasm?url";

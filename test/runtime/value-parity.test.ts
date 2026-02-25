@@ -44,16 +44,14 @@ const TEST_VALUES = [
 const valueTypeCounter = new Map<string, number>();
 for (const value of TEST_VALUES) {
     // class name or primitive type
-    const valueType = value === null
-        ? "null"
-        : typeof value === "undefined"
-        ? "undefined"
-        : value?.constructor.name;
+    const valueType = value === null ? "null" : typeof value === "undefined" ? "undefined" : value?.constructor.name;
     // increment counter for this type
     const count = valueTypeCounter.get(valueType) || 0;
     valueTypeCounter.set(valueType, count + 1);
-    Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, () => {
-        const runtime = new Runtime({ endpoint: "@jonas", debug: true });
+    Deno.test(`test value parity for value of type ${valueType} #${count + 1}`, async () => {
+        const runtime = await Runtime.create({
+            endpoint: "@jonas",
+        });
         const result = runtime.executeSync<typeof value>(
             "?",
             [value],

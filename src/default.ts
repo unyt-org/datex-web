@@ -12,22 +12,21 @@
  * ```
  */
 
-import { Runtime } from "./runtime/runtime.ts";
+import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 
 /**
  * The default configuration for the Datex runtime.
  */
-const defaultConfig = {
+const defaultConfig: RuntimeConfig = {
     interfaces: [{
         type: "websocket-client",
-        config: { address: "wss://example.unyt.land" },
+        config: { url: "wss://example.unyt.land" },
     }],
-    debug: false, // set to true to show info/debug messages
 };
 
 /**
  * The default instance of the Datex runtime.
  */
 export const Datex: Runtime = await Runtime.create(defaultConfig, {
-    allow_unsigned_blocks: true,
+    log_level: "warn",
 });

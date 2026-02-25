@@ -12,19 +12,16 @@ import {
 import { CoreTypeAddress } from "../../src/dif/core.ts";
 import { assertStrictEquals } from "@std/assert/strict-equals";
 import { Ref } from "../../src/refs/ref.ts";
-import {
-    difReferenceToDisplayString,
-    difValueContainerToDisplayString,
-} from "../../src/dif/display.ts";
-import { arrayTypeBinding } from "datex-core-js/lib/js-core-types/array.ts";
+import { difReferenceToDisplayString, difValueContainerToDisplayString } from "../../src/dif/display.ts";
+import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 
-const runtime = new Runtime({ endpoint: "@jonas", debug: true });
+const runtime = await Runtime.create({ endpoint: "@jonas" });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("pointer create with observe", () => {
     const ref = runtime.dif.createReferenceFromDIFValue(
         {
-            value: "Hello, Datex!",
+            value: "Hello, DATEX!",
         },
         undefined,
         DIFReferenceMutability.Mutable,

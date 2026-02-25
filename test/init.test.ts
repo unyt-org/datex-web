@@ -20,7 +20,7 @@ Deno.test("runtime version", async () => {
         return versionMatch ? versionMatch[1] : "unknown";
     });
 
-    const runtime = new Runtime({ endpoint: "@unyt" });
+    const runtime = await Runtime.create({ endpoint: "@unyt" });
     assertEquals(runtime.js_version, actual_js_version);
     assertEquals(runtime.version, actual_version);
     console.log(runtime);

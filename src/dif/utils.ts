@@ -93,12 +93,8 @@ export function interceptAccessors(
                 shadowObject,
                 key,
                 {
-                    get: originalDescriptor.get
-                        ? originalDescriptor.get.bind(originalObject)
-                        : undefined,
-                    set: originalDescriptor.set
-                        ? originalDescriptor.set.bind(originalObject)
-                        : undefined,
+                    get: originalDescriptor.get ? originalDescriptor.get.bind(originalObject) : undefined,
+                    set: originalDescriptor.set ? originalDescriptor.set.bind(originalObject) : undefined,
                     enumerable: originalDescriptor.enumerable,
                     configurable: true,
                 },

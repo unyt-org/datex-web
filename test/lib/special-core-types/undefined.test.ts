@@ -1,13 +1,10 @@
-import { Runtime } from "datex-core-js/runtime/runtime.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
-import {
-    DIFTypeDefinitionKind,
-    type DIFValue,
-} from "datex-core-js/dif/definitions.ts";
-import { JsLibTypeAddress } from "datex-core-js/dif/js-lib.ts";
-import { CoreTypeAddress } from "datex-core-js/dif/core.ts";
+import { DIFTypeDefinitionKind, type DIFValue } from "datex/dif/definitions.ts";
+import { JsLibTypeAddress } from "datex/dif/js-lib.ts";
+import { CoreTypeAddress } from "datex/dif/core.ts";
 
-const runtime = new Runtime({ endpoint: "@jonas", debug: true });
+const runtime = await Runtime.create({ endpoint: "@jonas" });
 
 Deno.test("undefined", () => {
     // convert JS undefined to DIF representation

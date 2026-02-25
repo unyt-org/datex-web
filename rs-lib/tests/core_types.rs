@@ -1,5 +1,7 @@
-use datex_core::libs::core::{CoreLibPointerId, create_core_lib};
-use datex_core::values::pointer::PointerAddress;
+use datex_core::{
+    libs::core::{CoreLibPointerId, create_core_lib_types},
+    values::pointer::PointerAddress,
+};
 
 #[test]
 #[ignore]
@@ -8,7 +10,7 @@ use datex_core::values::pointer::PointerAddress;
 ///
 /// `cargo test create_core_type_ts_mapping -- --show-output --ignored`
 fn create_core_type_ts_mapping() {
-    let core_lib = create_core_lib();
+    let core_lib = create_core_lib_types();
     let mut core_lib: Vec<(CoreLibPointerId, PointerAddress)> = core_lib
         .keys()
         .map(|key| (key.clone(), PointerAddress::from(key.clone())))

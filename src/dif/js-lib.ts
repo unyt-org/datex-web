@@ -5,5 +5,4 @@ export const JsLibTypeAddress = {
 /**
  * Type representing the unique pointer addresses of js lib types.
  */
-export type JsLibTypeAddress =
-    typeof JsLibTypeAddress[keyof typeof JsLibTypeAddress];
+export type JsLibTypeAddress = typeof JsLibTypeAddress[keyof typeof JsLibTypeAddress];

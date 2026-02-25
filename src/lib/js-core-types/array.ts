@@ -1,9 +1,5 @@
 import { CoreTypeAddress } from "../../dif/core.ts";
-import {
-    type CustomReferenceMetadata,
-    type DIFHandler,
-    IS_PROXY_ACCESS,
-} from "../../dif/dif-handler.ts";
+import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 import { interceptAccessors } from "../../dif/utils.ts";
 import { DEBUG_MODE } from "../../global.ts";
@@ -114,8 +110,7 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
         target.push(value);
     },
     handleSet(target, key: unknown, value: unknown) {
-        this.difHandler.getOriginalValueFromProxy(target)![key as number] =
-            value;
+        this.difHandler.getOriginalValueFromProxy(target)![key as number] = value;
     },
     handleDelete(target, key: number) {
         // remove key (splice)
@@ -256,14 +251,10 @@ function generateInterceptedArrayFill<V>(
 ) {
     return (value: V, start?: number, end?: number) => {
         const actualStart = start !== undefined
-            ? (start < 0
-                ? Math.max(array.length + start, 0)
-                : Math.min(start, array.length))
+            ? (start < 0 ? Math.max(array.length + start, 0) : Math.min(start, array.length))
             : 0;
         const actualEnd = end !== undefined
-            ? (end < 0
-                ? Math.max(array.length + end, 0)
-                : Math.min(end, array.length))
+            ? (end < 0 ? Math.max(array.length + end, 0) : Math.min(end, array.length))
             : array.length;
         const itemCount = actualEnd - actualStart;
         // splice to replace the filled range

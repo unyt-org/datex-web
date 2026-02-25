@@ -34,8 +34,7 @@ export const DIFTypeDefinitionKind = {
     Function: 10,
 } as const;
 /** A DIF type kind. */
-export type DIFTypeDefinitionKind =
-    typeof DIFTypeDefinitionKind[keyof typeof DIFTypeDefinitionKind];
+export type DIFTypeDefinitionKind = typeof DIFTypeDefinitionKind[keyof typeof DIFTypeDefinitionKind];
 
 /**
  * Representation of reference mutability (mutable or immutable) in DIF.
@@ -45,8 +44,7 @@ export const DIFReferenceMutability = {
     Immutable: 1,
 } as const;
 /** A DIF reference mutability. */
-export type DIFReferenceMutability =
-    typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
+export type DIFReferenceMutability = typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
 
 export type DIFType =
     | DIFPointerAddress // shorthand for DIFType with DIFTypeDefinitionKind.Reference
@@ -65,8 +63,7 @@ export type DIFTypeDefinitionInner<
     : Kind extends typeof DIFTypeDefinitionKind.Union ? Array<DIFType>
     : Kind extends typeof DIFTypeDefinitionKind.Unit ? null
     : Kind extends typeof DIFTypeDefinitionKind.Function ? unknown // TODO
-    : Kind extends typeof DIFTypeDefinitionKind.ImplType
-        ? [DIFType, Array<DIFPointerAddress>]
+    : Kind extends typeof DIFTypeDefinitionKind.ImplType ? [DIFType, Array<DIFPointerAddress>]
     : never;
 
 /** A DIF type definition representation. */
