@@ -1,14 +1,14 @@
 import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
-Deno.test("decompile integer without formatting", () => {
-    const runtime = new Runtime({ endpoint: "@jonas" });
+Deno.test("decompile integer without formatting", async () => {
+    const runtime = await Runtime.create({ endpoint: "@jonas" });
     const result = runtime.valueToString(42);
     assertEquals(result, "42f64");
 });
 
 // FIXME: colorization in new decompiler
 // Deno.test("decompile integer colorized", () => {
-//     const runtime = new Runtime({ endpoint: "@jonas" });
+//     const runtime = await Runtime.create({ endpoint: "@jonas" });
 //     const result = runtime.valueToString(42, { colorized: true });
 //     assertEquals(
 //         result,

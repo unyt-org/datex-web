@@ -1,33 +1,25 @@
-import {
-    create_runtime,
-    type DecompileOptions,
-    execute_internal,
-    type JSRuntime,
-} from "../datex-core.ts";
+import { create_runtime, type DecompileOptions, execute_internal, type JSRuntime } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
-import type {
-    DIFReferenceMutability,
-    DIFTypeDefinition,
-} from "../dif/definitions.ts";
+import type { DIFReferenceMutability, DIFTypeDefinition } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 import { unimplemented } from "../utils/exceptions.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
-const VERSION: string = "0.0.11";
+const VERSION: string = "0.0.12";
 
 /** debug flags for the runtime */
-interface DebugFlags {
-    allow_unsigned_blocks?: boolean;
-    enable_deterministic_behavior?: boolean;
+interface DebugConfig {
+    // optional log level for internal runtime logs, if not set, no logs are printed
+    log_level?: "error" | "warn" | "info" | "debug" | "trace" | null;
 }
 
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint?: string;
     interfaces?: { type: string; config: unknown }[];
-    debug?: boolean;
+    env?: Record<string, string>;
 };
 
 /**
@@ -40,37 +32,26 @@ export class Runtime {
     readonly #comHub: ComHub;
     readonly #difHandler: DIFHandler;
 
-    constructor(config: RuntimeConfig, debug_flags?: DebugFlags) {
-        this.#runtime = create_runtime(JSON.stringify(config), debug_flags);
-        this.#comHub = new ComHub(this.#runtime.com_hub);
+    private constructor(jsRuntime: JSRuntime) {
+        this.#runtime = jsRuntime;
+        this.#comHub = new ComHub(this.#runtime.com_hub, this);
         this.#difHandler = new DIFHandler(this.#runtime);
     }
 
     /**
      * Creates a new Runtime instance.
      * @param config Runtime configuration
-     * @param debug_flags Debug flags for the runtime
+     * @param debugConfig Debug flags for the runtime
      * @returns A promise that resolves to the created Runtime instance
      */
     public static async create(
         config: RuntimeConfig,
-        debug_flags?: DebugFlags,
+        debugConfig?: DebugConfig,
     ): Promise<Runtime> {
-        const runtime = new Runtime(config, debug_flags);
-        await runtime.start();
-        return runtime;
-    }
-
-    /**
-     * Starts the runtime.
-     * @returns A promise that resolves when the runtime has started.
-     */
-    public start(): Promise<void> {
-        return this.#runtime.start();
-    }
-
-    public _stop(): Promise<void> {
-        return this.#runtime._stop();
+        // workaround: temp dif handler without runtime to convert config to DIF
+        const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
+        const jsRuntime = await create_runtime(configDIF, debugConfig);
+        return new Runtime(jsRuntime);
     }
 
     /**
@@ -311,8 +292,7 @@ export class Runtime {
      */
     public createTransparentReference<
         V,
-        M extends DIFReferenceMutability =
-            typeof DIFReferenceMutability.Mutable,
+        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
     >(
         // deno-lint-ignore ban-types
         value: V & {},
@@ -337,8 +317,7 @@ export class Runtime {
      */
     public createOrGetWrappedReference<
         V,
-        M extends DIFReferenceMutability =
-            typeof DIFReferenceMutability.Mutable,
+        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
     >(
         _value: V,
         _allowedType?: DIFTypeDefinition | null,

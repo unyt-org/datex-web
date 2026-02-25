@@ -1,3 +1,14 @@
+use std::cell::RefCell;
+
+use datex_core::{
+    dif::value::{DIFReferenceNotFoundError, DIFValueContainer},
+    runtime::memory::Memory,
+    serde::deserializer::from_value_container,
+    values::value_container::ValueContainer,
+};
+use log::info;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde_wasm_bindgen::{Error, from_value};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
 
@@ -62,4 +73,50 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
     fn js(self) -> Result<T, JsError> {
         self.map_err(js_error)
     }
+}
+
+/// Deserialize a JsValue into a Rust type T using DIFValueContainer as an intermediary,
+pub fn cast_from_dif_js_value<T>(
+    value: JsValue,
+    memory: &RefCell<Memory>,
+) -> Result<T, ()>
+where
+    T: DeserializeOwned,
+{
+    let unresolved_value_container: DIFValueContainer = from_value(value)
+        .expect("Failed to deserialize JsValue to DIFValueContainer");
+
+    let value_container = unresolved_value_container
+        .to_value_container(memory)
+        .map_err(|_| ())?;
+
+    from_value_container::<T>(&value_container).map_err(|e| {
+        info!("Deserialization error: {}", e);
+        ()
+    })
+}
+
+/// Converts a JsValue to a DIFValueContainer using the provided Memory instance.
+pub fn dif_js_value_to_value_container(
+    value: JsValue,
+    memory: &RefCell<Memory>,
+) -> Result<ValueContainer, DIFReferenceNotFoundError> {
+    let unresolved_value_container: DIFValueContainer = from_value(value)
+        .expect("Failed to deserialize JsValue to DIFValueContainer");
+    unresolved_value_container.to_value_container(memory)
+}
+
+pub fn value_container_to_dif_js_value(
+    value_container: &ValueContainer,
+    memory: &RefCell<Memory>,
+) -> JsValue {
+    let dif_value_container =
+        DIFValueContainer::from_value_container(&value_container, memory);
+    to_js_value(&dif_value_container)
+        .expect("Failed to serialize DIFValueContainer to JsValue")
+}
+
+/// Convert a serializable value to a JsValue (JSON compatible)
+pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, Error> {
+    value.serialize(&serde_wasm_bindgen::Serializer::json_compatible())
 }

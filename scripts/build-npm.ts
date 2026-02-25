@@ -18,14 +18,14 @@ await build({
             name: "./default",
             path: "./src/default.ts",
         },
-        // interface impls
+        // interfaces
         {
-            name: "./interface-impls/base",
-            path: "./src/network/interface-impls/base.ts",
+            name: "./interfaces/websocket-server-base",
+            path: "./src/network/interfaces/websocket-server-base.ts",
         },
         {
-            name: "./interface-impls/websocket-client",
-            path: "./src/network/interface-impls/websocket-client.ts",
+            name: "./interfaces/websocket-server-deno",
+            path: "./src/network/interfaces/websocket-server-deno.ts",
         },
     ],
     outDir: "./npm",
@@ -41,17 +41,17 @@ await build({
         license: "MIT",
         repository: {
             type: "git",
-            url: "git+https://github.com/unyt-org/datex-core-js.git",
+            url: "git+https://github.com/unyt-org/datex-web.git",
         },
         bugs: {
-            url: "https://github.com/unyt-org/datex-core-js/issues",
+            url: "https://github.com/unyt-org/datex-web/issues",
         },
     },
     // steps to run after building and before running the tests
     async postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
         const datexCoreJSInternalPath = new URL(
-            "../npm/esm/datex-core/datex_core_js.js",
+            "../npm/esm/datex-web/datex_web.js",
             import.meta.url,
         );
         const fileContent = Deno.readTextFileSync(datexCoreJSInternalPath);
@@ -97,18 +97,18 @@ await build({
 
         Deno.copyFileSync("README.md", "npm/README.md");
         Deno.copyFileSync(
-            "src/datex-core/datex_core_js.wasm",
-            "npm/esm/datex-core/datex_core_js.wasm",
+            "src/datex-web/datex_web.wasm",
+            "npm/esm/datex-web/datex_web.wasm",
         );
 
-        // replace datex_core_js with custom version for node that also supports node vite builds for browsers
+        // replace datex_web with custom version for node that also supports node vite builds for browsers
         Deno.copyFileSync(
-            "scripts/datex_core_js.node.js",
-            "npm/esm/datex-core/datex_core_js.js",
+            "scripts/datex_web.node.js",
+            "npm/esm/datex-web/datex_web.js",
         );
         Deno.copyFileSync(
             "scripts/wasm_url.node.js",
-            "npm/esm/datex-core/wasm_url.node.js",
+            "npm/esm/datex-web/wasm_url.node.js",
         );
 
         // currently required for version tests

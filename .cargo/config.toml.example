@@ -1,0 +1,12 @@
+[build]
+rustflags = ["--cfg=web_sys_unstable_apis"]
+
+[patch."https://github.com/unyt-org/datex"]
+datex-core = { path = "../datex/crates/datex-core", default-features = false, features = [
+    "target_wasm",
+    "compiler",
+    "decompiler",
+    "syntax_highlighting_legacy",
+    "lsp_wasm",
+] }
+datex-crypto-facade = { path = "../datex/crates/datex-crypto-facade" }

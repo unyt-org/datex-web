@@ -21,8 +21,8 @@ jobs:
               with:
                   name: build
                   path: |
-                      ./src/datex-core/datex_core_js.internal.js
-                      ./src/datex-core/datex_core_js.wasm
+                      ./src/datex-web/datex_web.internal.js
+                      ./src/datex-web/datex_web.wasm
                   retention-days: 5
 
     publish-jsr:
@@ -40,7 +40,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: build
-                  path: ./src/datex-core
+                  path: ./src/datex-web
             # publish to JSR
             - name: Publish package
               run: npx jsr publish
@@ -59,7 +59,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: build
-                  path: ./src/datex-core
+                  path: ./src/datex-web
             - name: Install Deno
               uses: denoland/setup-deno@v2
               with:

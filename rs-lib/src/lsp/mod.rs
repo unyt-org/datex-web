@@ -1,9 +1,10 @@
 use futures::StreamExt;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 mod io;
-use datex_core::{runtime::Runtime, task::spawn_local};
+use datex_core::runtime::Runtime;
 use futures_channel::mpsc;
 use js_sys::Uint8Array;
+use wasm_bindgen_futures::spawn_local;
 
 use crate::lsp::io::{Reader, Writer};
 

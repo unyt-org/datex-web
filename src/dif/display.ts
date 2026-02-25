@@ -45,9 +45,7 @@ export function difValueContainerToDisplayString(
     if (typeof container === "string") {
         return addressToDisplayString(container);
     } else {
-        const typeString = container.type
-            ? difTypeDefinitionToDisplayString(container.type)
-            : null;
+        const typeString = container.type ? difTypeDefinitionToDisplayString(container.type) : null;
         const valueString = difRepresentationValueToDisplayString(
             container.value,
         );
@@ -82,9 +80,7 @@ export function difRepresentationValueToDisplayString(
         }]`;
     } else if (difRepValue && typeof difRepValue === "object") {
         return `{ ${
-            Object.entries(difRepValue).map(([k, v]) =>
-                `${k}: ${difValueContainerToDisplayString(v)}`
-            ).join(", ")
+            Object.entries(difRepValue).map(([k, v]) => `${k}: ${difValueContainerToDisplayString(v)}`).join(", ")
         } }`;
     } else {
         return JSON.stringify(difRepValue);
