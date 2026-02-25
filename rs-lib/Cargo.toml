@@ -106,18 +106,16 @@ wasm-bindgen-test = "0.3.50"
 
 [features]
 default = [
-    "wasm_websocket_client",
-    "wasm_serial",
-    "wasm_webrtc",
-    "lsp",                   # Make optional
+    "websocket-client",
+    "serial-client",
+    "webrtc",
+    "lsp",              # Make optional
 ]
 debug = []
 lsp = ["datex-core/lsp_wasm"]
 
-allow_unsigned_blocks = [
-    "datex-core/allow_unsigned_blocks"
-]
+allow_unsigned_blocks = ["datex-core/allow_unsigned_blocks"]
 
-wasm_websocket_client = [] # full support
-wasm_serial = []           # only required for frontend js runtime
-wasm_webrtc = ["uuid"]     # only required for frontend js runtime
+websocket-client = [] # full support
+serial-client = []    # only required for frontend js runtime
+webrtc = ["uuid"]     # only required for frontend js runtime

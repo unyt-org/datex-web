@@ -39,7 +39,6 @@ extern "C" {
 }
 static INIT: Once = Once::new();
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JSDebugConfig {
     // optional log level for the runtime, can be "error", "warn", "info", "debug" or "trace"
@@ -49,18 +48,20 @@ pub struct JSDebugConfig {
 
 impl JSDebugConfig {
     pub fn get_log_level(&self) -> Option<log::Level> {
-        self.log_level.as_ref().map(|level| match level.to_lowercase().as_str() {
-            "error" => log::Level::Error,
-            "warn" => log::Level::Warn,
-            "info" => log::Level::Info,
-            "debug" => log::Level::Debug,
-            "trace" => log::Level::Trace,
-            _ => {
-                log::warn!(
-                    "Invalid log level '{}', defaulting to 'info'",
-                    level
-                );
-                log::Level::Info
+        self.log_level.as_ref().map(|level| {
+            match level.to_lowercase().as_str() {
+                "error" => log::Level::Error,
+                "warn" => log::Level::Warn,
+                "info" => log::Level::Info,
+                "debug" => log::Level::Debug,
+                "trace" => log::Level::Trace,
+                _ => {
+                    log::warn!(
+                        "Invalid log level '{}', defaulting to 'info'",
+                        level
+                    );
+                    log::Level::Info
+                }
             }
         })
     }
