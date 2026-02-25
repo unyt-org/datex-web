@@ -37,7 +37,7 @@ if (code !== 0) {
     // replace await WebAssembly.instantiateStreaming(fetch(new URL("datex_web.wasm",import.meta.url)) with
     // WebAssembly.instantiate inline
     const wasmFile = new URL(
-        "../src/datex/datex_web.wasm",
+        "../src/datex-web/datex_web.wasm",
         import.meta.url,
     );
     const wasmContent = await Deno.readFile(wasmFile);
