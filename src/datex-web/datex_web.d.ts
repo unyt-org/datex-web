@@ -12,7 +12,6 @@ export interface AcceptAddress {
 export interface ComHubMetadata {
     endpoint: Endpoint;
     interfaces: ComHubMetadataInterface[];
-    endpoint_sockets: Map<Endpoint, [ComInterfaceSocketUUID, DynamicEndpointProperties][]>;
 }
 
 export interface ComHubMetadataInterface {
@@ -149,6 +148,29 @@ export interface HTTPServerInterfaceSetupData {
     accept_addresses: AcceptAddress[] | undefined;
 }
 
+export interface NetworkTraceHop {
+    endpoint: Endpoint;
+    distance: number;
+    socket: NetworkTraceHopSocket;
+    direction: NetworkTraceHopDirection;
+    fork_nr: string;
+    bounce_back: boolean;
+}
+
+export interface NetworkTraceHopSocket {
+    interface_type: string;
+    interface_name: string | undefined;
+    channel: string;
+    socket_uuid: string;
+}
+
+export interface NetworkTraceResult {
+    sender: Endpoint;
+    receiver: Endpoint;
+    hops: NetworkTraceHop[];
+    round_trip_time: number;
+}
+
 export interface RuntimeConfigInterface {
     type: string;
     config: unknown;
@@ -229,6 +251,8 @@ export type InterfaceDirection = "In" | "Out" | "InOut";
 
 export type InterfacePriority = "None" | { Priority: number };
 
+export type NetworkTraceHopDirection = "Outgoing" | "Incoming";
+
 export type ReconnectionConfig = "NoReconnect" | "InstantReconnect" | { ReconnectWithTimeout: { timeout: { secs: number; nanos: number } } } | { ReconnectWithTimeoutAndAttempts: { timeout: { secs: number; nanos: number }; attempts: number } };
 
 export type TLSMode = { type: "HandledExternally" } | { type: "WithCertificate"; data: { private_key: number[]; certificate: number[] } };
@@ -238,15 +262,17 @@ export class JSComHub {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    close_interface(interface_uuid: string): Promise<void>;
     create_interface(interface_type: string, setup_data: any, priority?: number | null): Promise<string>;
     get_metadata(): any;
     get_metadata_string(): string;
+    get_trace(endpoint: string): Promise<any | undefined>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
     register_default_interface_factories(): void;
     register_incoming_block_interceptor(callback: Function): void;
     register_interface_factory(interface_type: string, factory: Function): void;
     register_outgoing_block_interceptor(callback: Function): void;
+    remove_interface(interface_uuid: string): Promise<void>;
+    remove_socket(socket_uuid: string): Promise<void>;
 }
 
 export class JSPointer {

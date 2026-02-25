@@ -1,4 +1,9 @@
-import type { ComHubMetadata, ComInterfaceConfiguration, JSComHub } from "../datex-web/datex_web.d.ts";
+import type {
+    ComHubMetadata,
+    ComInterfaceConfiguration,
+    JSComHub,
+    NetworkTraceResult
+} from "../datex-web/datex_web.d.ts";
 import type { DIFValueContainer } from "../dif/definitions.ts";
 import type { Runtime } from "../runtime/runtime.ts";
 
@@ -58,10 +63,16 @@ export class ComHub {
         ) as ComInterfaceUUID;
     }
 
-    public closeInterface(
+    public removeInterface(
         interface_uuid: ComInterfaceUUID,
     ): Promise<void> {
-        return this.#jsComHub.close_interface(interface_uuid);
+        return this.#jsComHub.remove_interface(interface_uuid);
+    }
+
+    public removeSocket(
+        socket_uuid: ComInterfaceSocketUUID,
+    ): Promise<void> {
+        return this.#jsComHub.remove_socket(socket_uuid);
     }
 
     /**
@@ -75,8 +86,7 @@ export class ComHub {
 
     public getMetadata(): ComHubMetadata {
         // as any required because get_metadata only exists in debug builds
-        // deno-lint-ignore no-explicit-any
-        return (this.#jsComHub as any).get_metadata();
+        return this.#jsComHub.get_metadata();
     }
 
     /**
@@ -85,13 +95,17 @@ export class ComHub {
      */
     public async printTrace(endpoint: string): Promise<void> {
         // as any required because get_trace_string only exists in debug builds
-        // deno-lint-ignore no-explicit-any
-        const trace = await (this.#jsComHub as any).get_trace_string(endpoint);
+        const trace = await this.#jsComHub.get_trace_string(endpoint);
         if (trace === undefined) {
             console.warn(`No trace available for endpoint: ${endpoint}`);
             return;
         }
         console.log(trace);
+    }
+
+    public getTrace(endpoint: string): Promise<NetworkTraceResult | undefined> {
+        // as any required because get_trace_string only exists in debug builds
+        return this.#jsComHub.get_trace(endpoint);
     }
 
     /**

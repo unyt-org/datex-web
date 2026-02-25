@@ -341,7 +341,7 @@ impl JSComHub {
         Ok(interface.to_string())
     }
 
-    pub async fn close_interface(
+    pub async fn remove_interface(
         &self,
         interface_uuid: String,
     ) -> Result<(), JsError> {
@@ -349,17 +349,24 @@ impl JSComHub {
             .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
-        let has_interface = { com_hub.has_interface(&interface_uuid) };
-        if has_interface {
-            com_hub
-                .remove_interface(interface_uuid.clone())
-                .await
-                .map_err(|e| JsError::new(&format!("{e:?}")))?;
-            Ok(())
-        } else {
-            error!("Failed to find interface");
-            Err(JsError::new("Failed to find interface"))
-        }
+        com_hub
+            .remove_interface(interface_uuid.clone())
+            .await
+            .map_err(|_| JsError::new("Failed to remove interface"))
+    }
+
+    pub async fn remove_socket(
+        &self,
+        socket_uuid: String,
+    ) -> Result<(), JsError> {
+        let socket_uuid = ComInterfaceSocketUUID::try_from(socket_uuid)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        let runtime = self.runtime.clone();
+        let com_hub = runtime.com_hub();
+        com_hub
+            .remove_socket(socket_uuid.clone())
+            .await
+            .map_err(|_| JsError::new("Failed to remove socket"))
     }
 
     pub fn get_metadata_string(&self) -> String {
@@ -394,6 +401,23 @@ impl JSComHub {
                     .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
                 let trace = self.com_hub().record_trace(endpoint).await;
                 Ok(trace.map(|t| t.to_string()))
+            }
+            else {
+                unreachable!("Trace is only available in debug builds")
+            }
+        }
+    }
+
+    pub async fn get_trace(
+        &self,
+        endpoint: String,
+    ) -> Result<Option<JsValue>, JsError> {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "debug")] {
+                let endpoint = Endpoint::from_str(&endpoint)
+                    .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+                let trace = self.com_hub().record_trace(endpoint).await;
+                Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
             }
             else {
                 unreachable!("Trace is only available in debug builds")
