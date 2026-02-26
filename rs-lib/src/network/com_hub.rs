@@ -370,59 +370,33 @@ impl JSComHub {
     }
 
     pub fn get_metadata_string(&self) -> String {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "debug")] {
-                let metadata = self.com_hub().get_metadata();
-                metadata.to_string()
-            } else {
-                unreachable!("Metadata is only available in debug builds")
-            }
-        }
+        let metadata = self.com_hub().get_metadata();
+        metadata.to_string()
     }
 
     pub fn get_metadata(&self) -> JsValue {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "debug")] {
-                let metadata = self.com_hub().get_metadata();
-                serde_wasm_bindgen::to_value(&metadata).unwrap()
-            } else {
-                unreachable!("Metadata is only available in debug builds")
-            }
-        }
+        let metadata = self.com_hub().get_metadata();
+        serde_wasm_bindgen::to_value(&metadata).unwrap()
     }
 
     pub async fn get_trace_string(
         &self,
         endpoint: String,
     ) -> Result<Option<String>, JsError> {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "debug")] {
-                let endpoint = Endpoint::from_str(&endpoint)
-                    .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
-                let trace = self.com_hub().record_trace(endpoint).await;
-                Ok(trace.map(|t| t.to_string()))
-            }
-            else {
-                unreachable!("Trace is only available in debug builds")
-            }
-        }
+        let endpoint = Endpoint::from_str(&endpoint)
+            .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+        let trace = self.com_hub().record_trace(endpoint).await;
+        Ok(trace.map(|t| t.to_string()))
     }
 
     pub async fn get_trace(
         &self,
         endpoint: String,
     ) -> Result<Option<JsValue>, JsError> {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "debug")] {
-                let endpoint = Endpoint::from_str(&endpoint)
-                    .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
-                let trace = self.com_hub().record_trace(endpoint).await;
-                Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
-            }
-            else {
-                unreachable!("Trace is only available in debug builds")
-            }
-        }
+        let endpoint = Endpoint::from_str(&endpoint)
+            .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+        let trace = self.com_hub().record_trace(endpoint).await;
+        Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
     }
 
     pub fn register_outgoing_block_interceptor(

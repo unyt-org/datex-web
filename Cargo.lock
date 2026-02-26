@@ -351,7 +351,6 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.10"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
 dependencies = [
  "ariadne",
  "async-select",
@@ -360,7 +359,7 @@ dependencies = [
  "binrw",
  "bytes",
  "cfg-if",
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "datex-crypto-web",
  "datex-macros-internal",
  "foldhash 0.2.0",
@@ -404,6 +403,13 @@ dependencies = [
 
 [[package]]
 name = "datex-crypto-facade"
+version = "0.0.1"
+dependencies = [
+ "bs58",
+]
+
+[[package]]
+name = "datex-crypto-facade"
 version = "0.0.2"
 source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
 dependencies = [
@@ -412,10 +418,9 @@ dependencies = [
 
 [[package]]
 name = "datex-crypto-web"
-version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
+version = "0.0.1"
 dependencies = [
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.1",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -424,7 +429,6 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -439,7 +443,7 @@ dependencies = [
  "cfg-if",
  "console_error_panic_hook",
  "datex-core",
- "datex-crypto-facade",
+ "datex-crypto-facade 0.0.2",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -1243,18 +1247,18 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
 name = "pin-project"
-version = "1.1.11"
+version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1749c7ed4bcaf4c3d0a3efc28538844fb29bcdd7d2b67b2be7e20ba861ff517"
+checksum = "677f1add503faace112b9f1373e43e9e054bfdd22ff1a63c1bc485eaec6a6a8a"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "1.1.11"
+version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b20ed30f105399776b9c883e68e536ef602a16ae6f596d2c473591d6ad64c6"
+checksum = "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1263,9 +1267,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.17"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
 
 [[package]]
 name = "plist"
@@ -2389,11 +2393,3 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
-
-[[patch.unused]]
-name = "datex-core"
-version = "0.0.10"
-
-[[patch.unused]]
-name = "datex-crypto-facade"
-version = "0.0.2"
