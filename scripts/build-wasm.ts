@@ -105,7 +105,7 @@ async function runWasmBindgen(args: {
 }) {
     // make sure wasm-bindgen cli is installed
     const wasmBindgenInstallProcess = new Deno.Command("cargo", {
-        args: ["install", "wasm-bindgen-cli"],
+        args: ["install", "wasm-bindgen-cli", "--version", "0.2.112"],
     }).spawn();
     const installRes = await wasmBindgenInstallProcess.status;
     if (!installRes.success) {
