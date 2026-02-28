@@ -202,7 +202,7 @@ impl JSRuntime {
 
             // AES CTR with random key
             let random_bytes: [u8; 32] =
-                CryptoImpl::random_bytes(32).unwrap().try_into().unwrap();
+                CryptoImpl::random_bytes(32).try_into().unwrap();
 
             let msg: Vec<u8> = b"Some message".to_vec();
             let ctr_iv: [u8; 16] = [0u8; 16];
