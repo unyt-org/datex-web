@@ -112,12 +112,12 @@ impl JSRuntime {
         future_to_promise(async move {
             let something = b"yellow submarineyellow submarine".to_owned();
             let some_check =
-                b"9At2nzU19GjL8F4WFRyB7RZSGLemMGUMVBZAMChfndF2".to_owned();
+                "9At2nzU19GjL8F4WFRyB7RZSGLemMGUMVBZAMChfndF2".to_owned();
 
-            let based = CryptoImpl::enc_b58(&something).unwrap();
-            let unbased = CryptoImpl::dec_b58(&some_check).unwrap();
+            let based = CryptoImpl::enc_b58(&something).as_bytes().to_vec();
+            let unbased = CryptoImpl::dec_b58_32(&some_check).unwrap();
             assert_eq!(something, unbased);
-            assert_eq!(some_check, based);
+            assert_eq!(some_check.as_bytes().to_vec(), based);
 
             // Hashes
             let mut ikm = Vec::from([0u8; 32]);
@@ -224,12 +224,14 @@ impl JSRuntime {
             assert_ne!(msg, ctr_ciphered);
 
             // AES key wrapping
-            let wrapped = CryptoImpl::key_upwrap(&random_bytes, &random_bytes)
-                .await
-                .unwrap();
-            let unwrapped = CryptoImpl::key_unwrap(&random_bytes, &wrapped)
-                .await
-                .unwrap();
+            let wrapped =
+                CryptoImpl::key_wrap_rfc3394(&random_bytes, &random_bytes)
+                    .await
+                    .unwrap();
+            let unwrapped =
+                CryptoImpl::key_unwrap_rfc3394(&random_bytes, &wrapped)
+                    .await
+                    .unwrap();
             assert_eq!(random_bytes.to_vec(), unwrapped);
             // assert_ne!(wrapped, unwrapped);
 

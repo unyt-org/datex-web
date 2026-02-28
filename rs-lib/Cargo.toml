@@ -1,6 +1,6 @@
 [package]
 name = "datex-web"
-version = "0.0.12"
+version = "0.0.13"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
@@ -20,14 +20,14 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { version = "0.0.9", default-features = false, features = [
+datex-core = { git = "https://github.com/unyt-org/datex", branch = "release/0.0.10", version = "0.0.10", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",
     "syntax_highlighting_legacy",
     "lsp_wasm",
 ] }
-datex-crypto-facade = { version = "0.0.1" }
+datex-crypto-facade = { git = "https://github.com/unyt-org/datex", branch = "release/0.0.10", version = "0.0.2" }
 
 # datex_macros = { git = "https://github.com/unyt-org/datex", branch = "refactor/update-loop", version = "0.1.3", package = "datex_macros" }
 
