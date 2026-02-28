@@ -1,4 +1,4 @@
-# DATEX Web
+# DATEX
 
 > Check out our specification at [datex.unyt.org](https://datex.unyt.org).
 
