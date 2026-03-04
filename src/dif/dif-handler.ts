@@ -7,8 +7,8 @@ import {
     type DIFObject,
     type DIFPointerAddress,
     type DIFProperty,
-    type DIFReference,
-    DIFReferenceMutability,
+    type DIFSharedValue,
+    DIFSharedValueMutability,
     type DIFTypeDefinition,
     DIFTypeDefinitionKind,
     type DIFUpdate,
@@ -156,16 +156,16 @@ export class DIFHandler {
     }
 
     /**
-     * Creates a new pointer for the specified DIF value.
+     * Creates a new shared value for the specified DIF value.
      * @param difValueContainer - The DIFValueContainer value to create a pointer for.
      * @param allowedType - The allowed type for the pointer.
      * @param mutability - The mutability of the pointer.
      * @returns The created pointer address.
      */
-    public createReferenceFromDIFValue(
+    public createSharedValueFromDIFValue(
         difValueContainer: DIFValueContainer,
         allowedType: DIFTypeDefinition | null = null,
-        mutability: DIFReferenceMutability,
+        mutability: DIFSharedValueMutability,
     ): string {
         return this.#handle.create_pointer(
             difValueContainer,
@@ -589,7 +589,7 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const reference: DIFReference | Promise<DIFReference> = this
+        const reference: DIFSharedValue | Promise<DIFSharedValue> = this
             .#handle.resolve_pointer_address(address);
         return this.mapPromise(reference, (reference) => {
             const value: T | Promise<T> = this.resolveDIFValueContainer(
@@ -625,7 +625,7 @@ export class DIFHandler {
             return cached as T;
         }
         // if not in cache, resolve from runtime
-        const entry: DIFReference = this.#handle
+        const entry: DIFSharedValue = this.#handle
             .resolve_pointer_address_sync(address);
         const value: T = this.resolveDIFValueContainerSync(
             entry.value,
@@ -699,7 +699,7 @@ export class DIFHandler {
     protected initReference<T>(
         pointerAddress: string,
         value: T,
-        mutability: DIFReferenceMutability,
+        mutability: DIFSharedValueMutability,
         allowedType: DIFTypeDefinition | null = null,
     ): T | Ref<T> {
         let wrappedValue = this.wrapJSValue(
@@ -712,7 +712,7 @@ export class DIFHandler {
         let metadata: CustomReferenceMetadata | undefined = undefined;
 
         // bind js value (if mutable, nominal type)
-        const bindJSValue = mutability !== DIFReferenceMutability.Immutable &&
+        const bindJSValue = mutability !== DIFSharedValueMutability.Immutable &&
             typeof allowedType == "string";
         if (bindJSValue && !(wrappedValue instanceof Ref)) {
             typeBinding = this.type_registry.getTypeBinding(allowedType);
@@ -729,7 +729,7 @@ export class DIFHandler {
 
         // if not immutable, observe to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
-        if (mutability !== DIFReferenceMutability.Immutable) {
+        if (mutability !== DIFSharedValueMutability.Immutable) {
             observerId = this.observePointerBindDirect(
                 pointerAddress,
                 (update) => {
@@ -911,11 +911,11 @@ export class DIFHandler {
      */
     public createTransparentReference<
         V,
-        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
+        M extends DIFSharedValueMutability = typeof DIFSharedValueMutability.Mutable,
     >(
         value: V,
         allowedType: DIFTypeDefinition | null = null,
-        mutability: M = DIFReferenceMutability.Mutable as M,
+        mutability: M = DIFSharedValueMutability.Mutable as M,
     ): PointerOut<V, M> {
         // if already bound to a reference, return the existing reference proxy (or the value itself)
         const pointerAddress = this.getPointerAddressForValue(value as WeakKey);
@@ -926,7 +926,7 @@ export class DIFHandler {
         }
 
         const difValue = this.convertJSValueToDIFValueContainer(value);
-        const ptrAddress = this.createReferenceFromDIFValue(
+        const ptrAddress = this.createSharedValueFromDIFValue(
             difValue,
             allowedType,
             mutability,
@@ -935,7 +935,7 @@ export class DIFHandler {
         if (!allowedType) {
             allowedType = (this.#handle.resolve_pointer_address_sync(
                 ptrAddress,
-            ) as DIFReference).allowed_type;
+            ) as DIFSharedValue).allowed_type;
         }
         return this.initReference(
             ptrAddress,
@@ -1338,23 +1338,23 @@ type IsPlainObject<T> = T extends Builtins ? false
     : T extends object ? true
     : false;
 
-type ObjectFieldOut<T, M extends DIFReferenceMutability> = T extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+type ObjectFieldOut<T, M extends DIFSharedValueMutability> = T extends Ref<infer U>
+    ? M extends typeof DIFSharedValueMutability.Immutable ? Ref<U>
     : AssignableRef<U>
     : IsPlainObject<T> extends true ? (
             ContainsRef<T> extends true
-                ? M extends typeof DIFReferenceMutability.Immutable
+                ? M extends typeof DIFSharedValueMutability.Immutable
                     ? { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
                 : { [K in keyof T]: ObjectFieldOut<T[K], M> }
                 : { readonly [K in keyof T]: ObjectFieldOut<T[K], M> }
         )
     : T;
 
-export type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infer U>
-    ? M extends typeof DIFReferenceMutability.Immutable ? Ref<U>
+export type PointerOut<V, M extends DIFSharedValueMutability> = V extends Ref<infer U>
+    ? M extends typeof DIFSharedValueMutability.Immutable ? Ref<U>
     : AssignableRef<U>
     : IsPlainObject<V> extends true ? (
-            M extends typeof DIFReferenceMutability.Immutable ? { readonly [K in keyof V]: V[K] }
+            M extends typeof DIFSharedValueMutability.Immutable ? { readonly [K in keyof V]: V[K] }
                 : { [K in keyof V]: V[K] }
             // ContainsRef<V> extends true
             //     ? M extends typeof DIFReferenceMutability.Immutable
@@ -1363,7 +1363,7 @@ export type PointerOut<V, M extends DIFReferenceMutability> = V extends Ref<infe
             //     : { [K in keyof V]: ObjectFieldOut<V[K], M> }
         )
     : V extends PrimitiveValue ? Ref<
-            M extends typeof DIFReferenceMutability["Immutable"] ? V
+            M extends typeof DIFSharedValueMutability["Immutable"] ? V
                 : WidenLiteral<V>
         >
     : V;

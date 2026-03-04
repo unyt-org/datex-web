@@ -166,9 +166,9 @@ dependencies = [
 
 [[package]]
 name = "binrw"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81419ff39e6ed10a92a7f125290859776ced35d9a08a665ae40b23e7ca702f30"
+checksum = "d53195f985e88ab94d1cc87e80049dd2929fd39e4a772c5ae96a7e5c4aad3642"
 dependencies = [
  "array-init",
  "binrw_derive",
@@ -177,9 +177,9 @@ dependencies = [
 
 [[package]]
 name = "binrw_derive"
-version = "0.15.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "376404e55ec40d0d6f8b4b7df3f87b87954bd987f0cf9a7207ea3b6ea5c9add4"
+checksum = "5910da05ee556b789032c8ff5a61fb99239580aa3fd0bfaa8f4d094b2aee00ad"
 dependencies = [
  "either",
  "proc-macro2",
@@ -351,7 +351,7 @@ dependencies = [
 [[package]]
 name = "datex-core"
 version = "0.0.10"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-ownership#7c5df66d4032e89f01dbb3fdd668e8423e3fbf9d"
 dependencies = [
  "ariadne",
  "async-select",
@@ -405,7 +405,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-ownership#7c5df66d4032e89f01dbb3fdd668e8423e3fbf9d"
 dependencies = [
  "bs58",
 ]
@@ -413,7 +413,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.2"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-ownership#7c5df66d4032e89f01dbb3fdd668e8423e3fbf9d"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -424,7 +424,7 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
-source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.10#0512024d5eabadca4b7dfcffc6b270bf30e4d48e"
+source = "git+https://github.com/unyt-org/datex?branch=feat%2Fpointer-ownership#7c5df66d4032e89f01dbb3fdd668e8423e3fbf9d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1308,9 +1308,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-crate"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "219cb19e96be00ab2e37d6e299658a0cfa83e52429179969b0f0121b4ac46983"
+checksum = "e67ba7e9b2b56446f1d419b1d807906278ffa1a658a8a5d8a39dcb1f5a78614f"
 dependencies = [
  "toml_edit",
 ]
@@ -1335,9 +1335,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.44"
+version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
+checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
 dependencies = [
  "proc-macro2",
 ]
@@ -1897,18 +1897,18 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "toml_datetime"
-version = "0.7.5+spec-1.1.0"
+version = "1.0.0+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92e1cfed4a3038bc5a127e35a2d360f145e1f4b971b551a2ba5fd7aedf7e1347"
+checksum = "32c2555c699578a4f59f0cc68e5116c8d7cabbd45e1409b989d4be085b53f13e"
 dependencies = [
  "serde_core",
 ]
 
 [[package]]
 name = "toml_edit"
-version = "0.23.10+spec-1.0.0"
+version = "0.25.4+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84c8b9f757e028cee9fa244aea147aab2a9ec09d5325a9b01e0a49730c2b5269"
+checksum = "7193cbd0ce53dc966037f54351dbbcf0d5a642c7f0038c382ef9e677ce8c13f2"
 dependencies = [
  "indexmap 2.13.0",
  "toml_datetime",
@@ -2389,11 +2389,3 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
-
-[[patch.unused]]
-name = "datex-core"
-version = "0.0.10"
-
-[[patch.unused]]
-name = "datex-crypto-facade"
-version = "0.0.2"

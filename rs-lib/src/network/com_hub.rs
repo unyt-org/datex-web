@@ -122,7 +122,6 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &value_container_to_dif_js_value(
                                 &setup_data,
-                                runtime.memory(),
                             ),
                         )
                         .map_err(|e| {

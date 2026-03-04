@@ -2,8 +2,8 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import { assertThrows } from "@std/assert/throws";
 import {
-    type DIFReference,
-    DIFReferenceMutability,
+    type DIFSharedValue,
+    DIFSharedValueMutability,
     type DIFRepresentationValue,
     type DIFUpdate,
     type DIFUpdateData,
@@ -19,18 +19,18 @@ const runtime = await Runtime.create({ endpoint: "@jonas" });
 runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 
 Deno.test("pointer create with observe", () => {
-    const ref = runtime.dif.createReferenceFromDIFValue(
+    const ref = runtime.dif.createSharedValueFromDIFValue(
         {
             value: "Hello, DATEX!",
         },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
     let observed: DIFUpdate | null = null;
     const observerId = runtime.dif.observePointerBindDirect(ref, (value) => {
-        runtime.executeSync("'xy'");
+        runtime.executeSync('"xy"');
         runtime.dif.unobserveReferenceBindDirect(ref, observerId);
         observed = value;
         // TODO: print error message somewhere (don't throw)
@@ -53,12 +53,12 @@ Deno.test("pointer create with observe", () => {
 });
 
 Deno.test("pointer create without observe", () => {
-    const ref = runtime.dif.createReferenceFromDIFValue(
+    const ref = runtime.dif.createSharedValueFromDIFValue(
         {
             value: "Hello, Datex!",
         },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     assertEquals(typeof ref, "string");
 
@@ -82,37 +82,37 @@ Deno.test("pointer create primitive", () => {
     runtime.createTransparentReference(
         42,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     ) satisfies Ref<42>;
 
     runtime.createTransparentReference(
         42,
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     ) satisfies Ref<number>;
 
     runtime.createTransparentReference(
         "hello world",
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     ) satisfies Ref<"hello world">;
 
     runtime.createTransparentReference(
         "hello world",
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     ) satisfies Ref<string>;
 
     runtime.createTransparentReference(
         true,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     ) satisfies Ref<true>;
 
     runtime.createTransparentReference(
         { x: true } as const,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     ) satisfies {
         readonly x: true;
     };
@@ -120,12 +120,12 @@ Deno.test("pointer create primitive", () => {
     const a = runtime.createTransparentReference(
         5,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     );
     const b = runtime.createTransparentReference(
         { x: a },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     ) satisfies {
         x: Ref<5>;
     };
@@ -182,7 +182,7 @@ Deno.test("pointer create struct", () => {
          * -> User
          * -> readonly User
          */
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     const struct = { a: 1.0, b: "text", c: { d: true }, e: { f: innerPtr } };
 
@@ -190,7 +190,7 @@ Deno.test("pointer create struct", () => {
     const ptrObjImmutable = runtime.createTransparentReference(
         struct,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     );
     ptrObjImmutable.e satisfies { readonly f: Ref<number> };
 
@@ -200,7 +200,7 @@ Deno.test("pointer create struct", () => {
             runtime.createTransparentReference(
                 ptrObjImmutable,
                 undefined,
-                DIFReferenceMutability.Mutable,
+                DIFSharedValueMutability.Mutable,
             );
         },
         Error,
@@ -213,7 +213,7 @@ Deno.test("pointer create struct", () => {
             runtime.createTransparentReference(
                 struct,
                 undefined,
-                DIFReferenceMutability.Mutable,
+                DIFSharedValueMutability.Mutable,
             );
         },
         Error,
@@ -264,10 +264,10 @@ Deno.test("pointer create and resolve", () => {
     //     `Invalid`,
     // );
 
-    const ptr = runtime.dif.createReferenceFromDIFValue(
+    const ptr = runtime.dif.createSharedValueFromDIFValue(
         { value: "unyt.org" },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     const resolved = runtime.dif.resolveDIFValueContainerSync<string>(
         ptr,
@@ -280,12 +280,12 @@ Deno.test("pointer object create and resolve", () => {
         [{ value: "a" }, { value: 123 }],
         [{ value: "b" }, { value: 456 }],
     ];
-    const ptr = runtime.dif.createReferenceFromDIFValue(
+    const ptr = runtime.dif.createSharedValueFromDIFValue(
         {
             value: initialDIFValue,
         },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     console.log("ptr address", ptr);
     const loadedDIFValue = runtime.dif._handle.resolve_pointer_address_sync(
@@ -297,11 +297,11 @@ Deno.test("pointer object create and resolve", () => {
         loadedDIFValue,
         {
             allowed_type: "0c0000",
-            mut: DIFReferenceMutability.Mutable,
+            mut: DIFSharedValueMutability.Mutable,
             value: {
                 value: initialDIFValue,
             },
-        } satisfies DIFReference,
+        } satisfies DIFSharedValue,
     );
 });
 
@@ -359,7 +359,7 @@ Deno.test("pointer map create and cache", () => {
         difReferenceToDisplayString(
             runtime.dif._handle.resolve_pointer_address(
                 ptrId,
-            ) as DIFReference,
+            ) as DIFSharedValue,
         ),
     );
 
@@ -396,18 +396,18 @@ Deno.test("pointer primitive ref update", () => {
 
     // get value of ptrObj from DATEX execution
     let result = runtime.executeSyncWithStringResult(
-        "$" + ptrObj.pointerAddress,
+        "'$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&mut 123f64");
+    assertEquals(result, "shared mut 123f64");
 
     // update the ref value
     ptrObj.value = 456;
 
     // get value of ptrObj from DATEX execution
     result = runtime.executeSyncWithStringResult(
-        "$" + ptrObj.pointerAddress,
+        "'$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&mut 456f64");
+    assertEquals(result, "shared mut 456f64");
 });
 
 Deno.test("immutable pointer primitive ref update", () => {
@@ -415,7 +415,7 @@ Deno.test("immutable pointer primitive ref update", () => {
     const ptrObj = runtime.createTransparentReference(
         val as number,
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     );
     if (!(ptrObj instanceof Ref)) {
         throw new Error("Pointer object is not a Ref");
@@ -424,9 +424,9 @@ Deno.test("immutable pointer primitive ref update", () => {
 
     // get value of ptrObj from DATEX execution
     const result = runtime.executeSyncWithStringResult(
-        "$" + ptrObj.pointerAddress,
+        "'$" + ptrObj.pointerAddress,
     );
-    assertEquals(result, "&123f64");
+    assertEquals(result, "shared 123f64");
 
     // update the ref value
     assertThrows(
@@ -438,33 +438,6 @@ Deno.test("immutable pointer primitive ref update", () => {
     );
 });
 
-Deno.test("immutable pointer primitive ref update", () => {
-    const val = 123;
-    const ptrObj = runtime.createTransparentReference(
-        val as number,
-        undefined,
-        DIFReferenceMutability.Immutable,
-    );
-    if (!(ptrObj instanceof Ref)) {
-        throw new Error("Pointer object is not a Ref");
-    }
-    assertEquals(ptrObj.value, val);
-
-    // get value of ptrObj from DATEX execution
-    const result = runtime.executeSyncWithStringResult(
-        "$" + ptrObj.pointerAddress,
-    );
-    assertEquals(result, "&123f64");
-
-    // update the ref value
-    assertThrows(
-        () => {
-            ptrObj.value = 456;
-        },
-        Error,
-        `immutable reference`,
-    );
-});
 
 Deno.test("pointer primitive ref update and observe", () => {
     const val = 123;
@@ -643,10 +616,10 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 });
 
 Deno.test("observer immutable", () => {
-    const ref = runtime.dif.createReferenceFromDIFValue(
+    const ref = runtime.dif.createSharedValueFromDIFValue(
         { value: "Immutable" },
         undefined,
-        DIFReferenceMutability.Immutable,
+        DIFSharedValueMutability.Immutable,
     );
     assertThrows(
         () => {
@@ -658,10 +631,10 @@ Deno.test("observer immutable", () => {
 });
 
 Deno.test("pointer observe unobserve", () => {
-    const ref = runtime.dif.createReferenceFromDIFValue(
+    const ref = runtime.dif.createSharedValueFromDIFValue(
         { value: "42" },
         undefined,
-        DIFReferenceMutability.Mutable,
+        DIFSharedValueMutability.Mutable,
     );
     assertThrows(
         () => {

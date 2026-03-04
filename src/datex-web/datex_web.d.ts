@@ -275,12 +275,6 @@ export class JSComHub {
     remove_socket(socket_uuid: string): Promise<void>;
 }
 
-export class JSPointer {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-}
-
 export class JSRuntime {
     private constructor();
     free(): void;
@@ -328,14 +322,3 @@ export class RuntimeDIFHandle {
 }
 
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
-
-/**
- * Executes a Datex script and returns the result as a string.
- */
-export function execute(datex_script: string, decompile_options: any): string;
-
-/**
- * Executes a Datex script and returns true when execution was successful.
- * Does not return the result of the script, but only indicates success or failure.
- */
-export function execute_internal(datex_script: string): boolean;

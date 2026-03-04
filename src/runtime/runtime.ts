@@ -1,7 +1,7 @@
-import { create_runtime, type DecompileOptions, execute_internal, type JSRuntime } from "../datex.ts";
+import { create_runtime, type DecompileOptions, type JSRuntime } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
-import type { DIFReferenceMutability, DIFTypeDefinition } from "../dif/definitions.ts";
+import type { DIFSharedValueMutability, DIFTypeDefinition } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 import { unimplemented } from "../utils/exceptions.ts";
 
@@ -276,10 +276,6 @@ export class Runtime {
         return { datexScript, valuesArray };
     }
 
-    public _execute_internal(datexScript: string): boolean {
-        return execute_internal(datexScript);
-    }
-
     /**
      * Creates a new reference containg the given JS value.
      * For primitive values, a Ref wrapper is returned.
@@ -292,7 +288,7 @@ export class Runtime {
      */
     public createTransparentReference<
         V,
-        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
+        M extends DIFSharedValueMutability = typeof DIFSharedValueMutability.Mutable,
     >(
         // deno-lint-ignore ban-types
         value: V & {},
@@ -317,7 +313,7 @@ export class Runtime {
      */
     public createOrGetWrappedReference<
         V,
-        M extends DIFReferenceMutability = typeof DIFReferenceMutability.Mutable,
+        M extends DIFSharedValueMutability = typeof DIFSharedValueMutability.Mutable,
     >(
         _value: V,
         _allowedType?: DIFTypeDefinition | null,
