@@ -4,8 +4,8 @@
  * This module contains helper functions to convert DIF structures to display strings.
  */
 import {
-    type DIFReference,
-    DIFReferenceMutability,
+    type DIFSharedValue,
+    DIFSharedValueMutability,
     type DIFRepresentationValue,
     type DIFTypeDefinition,
     type DIFValueContainer,
@@ -15,10 +15,10 @@ import { CoreTypeAddress } from "./core.ts";
 /**
  * Converts a DIF reference mutability to a display string.
  */
-export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
-    if (mut === DIFReferenceMutability.Mutable) {
+export function mutabilityToDisplayString(mut: DIFSharedValueMutability): string {
+    if (mut === DIFSharedValueMutability.Mutable) {
         return "&mut ";
-    } else if (mut === DIFReferenceMutability.Immutable) {
+    } else if (mut === DIFSharedValueMutability.Immutable) {
         return "&";
     }
     throw new Error("Unknown mutability: " + mut);
@@ -28,7 +28,7 @@ export function mutabilityToDisplayString(mut: DIFReferenceMutability): string {
  * Converts a DIF reference to a display string.
  */
 export function difReferenceToDisplayString(
-    reference: DIFReference,
+    reference: DIFSharedValue,
 ): string {
     const typeString = difTypeDefinitionToDisplayString(reference.allowed_type);
     const valueString = difValueContainerToDisplayString(reference.value);

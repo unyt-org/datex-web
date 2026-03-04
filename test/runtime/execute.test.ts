@@ -67,7 +67,7 @@ Deno.test("execute sync bigint", async () => {
 
 Deno.test("execute sync string", async () => {
     const runtime = await Runtime.create({ endpoint: "@jonas" });
-    const result = runtime.executeSync<string>("'lol'");
+    const result = runtime.executeSync<string>(`"lol"`);
     assertEquals(result, "lol");
 });
 
@@ -98,7 +98,7 @@ Deno.test("execute sync none", async () => {
 Deno.test("execute sync object", async () => {
     const runtime = await Runtime.create({ endpoint: "@jonas" });
     const result = runtime.executeSync<Record<string, number | string>>(
-        "{ a: 1, b: 'test' }",
+        '{ a: 1, b: "test" }',
     );
     assertEquals(
         result,

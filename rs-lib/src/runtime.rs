@@ -19,13 +19,12 @@ use datex_core::{
         dxb_block::DXBBlock,
         protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
     },
-    references::{
+    shared_values::{
         observers::{ObserveOptions, TransceiverId},
-        reference::ReferenceMutability,
     },
     serde::deserializer::DatexDeserializer,
     values::{
-        core_values::endpoint::Endpoint, pointer::PointerAddress,
+        core_values::endpoint::Endpoint,
         value_container::ValueContainer,
     },
 };
@@ -44,6 +43,8 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{Error, from_value};
 use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, sync::Arc};
+use datex_core::shared_values::pointer_address::PointerAddress;
+use datex_core::shared_values::shared_container::SharedContainerMutability;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -397,7 +398,6 @@ impl JSRuntime {
                 let dif_value_container =
                     DIFValueContainer::from_value_container(
                         &value_container,
-                        self.runtime.memory(),
                     );
                 to_js_value(&dif_value_container).unwrap()
             }
@@ -557,7 +557,7 @@ impl RuntimeDIFHandle {
             } else {
                 Some(from_value(allowed_type).map_err(js_error)?)
             };
-        let dif_mutability = ReferenceMutability::try_from(mutability)
+        let dif_mutability = SharedContainerMutability::try_from(mutability)
             .map_err(|_| js_error(ConversionError::InvalidValue))?;
         let address = DIFInterface::create_pointer(
             self,
@@ -642,7 +642,7 @@ impl DIFInterface for RuntimeDIFHandle {
         &self,
         value: DIFValueContainer,
         allowed_type: Option<DIFTypeDefinition>,
-        mutability: ReferenceMutability,
+        mutability: SharedContainerMutability,
     ) -> Result<PointerAddress, DIFCreatePointerError> {
         self.internal
             .create_pointer(value, allowed_type, mutability)

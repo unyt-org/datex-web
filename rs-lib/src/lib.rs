@@ -22,7 +22,6 @@ use runtime::JSRuntime;
 pub mod network;
 
 pub mod js_utils;
-pub mod pointer;
 pub mod utils;
 
 #[cfg(feature = "lsp")]
@@ -79,60 +78,4 @@ pub async fn create_runtime(
     });
 
     JSRuntime::run(config).await
-}
-
-/// Executes a Datex script and returns the result as a string.
-#[wasm_bindgen]
-pub fn execute(datex_script: &str, decompile_options: JsValue) -> String {
-    let result = compile_script(datex_script, CompileOptions::default());
-    if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new(
-            &dxb,
-            ExecutionOptions {
-                verbose: true,
-                ..ExecutionOptions::default()
-            },
-            None,
-        );
-        let result = execute_dxb_sync(input).unwrap_or_else(|err| {
-            panic!("Failed to execute script: {err:?}");
-        });
-        let result = result.unwrap();
-        let (result_dxb, _) =
-            compile_template("?", &[Some(result)], CompileOptions::default())
-                .unwrap();
-
-        decompile_body(
-            &result_dxb,
-            from_value(decompile_options).unwrap_or_default(),
-        )
-        .unwrap_or_else(|err| {
-            panic!("Failed to decompile result: {err:?}");
-        })
-    } else {
-        panic!("Failed to compile script: {:?}", result.err());
-    }
-}
-
-/// Executes a Datex script and returns true when execution was successful.
-/// Does not return the result of the script, but only indicates success or failure.
-#[wasm_bindgen]
-pub fn execute_internal(datex_script: &str) -> bool {
-    let result = compile_script(datex_script, CompileOptions::default());
-    if let Ok((dxb, _)) = result {
-        let input = ExecutionInput::new(
-            &dxb,
-            ExecutionOptions {
-                verbose: true,
-                ..ExecutionOptions::default()
-            },
-            None,
-        );
-        let result = execute_dxb_sync(input).unwrap_or_else(|err| {
-            panic!("Failed to execute script: {err:?}");
-        });
-        result.is_some()
-    } else {
-        panic!("Failed to compile script: {:?}", result.err());
-    }
 }

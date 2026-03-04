@@ -39,18 +39,18 @@ export type DIFTypeDefinitionKind = typeof DIFTypeDefinitionKind[keyof typeof DI
 /**
  * Representation of reference mutability (mutable or immutable) in DIF.
  */
-export const DIFReferenceMutability = {
+export const DIFSharedValueMutability = {
     Mutable: 0,
     Immutable: 1,
 } as const;
 /** A DIF reference mutability. */
-export type DIFReferenceMutability = typeof DIFReferenceMutability[keyof typeof DIFReferenceMutability];
+export type DIFSharedValueMutability = typeof DIFSharedValueMutability[keyof typeof DIFSharedValueMutability];
 
 export type DIFType =
     | DIFPointerAddress // shorthand for DIFType with DIFTypeDefinitionKind.Reference
     | {
         name?: string;
-        mut?: DIFReferenceMutability;
+        mut?: DIFSharedValueMutability;
         def: DIFTypeDefinition;
     };
 
@@ -79,11 +79,11 @@ type VerboseDIFTypeDefinition<
     def: DIFTypeDefinitionInner<Kind>;
 };
 
-/** A representation of a reference in DIF. */
-export type DIFReference = {
+/** A representation of a shared value in DIF. */
+export type DIFSharedValue = {
     value: DIFValueContainer;
     allowed_type: DIFTypeDefinition;
-    mut: DIFReferenceMutability;
+    mut: DIFSharedValueMutability;
 };
 
 /** A representation of a value or pointer address in DIF. */

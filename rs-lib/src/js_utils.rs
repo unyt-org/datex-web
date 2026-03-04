@@ -108,10 +108,9 @@ pub fn dif_js_value_to_value_container(
 
 pub fn value_container_to_dif_js_value(
     value_container: &ValueContainer,
-    memory: &RefCell<Memory>,
 ) -> JsValue {
     let dif_value_container =
-        DIFValueContainer::from_value_container(&value_container, memory);
+        DIFValueContainer::from_value_container(&value_container);
     to_js_value(&dif_value_container)
         .expect("Failed to serialize DIFValueContainer to JsValue")
 }
