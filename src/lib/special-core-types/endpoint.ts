@@ -52,11 +52,11 @@ export class Endpoint {
         return this.#endpoint;
     }
 
-    get [Symbol.toStringTag]() {
+    get [Symbol.toStringTag](): string {
         return this.#endpoint;
     }
 
-    get [Symbol.toPrimitive]() {
+    get [Symbol.toPrimitive](): string {
         return this.#endpoint;
     }
 }

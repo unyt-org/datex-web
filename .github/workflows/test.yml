@@ -15,7 +15,7 @@ jobs:
               with:
                   deno-version: v2.x
             - name: Build
-              run: deno task debug
+              run: deno task debug-no-opt
             - name: Upload build artifacts
               uses: actions/upload-artifact@v4
               with:
@@ -24,6 +24,30 @@ jobs:
                       ./src/datex-web/datex_web.internal.js
                       ./src/datex-web/datex_web.wasm
                   retention-days: 5
+    lint:
+        name: Lint
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: "true"
+            - uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+            - name: Download build artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build
+                  path: ./src/datex-web
+            - name: Check formatting
+              run: deno fmt --check
+
+            - name: Lint
+              run: deno lint
+
+            - name: Type Checking
+              run: deno check -I ./src ./test
 
     test:
         runs-on: ubuntu-latest
@@ -42,15 +66,6 @@ jobs:
             - uses: denoland/setup-deno@v2
               with:
                   deno-version: v2.x
-
-            - name: Check formatting
-              run: deno fmt --check
-
-            - name: Lint
-              run: deno lint
-
-            - name: Type Checking
-              run: deno check -I ./src ./test
 
             - name: Run Tests
               run: deno task test-no-build

@@ -9,5 +9,5 @@
         "RUSTFLAGS": "--cfg=web_sys_unstable_apis"
     },
     "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
-    "rust-analyzer.cargo.features": ["debug"]
+    "rust-analyzer.cargo.features": []
 }

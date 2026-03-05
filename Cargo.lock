@@ -350,9 +350,9 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.10"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "828f8fd2544e3e7062641e6e1bc64cf2d05d749f8f0765d0f4fd4e588c2a080d"
+checksum = "1471cd0f342832e2a44603ce2c910359d2fd3325f15476359ca99493df421f05"
 dependencies = [
  "ariadne",
  "async-select",
@@ -437,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "datex-web"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -2283,9 +2283,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.7.14"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a5364e9d77fcdeeaa6062ced926ee3381faa2ee02d3eb83a5c27a8825540829"
+checksum = "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
 dependencies = [
  "memchr",
 ]

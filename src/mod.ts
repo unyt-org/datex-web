@@ -23,5 +23,8 @@
 export * from "./runtime/runtime.ts";
 export * as DIF from "./dif/mod.ts";
 export * as Network from "./network/mod.ts";
+export * from "./lib/special-core-types/endpoint.ts";
+export * from "./lib/special-core-types/range.ts";
 export * from "./refs/ref.ts";
+export * from "./repl/mod.ts";
 import "./utils/devtools-formatter.ts";

@@ -2,6 +2,7 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { assertEquals } from "@std/assert";
 import { Endpoint } from "../../src/lib/special-core-types/endpoint.ts";
 import { CoreTypeAddress } from "../../src/dif/core.ts";
+import { Range } from "../../src/lib/special-core-types/range.ts";
 Deno.test("execute sync with string result", async () => {
     const runtime = await Runtime.create({ endpoint: "@jonas" });
     const script = "1 + 2";
@@ -110,6 +111,14 @@ Deno.test("execute sync endpoint", async () => {
     const runtime = await Runtime.create({ endpoint: "@jonas" });
     const result = runtime.executeSync<Endpoint>("#endpoint");
     assertEquals(result, Endpoint.get("@jonas"));
+});
+
+Deno.test("execute sync range", async () => {
+    const runtime = await Runtime.create({ endpoint: "@jonas" });
+    const result = runtime.executeSync<Range>("1..2");
+    assertEquals(result.start, 1);
+    assertEquals(result.end, 2);
+    assertEquals(result, new Range(1, 2));
 });
 
 Deno.test("execute sync pass number from JS", async () => {

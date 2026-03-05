@@ -1,6 +1,6 @@
 use datex_core::{
     libs::core::{CoreLibPointerId, create_core_lib_types},
-    values::pointer::PointerAddress,
+    shared_values::pointer_address::PointerAddress,
 };
 
 #[test]

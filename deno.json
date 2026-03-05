@@ -1,6 +1,6 @@
 {
     "name": "@unyt/datex",
-    "version": "0.0.13",
+    "version": "0.0.14",
     "license": "MIT",
     "exports": {
         ".": "./src/mod.ts",
@@ -16,9 +16,9 @@
         ]
     },
     "tasks": {
-        "debug": "deno run -A scripts/build-wasm.ts --profile debug --features debug",
+        "debug": "deno run -A scripts/build-wasm.ts --profile debug",
         "release": "deno run -A scripts/build-wasm.ts --profile release",
-        "debug-unsecure": "deno run -A scripts/build-wasm.ts --profile debug --features debug,allow_unsigned_blocks",
+        "debug-unsecure": "deno run -A scripts/build-wasm.ts --profile debug --features allow_unsigned_blocks",
 
         "debug-no-opt": "deno task debug --no-opt",
         "test": "deno task debug-no-opt && deno test -A",
@@ -31,7 +31,7 @@
         "browser-demo-no-build": "deno task build-npm && cd datex-browser-demo && npm install && npm run dev",
 
         "fmt": "deno fmt && cargo fmt",
-        "lint": "deno lint --fix && cargo clippy --fix --features debug"
+        "lint": "deno lint --fix && cargo clippy --fix"
     },
     "fmt": {
         "indentWidth": 4,

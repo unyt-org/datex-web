@@ -299,6 +299,13 @@ export class JSRuntime {
     readonly version: string;
 }
 
+export class Repl {
+    free(): void;
+    [Symbol.dispose](): void;
+    execute(script: string): Promise<any>;
+    constructor(runtime: JSRuntime, verbose: boolean);
+}
+
 export class RuntimeDIFHandle {
     private constructor();
     free(): void;

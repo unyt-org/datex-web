@@ -1,4 +1,4 @@
-import { Ref, Runtime } from "datex";
+import { Endpoint, Range, Ref, Repl, Runtime } from "datex";
 
 export const runtime = await Runtime.create(
     {
@@ -6,7 +6,7 @@ export const runtime = await Runtime.create(
             {
                 type: "websocket-client",
                 config: {
-                    url: "ws://localhost:8043",
+                    url: "wss://example.unyt.land",
                 },
             },
         ],
@@ -15,7 +15,7 @@ export const runtime = await Runtime.create(
         },
     },
     {
-        log_level: "warn",
+        log_level: "info",
     },
 );
 
@@ -25,3 +25,12 @@ runtime.comHub.printMetadata();
 globalThis.Datex = runtime;
 // @ts-ignore global variable for debugging
 globalThis.Ref = Ref;
+
+// @ts-ignore global variable for debugging
+globalThis.Range = Range;
+
+// @ts-ignore global variable for debugging
+globalThis.Endpoint = Endpoint;
+
+// @ts-ignore global variable for debugging
+globalThis.Repl = Repl;
