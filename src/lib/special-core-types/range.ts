@@ -34,8 +34,4 @@ export class Range {
     get [Symbol.toPrimitive](): string {
         return this.toString();
     }
-
-    public static get(start: number, end: number): Range {
-        return new Range(start, end);
-    }
 }
