@@ -24,6 +24,9 @@ pub mod network;
 pub mod js_utils;
 pub mod utils;
 
+#[cfg(feature = "repl")]
+pub mod repl;
+
 #[cfg(feature = "lsp")]
 pub mod lsp;
 

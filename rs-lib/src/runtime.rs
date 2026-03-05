@@ -19,13 +19,10 @@ use datex_core::{
         dxb_block::DXBBlock,
         protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
     },
-    shared_values::{
-        observers::{ObserveOptions, TransceiverId},
-    },
     serde::deserializer::DatexDeserializer,
+    shared_values::observers::{ObserveOptions, TransceiverId},
     values::{
-        core_values::endpoint::Endpoint,
-        value_container::ValueContainer,
+        core_values::endpoint::Endpoint, value_container::ValueContainer,
     },
 };
 use datex_crypto_facade::crypto::Crypto;
@@ -37,19 +34,20 @@ use datex_core::{
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
     },
+    shared_values::{
+        pointer_address::PointerAddress,
+        shared_container::SharedContainerMutability,
+    },
 };
 use js_sys::Function;
-use log::info;
-use serde::{Deserialize, Serialize};
-use serde_wasm_bindgen::{Error, from_value};
-use std::{cell::RefCell, fmt::Display, rc::Rc, str::FromStr, sync::Arc};
-use datex_core::shared_values::pointer_address::PointerAddress;
-use datex_core::shared_values::shared_container::SharedContainerMutability;
+use serde_wasm_bindgen::from_value;
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
 
 #[wasm_bindgen(getter_with_clone)]
+#[derive(Clone)]
 pub struct JSRuntime {
     runtime: Runtime,
     pub com_hub: JSComHub,
@@ -96,6 +94,20 @@ impl JSRuntime {
         });
         initialized_receiver.await.unwrap();
         js_runtime
+    }
+
+    pub fn maybe_value_container_to_dif(
+        &self,
+        maybe_value_container: Option<ValueContainer>,
+    ) -> JsValue {
+        match maybe_value_container {
+            None => JsValue::NULL,
+            Some(value_container) => {
+                let dif_value_container =
+                    DIFValueContainer::from_value_container(&value_container);
+                to_js_value(&dif_value_container).unwrap()
+            }
+        }
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
@@ -386,22 +398,6 @@ impl JSRuntime {
             &value_container,
             from_value(decompile_options).unwrap_or_default(),
         ))
-    }
-
-    fn maybe_value_container_to_dif(
-        &self,
-        maybe_value_container: Option<ValueContainer>,
-    ) -> JsValue {
-        match maybe_value_container {
-            None => JsValue::NULL,
-            Some(value_container) => {
-                let dif_value_container =
-                    DIFValueContainer::from_value_container(
-                        &value_container,
-                    );
-                to_js_value(&dif_value_container).unwrap()
-            }
-        }
     }
 
     fn js_values_to_value_containers(

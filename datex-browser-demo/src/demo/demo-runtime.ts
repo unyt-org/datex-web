@@ -1,4 +1,4 @@
-import { Endpoint, Range, Ref, Runtime } from "datex";
+import { Endpoint, Range, Ref, Repl, Runtime } from "datex";
 
 export const runtime = await Runtime.create(
     {
@@ -15,7 +15,7 @@ export const runtime = await Runtime.create(
         },
     },
     {
-        log_level: "warn",
+        log_level: "info",
     },
 );
 
@@ -31,3 +31,6 @@ globalThis.Range = Range;
 
 // @ts-ignore global variable for debugging
 globalThis.Endpoint = Endpoint;
+
+// @ts-ignore global variable for debugging
+globalThis.Repl = Repl;
