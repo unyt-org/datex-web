@@ -20,14 +20,16 @@ panic = "abort"
 
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
-datex-core = { git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", version = "0.0.11", default-features = false, features = [
+# git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
+datex-core = { version = "0.0.11", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",
     "syntax_highlighting_legacy",
     "lsp_wasm",
 ] }
-datex-crypto-facade = { git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", version = "0.0.2" }
+# git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
+datex-crypto-facade = { version = "0.0.2" }
 
 async-trait = "0.1.87"
 url = { version = "2.5.7" }
@@ -107,9 +109,11 @@ default = [
     "websocket-client",
     "serial-client",
     "webrtc",
+    "repl",
     "lsp",              # Make optional
 ]
 lsp = ["datex-core/lsp_wasm"]
+repl = []
 
 allow_unsigned_blocks = ["datex-core/allow_unsigned_blocks"]
 
