@@ -350,9 +350,8 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "828f8fd2544e3e7062641e6e1bc64cf2d05d749f8f0765d0f4fd4e588c2a080d"
+version = "0.0.11"
+source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.11#fe3421a6e19ef07285ab914fd3436805e477f000"
 dependencies = [
  "ariadne",
  "async-select",
@@ -406,8 +405,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56ea2af04cab3b42b4ab122ed2e850a7837e6d402bb4b9a9ffe0b9cfca7ad26d"
+source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.11#fe3421a6e19ef07285ab914fd3436805e477f000"
 dependencies = [
  "bs58",
 ]
@@ -415,8 +413,7 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07a56e4ff8e888b4609dd502a1f63e17fd669ae050eee06af97f2a195bdb77c0"
+source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.11#fe3421a6e19ef07285ab914fd3436805e477f000"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -427,8 +424,7 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6717768303603f37c8d6fd393ae7da7b78ae33b1ad0d6980253fa19005d0b84"
+source = "git+https://github.com/unyt-org/datex?branch=release%2F0.0.11#fe3421a6e19ef07285ab914fd3436805e477f000"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2283,9 +2279,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.7.14"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a5364e9d77fcdeeaa6062ced926ee3381faa2ee02d3eb83a5c27a8825540829"
+checksum = "df79d97927682d2fd8adb29682d1140b343be4ac0f08fd68b7765d9c059d3945"
 dependencies = [
  "memchr",
 ]
@@ -2393,3 +2389,11 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+
+[[patch.unused]]
+name = "datex-core"
+version = "0.0.11"
+
+[[patch.unused]]
+name = "datex-crypto-facade"
+version = "0.0.2"

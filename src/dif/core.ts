@@ -13,6 +13,7 @@ export const CoreTypeAddress = {
     map: "0c0000",
     never: "0d0000",
     unknown: "0e0000",
+    range: "100000",
     decimal: "2c0100",
     decimal_f32: "2d0100",
     decimal_f64: "2e0100",
