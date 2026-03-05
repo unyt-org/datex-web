@@ -1,6 +1,7 @@
 import type { JSRuntime, RuntimeDIFHandle } from "../datex.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
+import { Range } from "../lib/special-core-types/range.ts";
 import {
     type DIFArray,
     type DIFMap,
@@ -410,6 +411,20 @@ export class DIFHandler {
         } // endpoint types are resolved to Endpoint instances
         else if (type === CoreTypeAddress.endpoint) {
             return Endpoint.get(value.value as string) as T;
+        } else if (type === CoreTypeAddress.range) {
+            const [start, end] = value.value as DIFArray;
+            const result = this.promiseAllOrSync<number>([
+                this.resolveDIFValueContainer(start),
+                this.resolveDIFValueContainer(end),
+            ]);
+            if (result instanceof Promise) {
+                return result.then(([start, end]) => {
+                    return Range.get(start, end) as T;
+                });
+            } else {
+                const [start, end] = result as number[];
+                return Range.get(start, end) as T;
+            }
         } else if (type === CoreTypeAddress.list) {
             return this.promiseAllOrSync(
                 (value.value as DIFArray).map((v) => this.resolveDIFValueContainer(v)),
