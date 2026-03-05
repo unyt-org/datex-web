@@ -118,7 +118,7 @@ Deno.test("execute sync range", async () => {
     const result = runtime.executeSync<Range>("1..2");
     assertEquals(result.start, 1);
     assertEquals(result.end, 2);
-    assertEquals(result, Range.get(1, 2));
+    assertEquals(result, new Range(1, 2));
 });
 
 Deno.test("execute sync pass number from JS", async () => {

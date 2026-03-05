@@ -4,7 +4,9 @@
  * This is a test for the full integration of the JS runtime with the DATEX runtime.
  * NOTE: as more JS values are supported, this test should be extended to cover all of them.
  */
-import { Runtime } from "../../src/runtime/runtime.ts";
+import { Endpoint } from "datex/lib/special-core-types/endpoint.ts";
+import { Runtime } from "datex/runtime/runtime.ts";
+import { Range } from "datex/lib/special-core-types/range.ts";
 import { assertEquals } from "@std/assert";
 
 /**
@@ -38,6 +40,8 @@ const TEST_VALUES = [
     Infinity,
     -Infinity,
     2000n,
+    Endpoint.get("@test"),
+    new Range(1, 2),
 ] as const;
 
 // initialization of the test cases

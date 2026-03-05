@@ -419,11 +419,11 @@ export class DIFHandler {
             ]);
             if (result instanceof Promise) {
                 return result.then(([start, end]) => {
-                    return Range.get(start, end) as T;
+                    return new Range(start, end) as T;
                 });
             } else {
                 const [start, end] = result as number[];
-                return Range.get(start, end) as T;
+                return new Range(start, end) as T;
             }
         } else if (type === CoreTypeAddress.list) {
             return this.promiseAllOrSync(
@@ -1156,6 +1156,14 @@ export class DIFHandler {
             return {
                 type: CoreTypeAddress.endpoint,
                 value: value.toString(),
+            };
+        } else if (value instanceof Range) {
+            return {
+                type: CoreTypeAddress.range,
+                value: [
+                    this.convertJSValueToDIFValueContainer(value.start),
+                    this.convertJSValueToDIFValueContainer(value.end),
+                ],
             };
         } else if (Array.isArray(value)) {
             return {
