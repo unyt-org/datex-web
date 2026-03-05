@@ -7,7 +7,7 @@ import { unimplemented } from "../utils/exceptions.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
-const VERSION: string = "0.0.13";
+const VERSION: string = "0.0.14";
 
 /** debug flags for the runtime */
 interface DebugConfig {
