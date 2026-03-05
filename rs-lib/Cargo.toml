@@ -109,7 +109,6 @@ default = [
     "webrtc",
     "lsp",              # Make optional
 ]
-debug = []
 lsp = ["datex-core/lsp_wasm"]
 
 allow_unsigned_blocks = ["datex-core/allow_unsigned_blocks"]
