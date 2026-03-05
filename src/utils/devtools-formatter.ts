@@ -31,8 +31,22 @@ globalThis.devtoolsFormatters = [
             } else if (obj instanceof Range) {
                 return [
                     "span",
-                    { style: "color: #d58e12" },
-                    `${obj.start}...${obj.end}`,
+                    {},
+                    [
+                        "span",
+                        {},
+                        ["span", { style: "color: #d57258" }, `${obj.start}`],
+                    ],
+                    [
+                        "span",
+                        {},
+                        ["span", {}, `..`],
+                    ],
+                    [
+                        "span",
+                        {},
+                        ["span", { style: "color: #d57258" }, `${obj.end}`],
+                    ],
                 ];
             }
             return null; // fall back to default

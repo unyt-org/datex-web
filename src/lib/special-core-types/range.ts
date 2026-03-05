@@ -21,11 +21,11 @@ export class Range {
     }
 
     /**
-     * Turns a string representation of the range in the format "[start, end)".
+     * Turns a string representation of the range in the format
      * @returns The string representation of the range.
      */
     public toString(): string {
-        return `${this.start}...${this.end}`;
+        return `${this.start}..${this.end}`;
     }
 
     get [Symbol.toStringTag](): string {
