@@ -2,9 +2,9 @@ import { Runtime } from "../../src/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import { assertThrows } from "@std/assert/throws";
 import {
+    type DIFRepresentationValue,
     type DIFSharedValue,
     DIFSharedValueMutability,
-    type DIFRepresentationValue,
     type DIFUpdate,
     type DIFUpdateData,
     DIFUpdateKind,
@@ -437,7 +437,6 @@ Deno.test("immutable pointer primitive ref update", () => {
         `immutable reference`,
     );
 });
-
 
 Deno.test("pointer primitive ref update and observe", () => {
     const val = 123;

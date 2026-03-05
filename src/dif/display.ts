@@ -4,9 +4,9 @@
  * This module contains helper functions to convert DIF structures to display strings.
  */
 import {
+    type DIFRepresentationValue,
     type DIFSharedValue,
     DIFSharedValueMutability,
-    type DIFRepresentationValue,
     type DIFTypeDefinition,
     type DIFValueContainer,
 } from "./definitions.ts";
