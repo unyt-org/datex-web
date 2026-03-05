@@ -1,4 +1,5 @@
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
+import { Range } from "../lib/special-core-types/range.ts";
 import { Ref } from "../refs/ref.ts";
 
 // @ts-ignore devtoolsFormatters
@@ -26,6 +27,12 @@ globalThis.devtoolsFormatters = [
                             obj.value,
                         ],
                     ],
+                ];
+            } else if (obj instanceof Range) {
+                return [
+                    "span",
+                    { style: "color: #d58e12" },
+                    `${obj.start}...${obj.end}`,
                 ];
             }
             return null; // fall back to default

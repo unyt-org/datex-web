@@ -25,7 +25,14 @@ export class Range {
      * @returns The string representation of the range.
      */
     public toString(): string {
-        return `[${this.start}, ${this.end})`;
+        return `${this.start}...${this.end}`;
+    }
+
+    get [Symbol.toStringTag](): string {
+        return this.toString();
+    }
+    get [Symbol.toPrimitive](): string {
+        return this.toString();
     }
 
     public static get(start: number, end: number): Range {
