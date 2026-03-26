@@ -164,8 +164,8 @@ impl JSRuntime {
 
             // Generate key and signature
             let (pub_key, pri_key) = CryptoImpl::gen_ed25519().await.unwrap();
-            assert_eq!(pub_key.len(), 44_usize);
-            assert_eq!(pri_key.len(), 48_usize);
+            assert_eq!(pub_key.len(), 32_usize);
+            assert_eq!(pri_key.len(), 32_usize);
 
             let sig = CryptoImpl::sig_ed25519(&pri_key, &data).await.unwrap();
             assert_eq!(sig.len(), 64_usize);
@@ -202,8 +202,8 @@ impl JSRuntime {
             // ECDH derivation
             let (ser_pub, ser_pri) = CryptoImpl::gen_x25519().await.unwrap();
             let (cli_pub, cli_pri) = CryptoImpl::gen_x25519().await.unwrap();
-            assert_eq!(ser_pub.len(), 44_usize);
-            assert_eq!(ser_pri.len(), 48_usize);
+            assert_eq!(ser_pub.len(), 32_usize);
+            assert_eq!(ser_pri.len(), 32_usize);
 
             let cli_sec =
                 CryptoImpl::derive_x25519(&cli_pri, &ser_pub).await.unwrap();
