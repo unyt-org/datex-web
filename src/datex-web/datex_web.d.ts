@@ -114,9 +114,9 @@ export interface DecompileOptions {
 }
 
 export interface DisassemblerOptions {
-    tree: boolean;
-    colorized: boolean;
-    recursive: boolean;
+    tree?: boolean;
+    colorized?: boolean;
+    recursive?: boolean;
 }
 
 export interface DynamicEndpointProperties {
