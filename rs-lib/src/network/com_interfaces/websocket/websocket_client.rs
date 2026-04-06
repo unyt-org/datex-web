@@ -2,7 +2,7 @@ use datex_core::{
     derive_setup_data,
     network::com_interfaces::com_interface::factory::ComInterfaceAsyncFactory,
 };
-use futures_channel::oneshot;
+use futures::channel::oneshot;
 use gloo_timers::future::TimeoutFuture;
 use std::{
     cell::RefCell,
