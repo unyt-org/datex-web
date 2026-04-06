@@ -1,9 +1,18 @@
-import {create_runtime, type DecompileOptions, disassemble_dxb_flat, disassemble_dxb_tree, type JSRuntime} from "../datex.ts";
+import {
+    create_runtime,
+    type DecompileOptions,
+    disassemble_dxb_flat,
+    disassemble_dxb_tree,
+    disassemble_dxb_to_string,
+    type JSRuntime,
+    type DisassemblerOptions
+} from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
 import type { DIFSharedValueMutability, DIFTypeDefinition } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 import { unimplemented } from "../utils/exceptions.ts";
+import {FlatInstruction, Instruction, InstructionTree} from "./types.d.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -369,7 +378,30 @@ export class Runtime {
         };
     }
 
-    public disassembleDXB(dxb: Uint8Array, flat = false): string {
-        return flat ? disassemble_dxb_flat(dxb) : disassemble_dxb_tree(dxb);
+    /**
+     * Returns a disassembled DXB as a list of instructions
+     * @param dxb DATEX binary body
+     * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
+     */
+    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string|null] {
+        return disassemble_dxb_flat(dxb)
+    }
+
+    /**
+     * Returns a disassembled DXB as a tree structure, where each instruction can have nested child instructions
+     * @param dxb DATEX binary body
+     * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
+     */
+    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string|null] {
+        return disassemble_dxb_tree(dxb);
+    }
+
+    /**
+     * Returns a disassembled DXB as a human-readable string, similar to assembly code.
+     * @param dxb
+     * @param options
+     */
+    public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions|null): string {
+        return disassemble_dxb_to_string(dxb, options)
     }
 }

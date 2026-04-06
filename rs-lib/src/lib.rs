@@ -12,8 +12,8 @@ use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
     decompiler::decompile_body,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
-    global::protocol_structures::disassembler::disassemble_body,
 };
+use datex_core::disassembler::{disassemble_body, disassemble_body_to_string};
 use datex_core::global::protocol_structures::instructions::NestedInstructionResolutionStrategy;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -95,4 +95,10 @@ pub fn disassemble_dxb_tree(dxb: Vec<u8>) -> JsValue {
 pub fn disassemble_dxb_flat(dxb: Vec<u8>) -> JsValue {
     let (tree, error) = disassemble_body(&dxb, NestedInstructionResolutionStrategy::ResolveNestedScopesFlat);
     serde_wasm_bindgen::to_value(&(tree.flatten(), error.map(|e| e.to_string()))).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn disassemble_dxb_to_string(dxb: Vec<u8>, options: JsValue) -> JsValue {
+    let options = from_value(options).unwrap_or_default();
+    serde_wasm_bindgen::to_value(&disassemble_body_to_string(&dxb, options)).unwrap()
 }

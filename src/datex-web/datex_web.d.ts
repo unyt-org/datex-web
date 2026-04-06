@@ -113,6 +113,12 @@ export interface DecompileOptions {
     resolve_slots?: boolean;
 }
 
+export interface DisassemblerOptions {
+    tree: boolean;
+    colorized: boolean;
+    recursive: boolean;
+}
+
 export interface DynamicEndpointProperties {
     known_since: number;
     distance: number;
@@ -335,5 +341,7 @@ export class RuntimeDIFHandle {
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
 
 export function disassemble_dxb_flat(dxb: Uint8Array): any;
+
+export function disassemble_dxb_to_string(dxb: Uint8Array, options: any): any;
 
 export function disassemble_dxb_tree(dxb: Uint8Array): any;

@@ -27,6 +27,7 @@ datex-core = { git = "https://github.com/unyt-org/datex", branch = "feat/pointer
     "decompiler",
     "syntax_highlighting_legacy",
     "lsp_wasm",
+    "disassembler",
 ] }
 # git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
 datex-crypto-facade = { git = "https://github.com/unyt-org/datex", branch = "feat/pointer-sync" }
