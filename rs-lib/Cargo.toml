@@ -21,7 +21,7 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 # git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
-datex-core = { version = "0.0.11", default-features = false, features = [
+datex-core = { git = "https://github.com/unyt-org/datex", branch = "feat/pointer-sync", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",
@@ -29,7 +29,7 @@ datex-core = { version = "0.0.11", default-features = false, features = [
     "lsp_wasm",
 ] }
 # git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
-datex-crypto-facade = { version = "0.0.2" }
+datex-crypto-facade = { git = "https://github.com/unyt-org/datex", branch = "feat/pointer-sync" }
 
 async-trait = "0.1.87"
 url = { version = "2.5.7" }

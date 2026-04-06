@@ -19,7 +19,6 @@ use datex_core::{
         dxb_block::DXBBlock,
         protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
     },
-    serde::deserializer::DatexDeserializer,
     shared_values::observers::{ObserveOptions, TransceiverId},
     values::{
         core_values::endpoint::Endpoint, value_container::ValueContainer,
@@ -39,9 +38,11 @@ use datex_core::{
         shared_container::SharedContainerMutability,
     },
 };
-use js_sys::Function;
+use js_sys::{Function, Uint8Array};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::compiler::{compile_template, CompileOptions};
+use datex_core::shared_values::pointer_address::OwnedPointerAddress;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -437,6 +438,26 @@ impl JSRuntime {
         }
     }
 
+    /// Compiles a DATEX script with optional inserted values to a DXB body
+    pub async fn compile(
+        &self,
+        script: &str,
+        dif_values: Option<Vec<JsValue>>,
+    ) -> Result<Vec<u8>, JsValue> {
+        let (bytes, _) = compile_template(
+            script,
+            self
+                .js_values_to_value_containers(dif_values)
+                .map_err(js_error)?
+                .into_iter()
+                .map(Some)
+                .collect::<Vec<_>>()
+                .as_slice(),
+            CompileOptions::default(),
+        ).map_err(js_error)?;
+        Ok(bytes)
+    }
+
     /// Start the LSP server, returning a JS function to send messages to Rust
     #[cfg(feature = "lsp")]
     pub fn start_lsp(&self, send_to_js: js_sys::Function) -> js_sys::Function {
@@ -639,7 +660,7 @@ impl DIFInterface for RuntimeDIFHandle {
         value: DIFValueContainer,
         allowed_type: Option<DIFTypeDefinition>,
         mutability: SharedContainerMutability,
-    ) -> Result<PointerAddress, DIFCreatePointerError> {
+    ) -> Result<OwnedPointerAddress, DIFCreatePointerError> {
         self.internal
             .create_pointer(value, allowed_type, mutability)
     }

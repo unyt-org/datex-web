@@ -1,6 +1,7 @@
 use datex_core::runtime::execution::context::{
     ExecutionContext, ExecutionMode,
 };
+use datex_core::runtime::execution::execution_input::ExecutionCallerMetadata;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{js_utils::js_error, runtime::JSRuntime};
@@ -19,11 +20,13 @@ impl Repl {
             ExecutionContext::local_debug(
                 ExecutionMode::unbounded(),
                 runtime.runtime().internal(),
+                ExecutionCallerMetadata::local_default()
             )
         } else {
             ExecutionContext::local(
                 ExecutionMode::unbounded(),
                 runtime.runtime().internal(),
+                ExecutionCallerMetadata::local_default()
             )
         };
 

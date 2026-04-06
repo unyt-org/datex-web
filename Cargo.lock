@@ -350,9 +350,7 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1471cd0f342832e2a44603ce2c910359d2fd3325f15476359ca99493df421f05"
+version = "0.0.12"
 dependencies = [
  "ariadne",
  "async-select",
@@ -395,6 +393,7 @@ dependencies = [
  "strum_macros",
  "syn 2.0.117",
  "syntect",
+ "termcolor",
  "thiserror 2.0.18",
  "tsify",
  "url",
@@ -406,8 +405,6 @@ dependencies = [
 [[package]]
 name = "datex-crypto-facade"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56ea2af04cab3b42b4ab122ed2e850a7837e6d402bb4b9a9ffe0b9cfca7ad26d"
 dependencies = [
  "bs58",
 ]
@@ -415,8 +412,6 @@ dependencies = [
 [[package]]
 name = "datex-crypto-web"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07a56e4ff8e888b4609dd502a1f63e17fd669ae050eee06af97f2a195bdb77c0"
 dependencies = [
  "datex-crypto-facade",
  "wasm-bindgen",
@@ -427,8 +422,6 @@ dependencies = [
 [[package]]
 name = "datex-macros-internal"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6717768303603f37c8d6fd393ae7da7b78ae33b1ad0d6980253fa19005d0b84"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2393,11 +2386,3 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
-
-[[patch.unused]]
-name = "datex-core"
-version = "0.0.12"
-
-[[patch.unused]]
-name = "datex-crypto-facade"
-version = "0.0.2"
