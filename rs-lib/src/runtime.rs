@@ -5,16 +5,6 @@ use crate::{
 use datex_core::{
     self,
     decompiler::decompile_value,
-    dif::{
-        interface::{
-            DIFApplyError, DIFCreatePointerError, DIFInterface,
-            DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
-        },
-        reference::DIFReference,
-        r#type::DIFTypeDefinition,
-        update::{DIFUpdate, DIFUpdateData},
-        value::DIFValueContainer,
-    },
     global::{
         dxb_block::DXBBlock,
         protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
@@ -34,24 +24,27 @@ use datex_core::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
     },
     shared_values::{
-        pointer_address::PointerAddress,
-        shared_container::SharedContainerMutability,
+        PointerAddress,
+        SharedContainerMutability,
     },
 };
 use js_sys::{Function, Uint8Array};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 use datex_core::compiler::{compile_template, CompileOptions};
-use datex_core::shared_values::pointer_address::OwnedPointerAddress;
+use datex_core::dif::dif_interface::DIFInterface;
+use datex_core::shared_values::SelfOwnedPointerAddress;
+use datex_core::value_updates::update_data::Update;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
 
 #[wasm_bindgen(getter_with_clone)]
-#[derive(Clone)]
 pub struct JSRuntime {
     runtime: Runtime,
     pub com_hub: JSComHub,
+    #[wasm_bindgen(skip)]
+    dif_interface: DIFInterface
 }
 
 #[derive(Debug, PartialEq)]
@@ -76,7 +69,7 @@ impl JSRuntime {
 
     pub async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            cast_from_dif_js_value(config, &RefCell::new(Memory::default()))
+            cast_from_dif_js_value(config, &RefCell::new(Memory::new()))
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -113,7 +106,8 @@ impl JSRuntime {
 
     fn new(runtime: Runtime) -> JSRuntime {
         let com_hub = JSComHub::new(runtime.clone());
-        JSRuntime { runtime, com_hub }
+        let dif_interface = runtime.internal.create_dif_interface();
+        JSRuntime { runtime, com_hub, dif_interface }
     }
 }
 
@@ -466,13 +460,9 @@ impl JSRuntime {
     }
 }
 
-#[wasm_bindgen]
-pub struct RuntimeDIFHandle {
-    internal: Rc<RuntimeInternal>,
-}
 
 #[wasm_bindgen]
-impl RuntimeDIFHandle {
+impl JSRuntime {
     fn js_value_to_pointer_address(
         address: &str,
     ) -> Result<PointerAddress, JsError> {
@@ -535,15 +525,15 @@ impl RuntimeDIFHandle {
 
     pub fn update(
         &mut self,
-        transceiver_id: TransceiverId,
         address: &str,
         update: JsValue,
-    ) -> Result<(), JsError> {
+    ) -> Result<JsValue, JsError> {
         let address = Self::js_value_to_pointer_address(address)?;
-        let dif_update_data: DIFUpdateData =
+        let update: Update =
             from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, transceiver_id, address, &dif_update_data)
+        self.dif_interface.update(address, update)
             .map_err(js_error)
+            .map(|_| JsValue::UNDEFINED) // TODO
     }
 
     pub fn apply(
