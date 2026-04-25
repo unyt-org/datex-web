@@ -108,6 +108,18 @@ pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
         .map_err(|e| js_error(e.to_string()))
 }
 
+pub fn to_js_value_with_cache<T: Serialize>(
+    value: &T,
+    cache: &mut DIFSharedContainerCache,
+) -> Result<JsValue, JsError> {
+    let serializer = serde_wasm_bindgen::Serializer::json_compatible();
+    let value_container = T::from_serializable(value, cache)
+        .map_err(|e| js_error(e.to_string()))?;
+    value_container
+        .serialize(serializer)
+        .map_err(|e| js_error(e.to_string()))
+}
+
 /// Convert a JsValue to a deserializable Rust type
 pub fn from_js_value<T: DeserializeOwned>(
     value: impl Into<JsValue>,
