@@ -11,6 +11,8 @@ use serde_wasm_bindgen::from_value;
 use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
     decompiler::decompile_body,
+    disassembler::{disassemble_body, disassemble_body_to_string},
+    global::protocol_structures::instructions::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
 use serde::{Deserialize, Serialize};
@@ -18,7 +20,7 @@ use wasm_bindgen::prelude::*;
 
 mod runtime;
 use runtime::JSRuntime;
-
+mod dif;
 pub mod network;
 
 pub mod js_utils;
@@ -81,4 +83,33 @@ pub async fn create_runtime(
     });
 
     JSRuntime::run(config).await
+}
+
+#[wasm_bindgen]
+pub fn disassemble_dxb_tree(dxb: Vec<u8>) -> JsValue {
+    let (tree, error) = disassemble_body(
+        &dxb,
+        NestedInstructionResolutionStrategy::ResolveNestedScopesTree,
+    );
+    serde_wasm_bindgen::to_value(&(tree, error.map(|e| e.to_string()))).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn disassemble_dxb_flat(dxb: Vec<u8>) -> JsValue {
+    let (tree, error) = disassemble_body(
+        &dxb,
+        NestedInstructionResolutionStrategy::ResolveNestedScopesFlat,
+    );
+    serde_wasm_bindgen::to_value(&(
+        tree.flatten(),
+        error.map(|e| e.to_string()),
+    ))
+    .unwrap()
+}
+
+#[wasm_bindgen]
+pub fn disassemble_dxb_to_string(dxb: Vec<u8>, options: JsValue) -> JsValue {
+    let options = from_value(options).unwrap_or_default();
+    serde_wasm_bindgen::to_value(&disassemble_body_to_string(&dxb, options))
+        .unwrap()
 }

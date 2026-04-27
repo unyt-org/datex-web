@@ -113,6 +113,12 @@ export interface DecompileOptions {
     resolve_slots?: boolean;
 }
 
+export interface DisassemblerOptions {
+    tree?: boolean;
+    colorized?: boolean;
+    recursive?: boolean;
+}
+
 export interface DynamicEndpointProperties {
     known_since: number;
     distance: number;
@@ -280,6 +286,10 @@ export class JSRuntime {
     free(): void;
     [Symbol.dispose](): void;
     _create_block(body: Uint8Array | null | undefined, receivers: string[]): Uint8Array;
+    /**
+     * Compiles a DATEX script with optional inserted values to a DXB body
+     */
+    compile(script: string, dif_values?: any[] | null): Promise<Uint8Array>;
     crypto_test_tmp(): Promise<Promise<any>>;
     /**
      * Get a handle to the DIF interface of the runtime
@@ -329,3 +339,9 @@ export class RuntimeDIFHandle {
 }
 
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
+
+export function disassemble_dxb_flat(dxb: Uint8Array): any;
+
+export function disassemble_dxb_to_string(dxb: Uint8Array, options: any): any;
+
+export function disassemble_dxb_tree(dxb: Uint8Array): any;
