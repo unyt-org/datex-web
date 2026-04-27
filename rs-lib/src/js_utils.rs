@@ -1,21 +1,11 @@
-use std::cell::RefCell;
-
 use datex_core::{
-    dif::{
-        cache::DIFSharedContainerCache,
-        deserialization_context::DeserializationContext,
-    },
-    runtime::memory::Memory,
-    serde::deserializer::from_value_container,
-    shared_values::PointerAddress,
-    values::value_container::ValueContainer,
+    dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
+    utils::serde_serialized_owned::SerializeSeedOwned,
 };
-use log::info;
 use serde::{
-    Deserialize, Serialize,
+    Serialize,
     de::{DeserializeOwned, DeserializeSeed},
 };
-use serde_wasm_bindgen::{Error, from_value};
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
 
@@ -108,18 +98,6 @@ pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
         .map_err(|e| js_error(e.to_string()))
 }
 
-pub fn to_js_value_with_cache<T: Serialize>(
-    value: &T,
-    cache: &mut DIFSharedContainerCache,
-) -> Result<JsValue, JsError> {
-    let serializer = serde_wasm_bindgen::Serializer::json_compatible();
-    let value_container = T::from_serializable(value, cache)
-        .map_err(|e| js_error(e.to_string()))?;
-    value_container
-        .serialize(serializer)
-        .map_err(|e| js_error(e.to_string()))
-}
-
 /// Convert a JsValue to a deserializable Rust type
 pub fn from_js_value<T: DeserializeOwned>(
     value: impl Into<JsValue>,
@@ -128,14 +106,15 @@ pub fn from_js_value<T: DeserializeOwned>(
         .map_err(js_error)
 }
 
-/// Convert a JsValue to a deserializable Rust type, with access to the DIF cache for resolving shared containers
-pub fn from_js_value_with_context<'ctx, T>(
+/// Convert a JsValue to a deserializable Rust type, using the DIF cache for resolving shared containers
+pub fn from_js_value_with_cache<'ctx, T>(
     value: JsValue,
-    context: DeserializationContext<'ctx, T>,
+    cache: &'ctx mut DIFSharedContainerCache,
 ) -> Result<T, JsError>
 where
-    DeserializationContext<'ctx, T>: DeserializeSeed<'ctx, Value = T>,
+    SerdeContext<'ctx, T>: DeserializeSeed<'ctx, Value = T>,
 {
+    let context = SerdeContext::new(cache);
     DeserializeSeed::deserialize(
         context,
         serde_wasm_bindgen::Deserializer::from(value),
@@ -143,14 +122,20 @@ where
     .map_err(js_error)
 }
 
-/// Convert a JsValue to a deserializable Rust type, using the DIF cache for resolving shared containers
-pub fn from_js_value_with_cache<'ctx, T>(
-    value: JsValue,
+/// Convert a serializable Rust value to a JsValue, using the DIF cache for resolving shared containers
+pub fn to_js_value_with_cache<'ctx, T>(
+    value: T,
     cache: &'ctx mut DIFSharedContainerCache,
-) -> Result<T, JsError>
+) -> Result<JsValue, JsError>
 where
-    DeserializationContext<'ctx, T>: DeserializeSeed<'ctx, Value = T>,
+    T: SerializeSeedOwned,
+    SerdeContext<'ctx, T>: SerializeSeedOwned<Value = T>,
 {
-    let context = DeserializationContext::new(cache);
-    from_js_value_with_context(value, context)
+    let mut context = SerdeContext::<T>::new(cache);
+    context
+        .serialize_owned(
+            value,
+            &serde_wasm_bindgen::Serializer::json_compatible(),
+        )
+        .map_err(|e| js_error(e.to_string()))
 }
