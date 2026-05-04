@@ -50,16 +50,16 @@ await build({
     // steps to run after building and before running the tests
     async postBuild() {
         // replace import.meta because dnt-shim-ignore does not work here
-        const datexCoreJSInternalPath = new URL(
+        const datexWebJSInternalPath = new URL(
             "../npm/esm/datex-web/datex_web.js",
             import.meta.url,
         );
-        const fileContent = Deno.readTextFileSync(datexCoreJSInternalPath);
+        const fileContent = Deno.readTextFileSync(datexWebJSInternalPath);
         const updatedContent = fileContent.replace(
             `globalThis[Symbol.for("import-meta-ponyfill-esmodule")](import.meta).url`,
             `import.meta.url`,
         );
-        Deno.writeTextFileSync(datexCoreJSInternalPath, updatedContent);
+        Deno.writeTextFileSync(datexWebJSInternalPath, updatedContent);
 
         // remove dnt polyfills completely because we don't need them
         // this also enables support for frontend npm module builds like Vite
@@ -80,7 +80,7 @@ await build({
                 }
             }
         }
-        // delte all _dnt.polyfills.js/_dnt.polyfills.d.ts/_dnt.polyfills.ts_dnt.polyfills.d.ts.map/_dnt.shims.ts files in ../npm
+        // delete all _dnt.polyfills.js/_dnt.polyfills.d.ts/_dnt.polyfills.ts_dnt.polyfills.d.ts.map/_dnt.shims.ts files in ../npm
         const npmDir = new URL("../npm/", import.meta.url);
         for await (const entry of walk(npmDir)) {
             if (
@@ -109,6 +109,12 @@ await build({
         Deno.copyFileSync(
             "scripts/wasm_url.node.js",
             "npm/esm/datex-web/wasm_url.node.js",
+        );
+
+        // override datex_web.d.ts, since the type definitions are dropped (probably a deno-dnt bug)
+        Deno.copyFileSync(
+            "src/datex-web/datex_web.d.ts",
+            "npm/esm/datex-web/datex_web.d.ts",
         );
 
         // currently required for version tests

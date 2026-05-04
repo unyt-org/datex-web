@@ -119,9 +119,9 @@ export type DIFProperty =
  */
 export const DIFUpdateKind = {
     Replace: "replace",
-    Append: "append",
-    Set: "set",
-    Delete: "delete",
+    AppendEntry: "append_entry",
+    SetEntry: "set_entry",
+    DeleteEntry: "delete_entry",
     Clear: "clear",
     ListSplice: "list_splice",
 } as const;
@@ -138,16 +138,16 @@ export type DIFUpdateDataReplace =
         value: DIFValueContainer;
     };
 export type DIFUpdateDataPush =
-    & DIFUpdateBaseData<typeof DIFUpdateKind.Append>
+    & DIFUpdateBaseData<typeof DIFUpdateKind.AppendEntry>
     & {
         value: DIFValueContainer;
     };
 export type DIFUpdateDataDelete =
-    & DIFUpdateBaseData<typeof DIFUpdateKind.Delete>
+    & DIFUpdateBaseData<typeof DIFUpdateKind.DeleteEntry>
     & {
         key: DIFProperty;
     };
-export type DIFUpdateDataSet = DIFUpdateBaseData<typeof DIFUpdateKind.Set> & {
+export type DIFUpdateDataSet = DIFUpdateBaseData<typeof DIFUpdateKind.SetEntry> & {
     key: DIFProperty;
     value: DIFValueContainer;
 };

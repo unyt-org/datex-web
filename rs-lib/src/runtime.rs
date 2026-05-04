@@ -1,68 +1,40 @@
 use crate::{
-    js_utils::{js_array, js_error, to_js_value},
+    dif::JSDIFInterface,
+    js_utils::{from_js_value_with_cache, js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
 };
 use datex_core::{
     self,
     decompiler::decompile_value,
-    dif::{
-        interface::{
-            DIFApplyError, DIFCreatePointerError, DIFInterface,
-            DIFObserveError, DIFResolveReferenceError, DIFUpdateError,
-        },
-        reference::DIFReference,
-        r#type::DIFTypeDefinition,
-        update::{DIFUpdate, DIFUpdateData},
-        value::DIFValueContainer,
-    },
-    global::{
-        dxb_block::DXBBlock,
-        protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
-    },
-    serde::deserializer::DatexDeserializer,
-    shared_values::observers::{ObserveOptions, TransceiverId},
     values::{
-        core_values::endpoint::Endpoint, value_container::ValueContainer,
+        core_values::endpoint::Endpoint, value::Value,
+        value_container::ValueContainer,
     },
 };
 use datex_crypto_facade::crypto::Crypto;
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::cast_from_dif_js_value;
 use datex_core::{
+    compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
+    dif::dif_interface::DIFInterface,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
     },
-    shared_values::{
-        pointer_address::PointerAddress,
-        shared_container::SharedContainerMutability,
-    },
 };
-use js_sys::Function;
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
+use crate::js_utils::{from_js_value, to_js_value_with_cache};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Clone)]
 pub struct JSRuntime {
     runtime: Runtime,
     pub com_hub: JSComHub,
-}
-
-#[derive(Debug, PartialEq)]
-enum ConversionError {
-    InvalidValue,
-}
-impl Display for ConversionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConversionError::InvalidValue => write!(f, "Invalid value"),
-        }
-    }
+    dif_interface: JSDIFInterface,
 }
 
 /**
@@ -73,9 +45,9 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub async fn run(config: JsValue) -> JSRuntime {
+    pub(crate) async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            cast_from_dif_js_value(config, &RefCell::new(Memory::default()))
+            from_js_value(config)
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -96,23 +68,14 @@ impl JSRuntime {
         js_runtime
     }
 
-    pub fn maybe_value_container_to_dif(
-        &self,
-        maybe_value_container: Option<ValueContainer>,
-    ) -> JsValue {
-        match maybe_value_container {
-            None => JsValue::NULL,
-            Some(value_container) => {
-                let dif_value_container =
-                    DIFValueContainer::from_value_container(&value_container);
-                to_js_value(&dif_value_container).unwrap()
-            }
-        }
-    }
-
     fn new(runtime: Runtime) -> JSRuntime {
-        let com_hub = JSComHub::new(runtime.clone());
-        JSRuntime { runtime, com_hub }
+        let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
+        let com_hub = JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
+        JSRuntime {
+            runtime,
+            com_hub,
+            dif_interface,
+        }
     }
 }
 
@@ -121,6 +84,7 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
+    // TODO remove @janiejestemja
     pub async fn crypto_test_tmp(&self) -> Promise {
         future_to_promise(async move {
             let something = b"yellow submarineyellow submarine".to_owned();
@@ -266,7 +230,7 @@ impl JSRuntime {
 
     #[wasm_bindgen(getter)]
     pub fn version(&self) -> String {
-        self.runtime.version.clone()
+        self.runtime.version().to_string()
     }
 
     #[wasm_bindgen(getter)]
@@ -274,42 +238,14 @@ impl JSRuntime {
         self.runtime.endpoint().to_string()
     }
 
-    pub fn _create_block(
-        &self,
-        body: Option<Vec<u8>>,
-        receivers: Vec<String>,
-    ) -> Vec<u8> {
-        let mut block = DXBBlock {
-            block_header: BlockHeader {
-                flags_and_timestamp: FlagsAndTimestamp::default()
-                    .with_is_end_of_context(true)
-                    .with_is_end_of_section(true),
-                ..BlockHeader::default()
-            },
-            body: body.unwrap_or_default(),
-            ..Default::default()
-        };
-
-        block.recalculate_struct();
-        block.set_receivers(
-            receivers
-                .into_iter()
-                .map(|r| Endpoint::try_from(r))
-                .collect::<Result<Vec<Endpoint>, _>>()
-                .unwrap(),
-        );
-        block.to_bytes()
-    }
-
+    /// Execute a DATEX script with optional inserted values, returning the result as a string
     pub async fn execute_with_string_result(
         &self,
         script: &str,
-        dif_values: Option<Vec<JsValue>>,
+        inserted_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let val = &self
-            .js_values_to_value_containers(dif_values)
-            .map_err(js_error)?;
+        let val = &self.js_values_to_value_containers(inserted_values)?;
         let result = self
             .runtime
             .execute(script, val, None)
@@ -324,23 +260,22 @@ impl JSRuntime {
         }
     }
 
+    /// Executes a DATEX script with inserted values, returning the result as DIFValue
     pub async fn execute(
         &self,
         script: &str,
-        dif_values: Option<Vec<JsValue>>,
-    ) -> Result<JsValue, JsValue> {
+        inserted_values: Option<Vec<JsValue>>,
+    ) -> Result<Option<JsValue>, JsError> {
         let result = self
             .runtime
             .execute(
                 script,
-                &self
-                    .js_values_to_value_containers(dif_values)
-                    .map_err(js_error)?,
+                &self.js_values_to_value_containers(inserted_values)?,
                 None,
             )
             .await
             .map_err(js_error)?;
-        Ok(self.maybe_value_container_to_dif(result))
+        result.map(|value| to_js_value_with_cache(&value, &mut self.dif_interface.cache())).transpose()
     }
 
     pub fn execute_sync_with_string_result(
@@ -348,14 +283,12 @@ impl JSRuntime {
         script: &str,
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
-    ) -> Result<String, JsValue> {
+    ) -> Result<String, JsError> {
         let input = self
             .runtime
             .execute_sync(
                 script,
-                &self
-                    .js_values_to_value_containers(dif_values)
-                    .map_err(js_error)?,
+                &self.js_values_to_value_containers(dif_values)?,
                 None,
             )
             .map_err(js_error)?;
@@ -372,18 +305,16 @@ impl JSRuntime {
         &self,
         script: &str,
         dif_values: Option<Vec<JsValue>>,
-    ) -> Result<JsValue, JsValue> {
+    ) -> Result<Option<JsValue>, JsError> {
         let result = self
             .runtime
             .execute_sync(
                 script,
-                &self
-                    .js_values_to_value_containers(dif_values)
-                    .map_err(js_error)?,
+                &self.js_values_to_value_containers(dif_values)?,
                 None,
             )
             .map_err(js_error)?;
-        Ok(self.maybe_value_container_to_dif(result))
+        result.map(|val| to_js_value_with_cache(&val, &mut self.dif_interface.cache())).transpose()
     }
 
     pub fn value_to_string(
@@ -391,19 +322,18 @@ impl JSRuntime {
         dif_value: JsValue,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let value_container = self
-            .js_value_to_value_container(dif_value)
-            .map_err(js_error)?;
+        let value_container = self.js_value_to_value_container(dif_value)?;
         Ok(decompile_value(
             &value_container,
             from_value(decompile_options).unwrap_or_default(),
         ))
     }
 
+    /// Converts a list of [JsValue]s to a list of [ValueContainer], using the DIF cache for resolving shared containers if necessary
     fn js_values_to_value_containers(
         &self,
         js_values: Option<Vec<JsValue>>,
-    ) -> Result<Vec<ValueContainer>, ConversionError> {
+    ) -> Result<Vec<ValueContainer>, JsError> {
         js_values
             .unwrap_or_default()
             .into_iter()
@@ -411,30 +341,41 @@ impl JSRuntime {
             .collect()
     }
 
-    /// Convert a JsValue (DIFValue) to a ValueContainer
-    /// Returns Err(()) if the conversion fails (invalid json or ref not found)
+    /// Convert a [JsValue] (DIFValue) to a ValueContainer
+    /// Returns an error if the [JsValue] cannot be converted to a [ValueContainer]
     fn js_value_to_value_container(
         &self,
-        js_value: JsValue,
-    ) -> Result<ValueContainer, ConversionError> {
-        // convert JsValue to DIFValue
-        let dif_value: DIFValueContainer = from_value(js_value).unwrap();
-        // convert DIFValue to ValueContainer
-        if let Ok(value_container) =
-            dif_value.to_value_container(self.runtime.memory())
-        {
-            Ok(value_container)
-        } else {
-            // ref not found
-            Err(ConversionError::InvalidValue)
-        }
+        value: JsValue,
+    ) -> Result<ValueContainer, JsError> {
+        from_js_value_with_cache::<ValueContainer>(
+            value,
+            &mut self.dif_interface.cache(),
+        )
     }
 
     /// Get a handle to the DIF interface of the runtime
-    pub fn dif(&self) -> RuntimeDIFHandle {
-        RuntimeDIFHandle {
-            internal: self.runtime.internal.clone(),
-        }
+    pub fn dif_interface(&self) -> JSDIFInterface {
+        self.dif_interface.clone()
+    }
+
+    /// Compiles a DATEX script with optional inserted values to a DXB body
+    pub async fn compile(
+        &self,
+        script: &str,
+        inserted_values: Option<Vec<JsValue>>,
+    ) -> Result<Vec<u8>, JsValue> {
+        let (bytes, _) = compile_template(
+            script,
+            self.js_values_to_value_containers(inserted_values)?
+                .into_iter()
+                .map(Some)
+                .collect::<Vec<_>>()
+                .as_slice(),
+            CompileOptions::default(),
+            self.runtime.clone(),
+        )
+        .map_err(js_error)?;
+        Ok(bytes)
     }
 
     /// Start the LSP server, returning a JS function to send messages to Rust
@@ -442,239 +383,6 @@ impl JSRuntime {
     pub fn start_lsp(&self, send_to_js: js_sys::Function) -> js_sys::Function {
         use crate::lsp::start_lsp;
         start_lsp(self.runtime.clone(), send_to_js)
-    }
-}
-
-#[wasm_bindgen]
-pub struct RuntimeDIFHandle {
-    internal: Rc<RuntimeInternal>,
-}
-
-#[wasm_bindgen]
-impl RuntimeDIFHandle {
-    fn js_value_to_pointer_address(
-        address: &str,
-    ) -> Result<PointerAddress, JsError> {
-        PointerAddress::try_from(address)
-            .map_err(|_| js_error(ConversionError::InvalidValue))
-    }
-
-    pub fn observe_pointer(
-        &self,
-        transceiver_id: TransceiverId,
-        address: &str,
-        observe_options: JsValue,
-        callback: &Function,
-    ) -> Result<u32, JsError> {
-        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
-        let cb = callback.clone();
-        let observe_options: ObserveOptions =
-            from_value(observe_options).map_err(js_error)?;
-        let observer = move |update_data: &DIFUpdateData,
-                             source_id: TransceiverId| {
-            let js_value = to_js_value(&DIFUpdate {
-                source_id,
-                data: Cow::Borrowed(update_data),
-            })
-            .unwrap();
-            let _ = cb.call1(&JsValue::NULL, &js_value);
-        };
-        self.internal
-            .observe_pointer(transceiver_id, address, observe_options, observer)
-            .map_err(js_error)
-    }
-
-    pub fn unobserve_pointer(
-        &self,
-        address: &str,
-        observer_id: u32,
-    ) -> Result<(), JsError> {
-        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
-        DIFInterface::unobserve_pointer(self, address, observer_id)
-            .map_err(js_error)
-    }
-
-    pub fn update_observer_options(
-        &self,
-        address: &str,
-        observer_id: u32,
-        observe_options: JsValue,
-    ) -> Result<(), JsError> {
-        let address = RuntimeDIFHandle::js_value_to_pointer_address(address)?;
-        let observe_options: ObserveOptions =
-            from_value(observe_options).map_err(js_error)?;
-        DIFInterface::update_observer_options(
-            self,
-            address,
-            observer_id,
-            observe_options,
-        )
-        .map_err(js_error)
-    }
-
-    pub fn update(
-        &mut self,
-        transceiver_id: TransceiverId,
-        address: &str,
-        update: JsValue,
-    ) -> Result<(), JsError> {
-        let address = Self::js_value_to_pointer_address(address)?;
-        let dif_update_data: DIFUpdateData =
-            from_value(update).map_err(js_error)?;
-        DIFInterface::update(self, transceiver_id, address, &dif_update_data)
-            .map_err(js_error)
-    }
-
-    pub fn apply(
-        &mut self,
-        callee: JsValue,
-        value: JsValue,
-    ) -> Result<JsValue, JsError> {
-        let dif_callee: DIFValueContainer =
-            from_value(callee).map_err(js_error)?;
-        let dif_value: DIFValueContainer =
-            from_value(value).map_err(js_error)?;
-        let result = DIFInterface::apply(self, dif_callee, dif_value)
-            .map_err(js_error)?;
-        to_js_value(&result).map_err(js_error)
-    }
-
-    pub fn create_pointer(
-        &self,
-        value: JsValue,
-        allowed_type: JsValue,
-        mutability: u8,
-    ) -> Result<String, JsError> {
-        let dif_value: DIFValueContainer =
-            from_value(value).map_err(js_error)?;
-        let dif_allowed_type: Option<DIFTypeDefinition> =
-            if allowed_type.is_null() || allowed_type.is_undefined() {
-                None
-            } else {
-                Some(from_value(allowed_type).map_err(js_error)?)
-            };
-        let dif_mutability = SharedContainerMutability::try_from(mutability)
-            .map_err(|_| js_error(ConversionError::InvalidValue))?;
-        let address = DIFInterface::create_pointer(
-            self,
-            dif_value,
-            dif_allowed_type,
-            dif_mutability,
-        )
-        .map_err(js_error)?;
-        Ok(address.to_address_string())
-    }
-
-    /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
-    pub fn resolve_pointer_address_sync(
-        &self,
-        address: &str,
-    ) -> Result<JsValue, JsError> {
-        let address = Self::js_value_to_pointer_address(address)?;
-        let result =
-            DIFInterface::resolve_pointer_address_in_memory(self, address)
-                .map_err(js_error)?;
-        to_js_value(&result).map_err(js_error)
-    }
-
-    /// Resolve a pointer address, returning a Promise
-    /// If the pointer is in memory, the promise resolves immediately
-    /// If the pointer is not in memory, it will be loaded first
-    pub fn resolve_pointer_address(
-        &self,
-        address: &str,
-    ) -> Result<JsValue, JsError> {
-        if let Ok(sync) = self.resolve_pointer_address_sync(address) {
-            return Ok(sync);
-        }
-        let address = Self::js_value_to_pointer_address(address)?;
-        let runtime = self.internal.clone();
-        Ok(future_to_promise(async move {
-            let result = runtime
-                .resolve_pointer_address_external(address)
-                .await
-                .map_err(js_error)?;
-            Ok(to_js_value(&result).map_err(js_error)?)
-        })
-        .unchecked_into())
-    }
-}
-
-impl DIFInterface for RuntimeDIFHandle {
-    fn update(
-        &self,
-        source_id: TransceiverId,
-        address: PointerAddress,
-        update: &DIFUpdateData,
-    ) -> Result<(), DIFUpdateError> {
-        self.internal.update(source_id, address, update)
-    }
-
-    async fn resolve_pointer_address_external(
-        &self,
-        address: PointerAddress,
-    ) -> Result<DIFReference, DIFResolveReferenceError> {
-        self.internal
-            .resolve_pointer_address_external(address)
-            .await
-    }
-
-    fn resolve_pointer_address_in_memory(
-        &self,
-        address: PointerAddress,
-    ) -> Result<DIFReference, DIFResolveReferenceError> {
-        self.internal.resolve_pointer_address_in_memory(address)
-    }
-
-    fn apply(
-        &self,
-        callee: DIFValueContainer,
-        value: DIFValueContainer,
-    ) -> Result<DIFValueContainer, DIFApplyError> {
-        self.internal.apply(callee, value)
-    }
-
-    fn create_pointer(
-        &self,
-        value: DIFValueContainer,
-        allowed_type: Option<DIFTypeDefinition>,
-        mutability: SharedContainerMutability,
-    ) -> Result<PointerAddress, DIFCreatePointerError> {
-        self.internal
-            .create_pointer(value, allowed_type, mutability)
-    }
-
-    fn observe_pointer(
-        &self,
-        transceiver_id: TransceiverId,
-        address: PointerAddress,
-        options: ObserveOptions,
-        observer: impl Fn(&DIFUpdateData, TransceiverId) + 'static,
-    ) -> Result<u32, DIFObserveError> {
-        self.internal.observe_pointer(
-            transceiver_id,
-            address,
-            options,
-            observer,
-        )
-    }
-
-    fn unobserve_pointer(
-        &self,
-        address: PointerAddress,
-        observer_id: u32,
-    ) -> Result<(), DIFObserveError> {
-        self.internal.unobserve_pointer(address, observer_id)
-    }
-
-    fn update_observer_options(
-        &self,
-        address: PointerAddress,
-        observer_id: u32,
-        options: ObserveOptions,
-    ) -> Result<(), DIFObserveError> {
-        self.internal
-            .update_observer_options(address, observer_id, options)
     }
 }
 

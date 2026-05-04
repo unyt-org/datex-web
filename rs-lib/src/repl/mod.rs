@@ -1,9 +1,11 @@
 use datex_core::runtime::execution::context::{
     ExecutionContext, ExecutionMode,
 };
+use datex_core::runtime::execution::execution_input::ExecutionCallerMetadata;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{js_utils::js_error, runtime::JSRuntime};
+use crate::js_utils::{to_js_value, to_js_value_with_cache};
 
 #[wasm_bindgen]
 pub struct Repl {
@@ -18,12 +20,14 @@ impl Repl {
         let execution_context = if verbose {
             ExecutionContext::local_debug(
                 ExecutionMode::unbounded(),
-                runtime.runtime().internal(),
+                runtime.runtime().clone(),
+                ExecutionCallerMetadata::local_default()
             )
         } else {
             ExecutionContext::local(
                 ExecutionMode::unbounded(),
-                runtime.runtime().internal(),
+                runtime.runtime().clone(),
+                ExecutionCallerMetadata::local_default()
             )
         };
 
@@ -33,13 +37,13 @@ impl Repl {
         }
     }
 
-    pub async fn execute(&mut self, script: &str) -> Result<JsValue, JsError> {
+    pub async fn execute(&mut self, script: &str) -> Result<Option<JsValue>, JsError> {
         let result = self
             .runtime
             .runtime()
             .execute(script, &[], Some(&mut self.execution_context))
             .await
             .map_err(js_error)?;
-        Ok(self.runtime.maybe_value_container_to_dif(result))
+        result.map(|v| to_js_value_with_cache(&v, &mut self.runtime.dif_interface().cache())).transpose()
     }
 }

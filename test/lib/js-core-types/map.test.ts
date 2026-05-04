@@ -9,7 +9,7 @@ runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
         .resolveDIFValueContainerSync(
-            runtime.dif._handle.resolve_pointer_address_sync(address).value,
+            runtime.dif._handle.resolve_pointer_address(address).value,
         ) as T;
 }
 
@@ -29,10 +29,13 @@ Deno.test("map set external", () => {
     );
 
     // fake a remote update from transceiver 42
-    runtime._runtime.dif().update(42, address, {
-        key: { kind: "text", value: "externalKey" },
-        value: { value: "newValue" },
-        kind: DIFUpdateKind.Set,
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            key: { kind: "text", value: "externalKey" },
+            value: { value: "newValue" },
+            kind: DIFUpdateKind.SetEntry,
+        }
     });
     assertEquals(map.get("externalKey"), "newValue");
 });
@@ -45,9 +48,12 @@ Deno.test("map delete external", () => {
             [2, "value2"],
         ]),
     );
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.Delete,
-        key: { kind: "text", value: "key1" },
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.DeleteEntry,
+            key: { kind: "text", value: "key1" },
+        }
     });
     assertEquals(map.has("key1"), false);
 });
@@ -61,8 +67,11 @@ Deno.test("map clear external", () => {
         ]),
     );
 
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.Clear,
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.Clear,
+        }
     });
     assertEquals(map.size, 0);
 });
@@ -76,14 +85,17 @@ Deno.test("map replace external", () => {
         ]),
     );
 
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.Replace,
-        value: runtime.dif.convertJSValueToDIFValueContainer(
-            new Map<string, string>([
-                ["a", "valueA"],
-                ["b", "valueB"],
-            ]),
-        ),
+    runtime._runtime.dif_interface().update( address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.Replace,
+            value: runtime.dif.convertJSValueToDIFValueContainer(
+                new Map<string, string>([
+                    ["a", "valueA"],
+                    ["b", "valueB"],
+                ]),
+            ),
+        }
     });
     assertEquals(
         map,

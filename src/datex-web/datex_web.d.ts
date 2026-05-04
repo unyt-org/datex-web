@@ -113,6 +113,12 @@ export interface DecompileOptions {
     resolve_slots?: boolean;
 }
 
+export interface DisassemblerOptions {
+    tree?: boolean;
+    colorized?: boolean;
+    recursive?: boolean;
+}
+
 export interface DynamicEndpointProperties {
     known_since: number;
     distance: number;
@@ -275,20 +281,50 @@ export class JSComHub {
     remove_socket(socket_uuid: string): Promise<void>;
 }
 
+export class JSDIFInterface {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    apply(callee: any, value: any): any | undefined;
+    create_pointer(value: any): string;
+    observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
+    /**
+     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
+     */
+    resolve_pointer_address(address: string): any;
+    unobserve_pointer(address: string, observer_id: number): void;
+    /**
+     * Applies a DIF update on a shared container at the given address, using the provided update data.
+     * TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecesarry overhead, as
+     * we can access the values in JS before update.
+     */
+    update(address: string, update: any): any;
+    update_observer_options(address: string, observer_id: number, observe_options: any): void;
+}
+
 export class JSRuntime {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    _create_block(body: Uint8Array | null | undefined, receivers: string[]): Uint8Array;
+    /**
+     * Compiles a DATEX script with optional inserted values to a DXB body
+     */
+    compile(script: string, inserted_values?: any[] | null): Promise<Uint8Array>;
     crypto_test_tmp(): Promise<Promise<any>>;
     /**
      * Get a handle to the DIF interface of the runtime
      */
-    dif(): RuntimeDIFHandle;
-    execute(script: string, dif_values?: any[] | null): Promise<any>;
-    execute_sync(script: string, dif_values?: any[] | null): any;
+    dif_interface(): JSDIFInterface;
+    /**
+     * Executes a DATEX script with inserted values, returning the result as DIFValue
+     */
+    execute(script: string, inserted_values?: any[] | null): Promise<any | undefined>;
+    execute_sync(script: string, dif_values?: any[] | null): any | undefined;
     execute_sync_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): string;
-    execute_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): Promise<string>;
+    /**
+     * Execute a DATEX script with optional inserted values, returning the result as a string
+     */
+    execute_with_string_result(script: string, inserted_values: any[] | null | undefined, decompile_options: any): Promise<string>;
     /**
      * Start the LSP server, returning a JS function to send messages to Rust
      */
@@ -302,30 +338,14 @@ export class JSRuntime {
 export class Repl {
     free(): void;
     [Symbol.dispose](): void;
-    execute(script: string): Promise<any>;
+    execute(script: string): Promise<any | undefined>;
     constructor(runtime: JSRuntime, verbose: boolean);
 }
 
-export class RuntimeDIFHandle {
-    private constructor();
-    free(): void;
-    [Symbol.dispose](): void;
-    apply(callee: any, value: any): any;
-    create_pointer(value: any, allowed_type: any, mutability: number): string;
-    observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
-    /**
-     * Resolve a pointer address, returning a Promise
-     * If the pointer is in memory, the promise resolves immediately
-     * If the pointer is not in memory, it will be loaded first
-     */
-    resolve_pointer_address(address: string): any;
-    /**
-     * Resolve a pointer address synchronously if it's in memory, otherwise return an error
-     */
-    resolve_pointer_address_sync(address: string): any;
-    unobserve_pointer(address: string, observer_id: number): void;
-    update(transceiver_id: number, address: string, update: any): void;
-    update_observer_options(address: string, observer_id: number, observe_options: any): void;
-}
-
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
+
+export function disassemble_dxb_flat(dxb: Uint8Array): any;
+
+export function disassemble_dxb_to_string(dxb: Uint8Array, options: any): any;
+
+export function disassemble_dxb_tree(dxb: Uint8Array): any;

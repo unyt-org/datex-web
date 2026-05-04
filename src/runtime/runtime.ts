@@ -1,9 +1,18 @@
-import { create_runtime, type DecompileOptions, type JSRuntime } from "../datex.ts";
+import {
+    create_runtime,
+    type DecompileOptions,
+    disassemble_dxb_flat,
+    disassemble_dxb_tree,
+    disassemble_dxb_to_string,
+    type JSRuntime,
+    type DisassemblerOptions
+} from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler, type PointerOut } from "../dif/dif-handler.ts";
 import type { DIFSharedValueMutability, DIFTypeDefinition } from "../dif/definitions.ts";
 import type { Ref } from "../refs/ref.ts";
 import { unimplemented } from "../utils/exceptions.ts";
+import {FlatInstruction, Instruction, InstructionTree} from "./types.d.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -238,6 +247,38 @@ export class Runtime {
     }
 
     /**
+     * Compiles a DATEX source code and optional injected values to a DXB body
+     */
+    public compile(
+        datexScript: string,
+        values?: unknown[],
+    ): Promise<Uint8Array>;
+
+    /**
+     * Compiles a DATEX source code and optional injected values to a DXB body.
+     * Injected values can be passed to the template string.
+     * Example usage:
+     * ```ts
+     * const dxb = await runtime.compile<number>`1 + ${41}`;
+     * ```
+     */
+    public compile(
+        templateStrings: TemplateStringsArray,
+        ...values: unknown[]
+    ): Promise<Uint8Array>;
+    public compile(
+        datexScriptOrTemplateStrings: string | TemplateStringsArray,
+        ...values: unknown[]
+    ): Promise<Uint8Array> {
+        const { datexScript, valuesArray } = this.#getScriptAndValues(
+            datexScriptOrTemplateStrings,
+            ...values,
+        );
+        return this.#runtime.compile(datexScript, valuesArray);
+    }
+
+
+    /**
      * Converts a JavaScript value to a string representation.
      * @param value The value to convert.
      * @param decompileOptions Options for decompiling the result.
@@ -277,7 +318,7 @@ export class Runtime {
     }
 
     /**
-     * Creates a new reference containg the given JS value.
+     * Creates a new reference containing the given JS value.
      * For primitive values, a Ref wrapper is returned.
      * For other values (objects, arrays, maps), the returned value is a proxy object that behaves like the original object.
      *
@@ -335,5 +376,32 @@ export class Runtime {
         return (data: string) => {
             sendToRust(encoder.encode(data));
         };
+    }
+
+    /**
+     * Returns a disassembled DXB as a list of instructions
+     * @param dxb DATEX binary body
+     * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
+     */
+    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string|null] {
+        return disassemble_dxb_flat(dxb)
+    }
+
+    /**
+     * Returns a disassembled DXB as a tree structure, where each instruction can have nested child instructions
+     * @param dxb DATEX binary body
+     * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
+     */
+    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string|null] {
+        return disassemble_dxb_tree(dxb);
+    }
+
+    /**
+     * Returns a disassembled DXB as a human-readable string, similar to assembly code.
+     * @param dxb
+     * @param options
+     */
+    public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions|null): string {
+        return disassemble_dxb_to_string(dxb, options)
     }
 }

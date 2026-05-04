@@ -1,5 +1,7 @@
 use datex_core::{
-    dif::value::{DIFValue, DIFValueContainer},
+    dif::{
+        dif_interface::DIFInterface,
+    },
     global::dxb_block::DXBBlock,
     network::{
         com_hub::{
@@ -32,20 +34,20 @@ use datex_core::{
 use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
-use std::{ops::Deref, rc::Rc, str::FromStr};
+use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{
-    dif_js_value_to_value_container, value_container_to_dif_js_value,
-};
+use crate::js_utils::{from_js_value_with_cache, to_js_value};
 
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
+    #[wasm_bindgen(skip)]
+    pub dif_interface: Rc<RefCell<DIFInterface>>,
 }
 
 // wrapper around AsyncGenerator that implements Drop
@@ -71,8 +73,14 @@ impl Deref for JsReadableStream {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(runtime: Runtime) -> JSComHub {
-        let com_hub = JSComHub { runtime };
+    pub fn new(
+        runtime: Runtime,
+        dif_interface: Rc<RefCell<DIFInterface>>,
+    ) -> JSComHub {
+        let com_hub = JSComHub {
+            runtime,
+            dif_interface,
+        };
         com_hub.register_default_interface_factories();
         com_hub
     }
@@ -120,9 +128,9 @@ impl JSComHub {
                     let interface_configuration_promise = factory
                         .call1(
                             &JsValue::UNDEFINED,
-                            &value_container_to_dif_js_value(
+                            &to_js_value(
                                 &setup_data,
-                            ),
+                            ).unwrap(),
                         )
                         .map_err(|e| {
                             error!("Error calling interface factory: {:?}", e);
@@ -331,7 +339,7 @@ impl JSComHub {
         priority: Option<u16>,
     ) -> Result<String, JsError> {
         let setup_data =
-            dif_js_value_to_value_container(setup_data, self.runtime.memory())
+            from_js_value_with_cache(setup_data, &mut self.dif_interface.borrow_mut().cache)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
@@ -382,8 +390,9 @@ impl JSComHub {
         &self,
         endpoint: String,
     ) -> Result<Option<String>, JsError> {
-        let endpoint = Endpoint::from_str(&endpoint)
-            .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+        let endpoint = Endpoint::from_str(&endpoint).map_err(|e| {
+            JsError::new(&format!("Invalid endpoint format: {:?}", e))
+        })?;
         let trace = self.com_hub().record_trace(endpoint).await;
         Ok(trace.map(|t| t.to_string()))
     }
@@ -392,8 +401,9 @@ impl JSComHub {
         &self,
         endpoint: String,
     ) -> Result<Option<JsValue>, JsError> {
-        let endpoint = Endpoint::from_str(&endpoint)
-            .map_err(|e| JsError::new(&format!("Invalid endpoint format: {:?}", e)))?;
+        let endpoint = Endpoint::from_str(&endpoint).map_err(|e| {
+            JsError::new(&format!("Invalid endpoint format: {:?}", e))
+        })?;
         let trace = self.com_hub().record_trace(endpoint).await;
         Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
     }
