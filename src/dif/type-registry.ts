@@ -210,7 +210,7 @@ export class TypeBinding<
             this.allowOriginalValueAccess(value, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData.kind === DIFUpdateKind.Set &&
+                    difUpdateData.kind === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
@@ -224,7 +224,7 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Append &&
+                    difUpdateData.kind === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
@@ -246,7 +246,7 @@ export class TypeBinding<
                         ),
                     );
                 } else if (
-                    difUpdateData.kind === DIFUpdateKind.Delete &&
+                    difUpdateData.kind === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
@@ -280,16 +280,16 @@ export class TypeBinding<
     public getUpdateHandlerTypes(): Set<DIFUpdateKind> {
         const updateHandlerTypes = new Set<DIFUpdateKind>();
         if (this.#definition.handleSet) {
-            updateHandlerTypes.add(DIFUpdateKind.Set);
+            updateHandlerTypes.add(DIFUpdateKind.SetEntry);
         }
         if (this.#definition.handleAppend) {
-            updateHandlerTypes.add(DIFUpdateKind.Append);
+            updateHandlerTypes.add(DIFUpdateKind.AppendEntry);
         }
         if (this.#definition.handleReplace) {
             updateHandlerTypes.add(DIFUpdateKind.Replace);
         }
         if (this.#definition.handleDelete) {
-            updateHandlerTypes.add(DIFUpdateKind.Delete);
+            updateHandlerTypes.add(DIFUpdateKind.DeleteEntry);
         }
         if (this.#definition.handleClear) {
             updateHandlerTypes.add(DIFUpdateKind.Clear);

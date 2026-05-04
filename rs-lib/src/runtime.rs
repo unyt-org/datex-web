@@ -30,10 +30,11 @@ use web_sys::js_sys::Promise;
 use crate::js_utils::{from_js_value, to_js_value_with_cache};
 
 #[wasm_bindgen(getter_with_clone)]
+#[derive(Clone)]
 pub struct JSRuntime {
     runtime: Runtime,
     pub com_hub: JSComHub,
-    pub dif_interface: JSDIFInterface,
+    dif_interface: JSDIFInterface,
 }
 
 /**
@@ -68,8 +69,8 @@ impl JSRuntime {
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
-        let com_hub = JSComHub::new(runtime.clone());
         let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
+        let com_hub = JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {
             runtime,
             com_hub,

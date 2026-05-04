@@ -1,4 +1,4 @@
-import type { JSRuntime, RuntimeDIFHandle } from "../datex.ts";
+import {JSDIFInterface, JSRuntime} from "../datex.ts";
 import { Ref } from "../refs/ref.ts";
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
@@ -43,7 +43,7 @@ export type ReferenceMetadata<M extends CustomReferenceMetadata> = {
 export class DIFHandler {
     /** The JSRuntime interface for the underlying Datex Core runtime */
     #runtime: JSRuntime;
-    readonly #handle: RuntimeDIFHandle;
+    readonly #handle: JSDIFInterface;
 
     // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
     readonly #transceiver_id = 0;
@@ -92,9 +92,9 @@ export class DIFHandler {
 
     /**
      * Internal property
-     * @returns The RuntimeDIFHandle instance.
+     * @returns The {@link JSDIFInterface} instance.
      */
-    get _handle(): RuntimeDIFHandle {
+    get _handle(): JSDIFInterface {
         return this.#handle;
     }
 
@@ -113,13 +113,12 @@ export class DIFHandler {
     /**
      * Creates a new DIFHandler instance.
      * @param runtime - The JSRuntime instance for executing Datex scripts.
-     * @param pointerCache - The PointerCache instance for managing object pointers. If not provided, a new PointerCache will be created.
      */
     constructor(
         runtime: JSRuntime,
     ) {
         this.#runtime = runtime;
-        this.#handle = runtime.dif();
+        this.#handle = runtime.dif_interface();
     }
 
     /**
@@ -168,20 +167,23 @@ export class DIFHandler {
         allowedType: DIFTypeDefinition | null = null,
         mutability: DIFSharedValueMutability,
     ): string {
-        return this.#handle.create_pointer(
-            difValueContainer,
-            allowedType,
-            mutability,
-        );
+        return this.#handle.create_pointer({
+            value: difValueContainer,
+            allowed_type: allowedType,
+            mutability
+        });
     }
 
     /**
      * Updates the DIF value at the specified address.
      * @param address - The address of the DIF value to update.
-     * @param dif - The DIFUpdate object containing the update information.
+     * @param update_data - The DIFUpdate object containing the update information.
      */
-    public updateReference(address: string, dif: DIFUpdateData) {
-        this.#handle.update(this.#transceiver_id, address, dif);
+    public updateReference(address: string, update_data: DIFUpdateData) {
+        this.#handle.update(address, {
+            source_id: this.#transceiver_id,
+            data: update_data
+        });
     }
 
     /**
@@ -200,7 +202,7 @@ export class DIFHandler {
         callback: (value: DIFUpdate) => void,
         options: ObserveOptions = { relay_own_updates: false },
     ): number {
-        return this.#runtime.dif().observe_pointer(
+        return this.#runtime.dif_interface().observe_pointer(
             this.#transceiver_id,
             address,
             options,
@@ -219,7 +221,7 @@ export class DIFHandler {
         observerId: number,
         options: ObserveOptions,
     ) {
-        this.#runtime.dif().update_observer_options(
+        this.#runtime.dif_interface().update_observer_options(
             address,
             observerId,
             options,
@@ -262,7 +264,7 @@ export class DIFHandler {
      * @param observerId - The observer ID returned by the observePointer method.
      */
     public unobserveReferenceBindDirect(address: string, observerId: number) {
-        this.#runtime.dif().unobserve_pointer(address, observerId);
+        this.#runtime.dif_interface().unobserve_pointer(address, observerId);
     }
 
     /**
@@ -641,7 +643,7 @@ export class DIFHandler {
         }
         // if not in cache, resolve from runtime
         const entry: DIFSharedValue = this.#handle
-            .resolve_pointer_address_sync(address);
+            .resolve_pointer_address(address);
         const value: T = this.resolveDIFValueContainerSync(
             entry.value,
         );
@@ -948,7 +950,7 @@ export class DIFHandler {
         );
         // get inferred allowed type from pointer if not explicitly set
         if (!allowedType) {
-            allowedType = (this.#handle.resolve_pointer_address_sync(
+            allowedType = (this.#handle.resolve_pointer_address(
                 ptrAddress,
             ) as DIFSharedValue).allowed_type;
         }
@@ -1220,7 +1222,7 @@ export class DIFHandler {
         const difKey = this.convertJSValueToDIFValueContainer(key);
         const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Set,
+            kind: DIFUpdateKind.SetEntry,
             key: { kind: "value", value: difKey },
             value: difValue,
         };
@@ -1241,7 +1243,7 @@ export class DIFHandler {
         }
         const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Set,
+            kind: DIFUpdateKind.SetEntry,
             key: { kind: "index", value: Number(index) },
             value: difValue,
         };
@@ -1258,7 +1260,7 @@ export class DIFHandler {
     ) {
         const difValue = this.convertJSValueToDIFValueContainer(value);
         const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Append,
+            kind: DIFUpdateKind.AppendEntry,
             value: difValue,
         };
         console.log("Triggering append update", update);
@@ -1290,7 +1292,7 @@ export class DIFHandler {
     ) {
         const difKey = this.convertJSValueToDIFValueContainer(key);
         const update: DIFUpdateData = {
-            kind: DIFUpdateKind.Delete,
+            kind: DIFUpdateKind.DeleteEntry,
             key: { kind: "value", value: difKey },
         };
         console.log("Triggering delete update", update);

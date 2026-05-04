@@ -3,7 +3,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::js_utils::{from_js_value, from_js_value_with_cache, js_error, to_js_value, to_js_value_with_cache, unwrap_or_report_js_error};
+use crate::js_utils::{from_js_value, from_js_value_with_cache, js_error, to_js_value, to_js_value_with_cache, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         cache::DIFSharedContainerCache,
@@ -40,25 +40,33 @@ impl JSDIFInterface {
             &mut interface.cache
         })
     }
+
+    /// Get a clone of the Rc<RefCell<DIFInterface>> to allow sharing the DIFInterface across multiple JS objects.
+    pub fn dif_interface_rc(&self) -> Rc<RefCell<DIFInterface>> {
+        self.dif_interface.clone()
+    }
 }
 
+#[wasm_bindgen]
 impl JSDIFInterface {
     pub fn observe_pointer(
         &self,
-        transceiver_id: TransceiverId,
+        transceiver_id: u32,
         address: &str,
         observe_options: JsValue,
         callback: &Function,
     ) -> Result<u32, JsError> {
+        let transceiver_id = TransceiverId(transceiver_id);
         let address: PointerAddress = from_js_value(address)?;
         let cb = callback.clone();
         let observe_options: ObserveOptions = from_js_value(observe_options)?;
-        let observer = move |update_data: &Update| {
+        let self_clone = self.clone();
+        let observer = move |update: &Update| {
             let value = to_js_value_with_cache(
-                &update_data,
-                &mut self.cache()
+                update,
+                &mut self_clone.cache()
             ).expect("Failed to convert update data to JsValue");
-            let _ = unwrap_or_report_js_error(cb.call1(&JsValue::NULL, &value));
+            let _ = unwrap_or_report_js_error_debug(cb.call1(&JsValue::NULL, &value));
         };
         self.dif_interface
             .borrow_mut()
@@ -148,15 +156,13 @@ impl JSDIFInterface {
         &self,
         address: &str,
     ) -> Result<JsValue, JsError> {
-        let address_with_ownership = PointerAddressWithOwnership::deserialize(
-            address.into_deserializer(),
-        )
-        .map_err(js_error)?;
+        let address = PointerAddress::try_from(address)
+            .map_err(js_error)?;
         let result = self
             .dif_interface
             .borrow_mut()
-            .resolve_pointer_address(address_with_ownership)
+            .resolve_pointer_address(address)
             .map_err(js_error)?;
-        to_js_value_with_cache(&result.base_shared_container(), &mut self.cache())
+        to_js_value_with_cache(&*result.base_shared_container(), &mut self.cache())
     }
 }

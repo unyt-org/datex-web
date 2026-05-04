@@ -288,7 +288,7 @@ Deno.test("pointer object create and resolve", () => {
         DIFSharedValueMutability.Mutable,
     );
     console.log("ptr address", ptr);
-    const loadedDIFValue = runtime.dif._handle.resolve_pointer_address_sync(
+    const loadedDIFValue = runtime.dif._handle.resolve_pointer_address(
         ptr,
     );
     console.log("loadedObj", loadedDIFValue);
@@ -537,9 +537,12 @@ Deno.test("pointer primitive ref remote update and observe bind direct", () => {
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
-        value: { value: 456 },
-        kind: DIFUpdateKind.Replace,
+    runtime.dif._handle.update(ptrObj.pointerAddress, {
+        source_id: 42,
+        data: {
+            value: { value: 456 },
+            kind: DIFUpdateKind.Replace,
+        }
     });
 
     // check if the update was observed
@@ -575,9 +578,12 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
     );
 
     // fake a remote update from transceiver 42
-    runtime.dif._handle.update(42, ptrObj.pointerAddress, {
-        value: { value: 456 },
-        kind: DIFUpdateKind.Replace,
+    runtime.dif._handle.update(ptrObj.pointerAddress, {
+        source_id: 42,
+        data: {
+            value: { value: 456 },
+            kind: DIFUpdateKind.Replace,
+        }
     });
 
     // check if the update was observed
@@ -594,11 +600,13 @@ Deno.test("pointer primitive ref remote update and observe local", () => {
 
     // fake a local update
     runtime.dif._handle.update(
-        runtime.dif._transceiver_id,
         ptrObj.pointerAddress,
         {
-            value: { value: 789 },
-            kind: DIFUpdateKind.Replace,
+            source_id: runtime.dif._transceiver_id,
+            data: {
+                value: { value: 789 },
+                kind: DIFUpdateKind.Replace,
+            }
         },
     );
 

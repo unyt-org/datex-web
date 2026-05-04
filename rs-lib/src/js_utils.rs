@@ -1,3 +1,4 @@
+use core::fmt::{Debug, Display};
 use datex_core::{
     dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
 };
@@ -14,19 +15,34 @@ pub trait TryAsByteSlice {
 }
 
 /// Reports a JavaScript error to the console with a given message.
-pub fn report_js_error<T: std::fmt::Display>(err: T) {
-    let js_error = JsError::new(&err.to_string());
-    log::error!("JavaScript error: {:?}", js_error);
+pub fn report_js_error(err: &str) {
+    log::error!("JavaScript error: {}", err);
 }
 
 /// Unwraps a Result, and if it's an Err, reports it as a JavaScript error and returns None.
-pub fn unwrap_or_report_js_error<T, E: std::fmt::Display>(
+/// Works for errors that implement Display
+pub fn unwrap_or_report_js_error_display<T, E: Display>(
     result: Result<T, E>,
 ) -> Option<T> {
     match result {
         Ok(value) => Some(value),
         Err(err) => {
-            report_js_error(err);
+            report_js_error(&err.to_string());
+            None
+        }
+    }
+}
+
+
+/// Unwraps a Result, and if it's an Err, reports it as a JavaScript error and returns None.
+/// Works for errors that implement Debug
+pub fn unwrap_or_report_js_error_debug<T, E: Debug>(
+    result: Result<T, E>,
+) -> Option<T> {
+    match result {
+        Ok(value) => Some(value),
+        Err(err) => {
+            report_js_error(&format!("{:?}", err));
             None
         }
     }

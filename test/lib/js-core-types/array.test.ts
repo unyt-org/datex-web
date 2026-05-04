@@ -9,7 +9,7 @@ runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
         .resolveDIFValueContainerSync(
-            runtime.dif._handle.resolve_pointer_address_sync(address).value,
+            runtime.dif._handle.resolve_pointer_address(address).value,
         ) as T;
 }
 
@@ -27,10 +27,13 @@ Deno.test("array set external", () => {
     // TODO: property updates are not yet implemented in DATEX Script
     // runtime.executeSync(`${mapPtr}.test = 'newValue'`);
     // fake a remote update from transceiver 42
-    runtime._runtime.dif().update(42, address, {
-        key: { kind: "index", value: 0 },
-        value: { value: "newValue" },
-        kind: DIFUpdateKind.Set,
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            key: { kind: "index", value: 0 },
+            value: { value: "newValue" },
+            kind: DIFUpdateKind.SetEntry,
+        }
     });
     assertEquals(arrayPtr[0], "newValue");
 });
@@ -40,9 +43,12 @@ Deno.test("array append external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif().update(42, address, {
-        value: { value: "newValueEnd" },
-        kind: DIFUpdateKind.Append,
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            value: { value: "newValueEnd" },
+            kind: DIFUpdateKind.AppendEntry,
+        }
     });
     assertEquals(arrayPtr[3], "newValueEnd");
 });
@@ -52,9 +58,12 @@ Deno.test("array delete external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.Delete,
-        key: { kind: "index", value: 0 },
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.DeleteEntry,
+            key: { kind: "index", value: 0 },
+        }
     });
     assertEquals(arrayPtr, ["value2", 123]);
 });
@@ -64,8 +73,11 @@ Deno.test("array clear external", () => {
     const array = ["value1", "value2", 123];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime.dif._handle.update(42, address, {
-        kind: DIFUpdateKind.Clear,
+    runtime.dif._handle.update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.Clear,
+        }
     });
     assertEquals(arrayPtr.length, 0);
 });
@@ -76,9 +88,12 @@ Deno.test("array replace external", () => {
     const [arrayPtr, address] = createArrayReference(array);
 
     arrayPtr.push("toBeRemoved");
-    runtime._runtime.dif().update(42, address, {
-        value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
-        kind: DIFUpdateKind.Replace,
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            value: runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"]),
+            kind: DIFUpdateKind.Replace,
+        }
     });
     assertEquals(arrayPtr, ["a", "b", "c"]);
 });
@@ -88,22 +103,28 @@ Deno.test("array splice external", () => {
     const array = ["value1", "value2", 123, "value4"];
     const [arrayPtr, address] = createArrayReference(array);
 
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.ListSplice,
-        start: 1,
-        delete_count: 2,
-        items: [
-            runtime.dif.convertJSValueToDIFValueContainer("newValueA"),
-            runtime.dif.convertJSValueToDIFValueContainer("newValueB"),
-        ],
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.ListSplice,
+            start: 1,
+            delete_count: 2,
+            items: [
+                runtime.dif.convertJSValueToDIFValueContainer("newValueA"),
+                runtime.dif.convertJSValueToDIFValueContainer("newValueB"),
+            ],
+        }
     });
     assertEquals(arrayPtr, ["value1", "newValueA", "newValueB", "value4"]);
 
-    runtime._runtime.dif().update(42, address, {
-        kind: DIFUpdateKind.ListSplice,
-        start: 2,
-        delete_count: 2,
-        items: [],
+    runtime._runtime.dif_interface().update(address, {
+        source_id: 42,
+        data: {
+            kind: DIFUpdateKind.ListSplice,
+            start: 2,
+            delete_count: 2,
+            items: [],
+        }
     });
     assertEquals(arrayPtr, ["value1", "newValueA"]);
 });
