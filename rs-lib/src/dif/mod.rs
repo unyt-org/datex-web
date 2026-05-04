@@ -13,11 +13,11 @@ use datex_core::{
     shared_values::{
         PointerAddress,
         base_shared_value_container::BaseSharedValueContainer,
-        observers::{ObserveOptions, ObserverId, TransceiverId},
     },
     value_updates::update_data::Update,
     values::value_container::ValueContainer,
 };
+use datex_core::shared_values::base_shared_value_container::observers::{ObserveOptions, ObserverId, TransceiverId};
 use js_sys::Function;
 use serde::{Deserialize, de::IntoDeserializer};
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
@@ -55,7 +55,7 @@ impl JSDIFInterface {
         let observe_options: ObserveOptions = from_js_value(observe_options)?;
         let observer = move |update_data: &Update| {
             let value = to_js_value_with_cache(
-                update_data, 
+                &update_data,
                 &mut self.cache()
             ).expect("Failed to convert update data to JsValue");
             let _ = unwrap_or_report_js_error(cb.call1(&JsValue::NULL, &value));
@@ -113,7 +113,7 @@ impl JSDIFInterface {
             .borrow_mut()
             .update(address, update)
             .map_err(js_error)?;
-        to_js_value_with_cache(result, &mut self.cache())
+        to_js_value_with_cache(&result, &mut self.cache())
     }
 
     pub fn apply(
@@ -129,7 +129,7 @@ impl JSDIFInterface {
             .borrow_mut()
             .apply(callee, value)
             .map_err(js_error)?
-            .map(|res| to_js_value_with_cache(res, &mut self.cache()))
+            .map(|res| to_js_value_with_cache(&res, &mut self.cache()))
             .transpose()
     }
 
@@ -157,6 +157,6 @@ impl JSDIFInterface {
             .borrow_mut()
             .resolve_pointer_address(address_with_ownership)
             .map_err(js_error)?;
-        to_js_value_with_cache(result.base_shared_container(), &mut self.cache())
+        to_js_value_with_cache(&result.base_shared_container(), &mut self.cache())
     }
 }

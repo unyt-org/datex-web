@@ -56,7 +56,6 @@ gloo-timers = "0.3.0"
 cfg-if = "1.0.1"
 console_error_panic_hook = "0.1.7"
 wasm-logger = "0.2.0"
-serde-serialize-seed = "0.0.10"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }

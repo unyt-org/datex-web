@@ -1,7 +1,7 @@
 use datex_core::{
     dif::{cache::DIFSharedContainerCache, serde_context::SerdeContext},
-    utils::serde_serialized_owned::SerializeSeedOwned,
 };
+use datex_core::utils::serde_serialize_seed::SerializeSeed;
 use serde::{
     Serialize,
     de::{DeserializeOwned, DeserializeSeed},
@@ -126,16 +126,15 @@ pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
 
 /// Convert a serializable Rust value to a JsValue, using the DIF cache for resolving shared containers
 pub fn to_js_value_with_cache<'ctx, T>(
-    value: T,
+    value: &T,
     cache: &'ctx mut DIFSharedContainerCache,
 ) -> Result<JsValue, JsError>
 where
-    T: SerializeSeedOwned,
-    SerdeContext<'ctx, T>: SerializeSeedOwned<Value = T>,
+    SerdeContext<'ctx, T>: SerializeSeed<Value = T>,
 {
     let mut context = SerdeContext::<T>::new(cache);
     context
-        .serialize_owned(
+        .serialize(
             value,
             &serde_wasm_bindgen::Serializer::json_compatible(),
         )

@@ -44,6 +44,6 @@ impl Repl {
             .execute(script, &[], Some(&mut self.execution_context))
             .await
             .map_err(js_error)?;
-        result.map(|v| to_js_value_with_cache(v, &mut self.runtime.dif_interface.cache())).transpose()
+        result.map(|v| to_js_value_with_cache(&v, &mut self.runtime.dif_interface.cache())).transpose()
     }
 }

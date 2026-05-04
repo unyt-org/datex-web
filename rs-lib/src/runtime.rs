@@ -6,12 +6,6 @@ use crate::{
 use datex_core::{
     self,
     decompiler::decompile_value,
-    dif::pointer_address::PointerAddressWithOwnership,
-    global::{
-        dxb_block::DXBBlock,
-        protocol_structures::block_header::{BlockHeader, FlagsAndTimestamp},
-    },
-    shared_values::observers::{ObserveOptions, TransceiverId},
     values::{
         core_values::endpoint::Endpoint, value::Value,
         value_container::ValueContainer,
@@ -27,12 +21,7 @@ use datex_core::{
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner, memory::Memory,
     },
-    shared_values::{
-        PointerAddress, SelfOwnedPointerAddress, SharedContainerMutability,
-    },
-    value_updates::update_data::Update,
 };
-use js_sys::{Function, Uint8Array};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 use wasm_bindgen::prelude::*;
@@ -324,7 +313,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        result.map(|val| to_js_value_with_cache(val, &mut self.dif_interface.cache())).transpose()
+        result.map(|val| to_js_value_with_cache(&val, &mut self.dif_interface.cache())).transpose()
     }
 
     pub fn value_to_string(
