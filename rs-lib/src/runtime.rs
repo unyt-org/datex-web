@@ -38,7 +38,7 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
-use crate::js_utils::from_js_value;
+use crate::js_utils::{from_js_value, to_js_value_with_cache};
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -285,7 +285,7 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        result.map(|value| to_js_value(&value)).transpose()
+        result.map(|value| to_js_value_with_cache(&value, &mut self.dif_interface.cache())).transpose()
     }
 
     pub fn execute_sync_with_string_result(
@@ -324,7 +324,7 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        result.map(|e| to_js_value(&e)).transpose()
+        result.map(|val| to_js_value_with_cache(val, &mut self.dif_interface.cache())).transpose()
     }
 
     pub fn value_to_string(

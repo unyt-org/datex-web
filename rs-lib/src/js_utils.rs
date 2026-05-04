@@ -91,13 +91,6 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
     }
 }
 
-/// Convert a serializable value to a JsValue (JSON compatible)
-pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
-    value
-        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
-        .map_err(|e| js_error(e.to_string()))
-}
-
 /// Convert a JsValue to a deserializable Rust type
 pub fn from_js_value<T: DeserializeOwned>(
     value: impl Into<JsValue>,
@@ -121,6 +114,15 @@ where
     )
     .map_err(js_error)
 }
+
+
+/// Convert a serializable value to a JsValue (JSON compatible)
+pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
+    value
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .map_err(|e| js_error(e.to_string()))
+}
+
 
 /// Convert a serializable Rust value to a JsValue, using the DIF cache for resolving shared containers
 pub fn to_js_value_with_cache<'ctx, T>(
