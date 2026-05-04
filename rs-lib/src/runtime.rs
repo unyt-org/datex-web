@@ -1,6 +1,6 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_js_value_with_context, js_array, js_error, to_js_value},
+    js_utils::{from_js_value_with_cache, js_array, js_error, to_js_value},
     network::com_hub::JSComHub,
 };
 use datex_core::{
@@ -38,6 +38,7 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
+use crate::js_utils::from_js_value;
 
 #[wasm_bindgen(getter_with_clone)]
 pub struct JSRuntime {
@@ -56,7 +57,7 @@ impl JSRuntime {
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            cast_from_dif_js_value(config, &RefCell::new(Memory::new()))
+            from_js_value(config)
                 .unwrap();
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -356,7 +357,7 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_js_value_with_context::<ValueContainer>(
+        from_js_value_with_cache::<ValueContainer>(
             value,
             &mut self.dif_interface.cache(),
         )

@@ -1,7 +1,6 @@
 use datex_core::{
     dif::{
         dif_interface::DIFInterface,
-        value::{DIFValue, DIFValueContainer},
     },
     global::dxb_block::DXBBlock,
     network::{
@@ -40,7 +39,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::to_js_value;
+use crate::js_utils::{from_js_value_with_cache, to_js_value};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -131,7 +130,7 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &to_js_value(
                                 &setup_data,
-                            ),
+                            ).unwrap(),
                         )
                         .map_err(|e| {
                             error!("Error calling interface factory: {:?}", e);
@@ -340,7 +339,7 @@ impl JSComHub {
         priority: Option<u16>,
     ) -> Result<String, JsError> {
         let setup_data =
-            dif_js_value_to_value_container(setup_data, self.runtime.memory())
+            from_js_value_with_cache(setup_data, &mut self.dif_interface.borrow_mut().cache)
                 .map_err(|e| JsError::new(&format!("{e:?}")))?;
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)

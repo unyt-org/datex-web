@@ -4,13 +4,12 @@ use std::{
 };
 
 use crate::js_utils::{
-    from_js_value, from_js_value_with_cache, from_js_value_with_context,
+    from_js_value, from_js_value_with_cache, from_js_value_with_cache,
     js_error, to_js_value, unwrap_or_report_js_error,
 };
 use datex_core::{
     dif::{
         cache::DIFSharedContainerCache,
-        deserialization_context::DeserializationContext,
         dif_interface::DIFInterface,
         pointer_address::PointerAddressWithOwnership,
     },

@@ -20,7 +20,7 @@ pub fn report_js_error<T: std::fmt::Display>(err: T) {
 }
 
 /// Unwraps a Result, and if it's an Err, reports it as a JavaScript error and returns None.
-pub fn unwrap_or_report_js_error<T, E: std::error::Error + 'static>(
+pub fn unwrap_or_report_js_error<T, E: std::fmt::Display>(
     result: Result<T, E>,
 ) -> Option<T> {
     match result {
