@@ -5,7 +5,6 @@ use crate::{
 };
 use datex_core::{
     self,
-    decompiler::decompile_value,
     values::{
         core_values::endpoint::Endpoint, value::Value,
         value_container::ValueContainer,
@@ -19,7 +18,6 @@ use crate::js_utils::{optional_value_container_to_optional_js_dif_value, to_js_v
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
-    datex_proxy::DatexValueContainerProxyInfallibleSerialize,
     decompiler::DecompileOptions,
     dif::dif_interface::DIFInterface,
     runtime::{
@@ -29,6 +27,7 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::decompiler::ast_to_source_code::value_to_source_code;
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
@@ -56,9 +55,10 @@ impl JSRuntime {
                 .unwrap();
         info!(
             "Initializing runtime with config: {}",
-            config
-                .clone()
-                .to_datex_string(DecompileOptions::colorized_pretty(), &mut SharedReferencesCache::default())
+            value_to_source_code(
+                &config,
+                DecompileOptions::colorized_pretty(),
+            ),
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -271,7 +271,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         match result {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(&result, decompile_options)),
+            Some(result) => Ok(value_to_source_code(&result, decompile_options)),
         }
     }
 
@@ -315,7 +315,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         match input {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(&result, decompile_options)),
+            Some(result) => Ok(value_to_source_code(&result, decompile_options)),
         }
     }
 
@@ -346,7 +346,7 @@ impl JSRuntime {
             &mut SharedValuesCache::default(),
         )
         .unwrap_or_default();
-        Ok(decompile_value(&value_container, decompile_options))
+        Ok(value_to_source_code(&value_container, decompile_options))
     }
 
     /// Converts a list of [JsValue]s to a list of [ValueContainer], using the DIF cache for resolving shared containers if necessary

@@ -152,7 +152,7 @@ impl JSDIFInterface {
         let callable_clone = callable.clone();
         let self_clone = self.clone();
         let native_callable = if signature.requires_async {
-            NativeCallable::new_async(move |args: Vec<ApplyArgument>| {
+            NativeCallable::new_async(move |args: Vec<ApplyArgument>, runtime| {
                 let callable_clone = callable_clone.clone();
                 let self_clone = self_clone.clone();
                 Box::pin(async move {
@@ -175,7 +175,7 @@ impl JSDIFInterface {
                 })
             })
         } else {
-            NativeCallable::new_sync(move |args: Vec<ApplyArgument>| {
+            NativeCallable::new_sync(move |args: Vec<ApplyArgument>, runtime| {
                 let js_args = args.iter().map(|v| to_js_value(&v.value, &mut self_clone.cache())).collect::<Array>();
                 let result = unwrap_or_report_js_error_debug(
                     callable_clone.call1(&JsValue::NULL, &js_args),

@@ -69,13 +69,13 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
-    #[datex(structural_recursive)]
+    #[datex(structural)]
     struct Dependency {
         endpoint: Endpoint,
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
-    #[datex(structural_recursive)]
+    #[datex(structural)]
     struct Root {
         dependency: Dependency,
     }
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn no_unused_import() {
         #[derive(Datex, Debug, Clone, PartialEq)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         struct Plain {
             value: String,
         }
@@ -266,7 +266,7 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
-    #[datex(structural_recursive)]
+    #[datex(structural)]
     #[datex(namespace = "a/b/c")]
     struct Example {
         a: u8,
@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[derive(Datex, Debug, Clone, PartialEq)]
-    #[datex(structural_recursive)]
+    #[datex(structural)]
     #[datex(namespace = "a/c")]
     struct WrappedExample {
         inner: Example,

@@ -32,7 +32,7 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
-use datex_core::types::shared_container_containing_entity_type::SharedContainerContainingEntityType;
+use datex_core::types::entity_type::EntityType;
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{TsKeywordType, TsType, TsTypeAliasDecl};
 
@@ -513,7 +513,7 @@ impl TypeFolder for TsTypeFolder {
 
     fn fold_entity_reference(
         &mut self,
-        _nominal: &SharedContainerContainingEntityType,
+        _nominal: &EntityType,
     ) -> Result<Self::Output, Self::Error> {
         Ok(ts_null()) // TODO
     }
@@ -625,10 +625,11 @@ mod tests {
 
     use crate::ts::{TsExport, TsTypeFolder};
     use datex_core::{
-        datex_proxy::DatexProxyTypes, macros::Datex,
+        macros::Datex,
         runtime::cache::shared_references_cache::SharedReferencesCache,
         types::r#type::Type,
     };
+    use datex_core::traits::get_datex_type::GetDatexType;
     use dedent::dedent;
 
     /// Helper function to fold a type into a TypeScript AST and convert it to a string.
@@ -654,7 +655,7 @@ mod tests {
     #[test]
     fn simple_types() {
         #[derive(Datex)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         struct Test {
             a: String,
             b: i32,
@@ -678,7 +679,7 @@ mod tests {
     #[test]
     fn list_and_map() {
         #[derive(Datex)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         struct Test {
             a: Vec<String>,
             b: HashMap<String, i32>,
@@ -702,7 +703,7 @@ mod tests {
     #[test]
     fn option() {
         #[derive(Datex)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         struct Test {
             a: Option<String>,
         }
@@ -724,7 +725,7 @@ mod tests {
     #[test]
     fn tagged() {
         #[derive(Datex)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         enum Test {
             A { x: i32 },
             B,

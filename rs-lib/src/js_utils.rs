@@ -1,15 +1,11 @@
 use core::fmt::{Debug, Display};
 use datex_core::{
-    datex_proxy::{
-        DatexValueContainerProxyDeserialize,
-        DatexValueContainerProxyInfallibleSerialize,
-    },
     dif::serde_context::SerdeContext,
     runtime::cache::shared_values_cache::SharedValuesCache,
     utils::serde_serialize_seed::SerializeSeed,
     values::value_container::ValueContainer,
 };
-use datex_core::datex_proxy::ToDatexNativeValueContainer;
+use datex_core::preludes::derive::ConvertValueContainer;
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use serde::{
     Serialize,
@@ -131,12 +127,12 @@ where
 }
 
 /// Convert a DIF format JsValue to a #[Datex] struct
-pub fn from_dif_js_value<T: DatexValueContainerProxyDeserialize>(
+pub fn from_dif_js_value<T: ConvertValueContainer>(
     value: impl Into<JsValue>,
     cache: &mut SharedValuesCache,
 ) -> Result<T, JsError> {
     let value_container: ValueContainer = from_js_value(value, cache)?;
-    T::try_from_value_container(value_container).map_err(|e| {
+    value_container.try_into_value::<T>().map_err(|e| {
         js_error(format!(
             "Failed to convert ValueContainer to target type: {:?}",
             e
@@ -159,11 +155,11 @@ where
 }
 
 /// Convert a serializable #[Datex] struct to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_dif_js_value<T: DatexValueContainerProxyInfallibleSerialize>(
+pub fn to_dif_js_value<T: ConvertValueContainer>(
     value: T,
     cache: &mut SharedValuesCache,
 ) -> JsValue {
-    to_js_value(&value.to_value_container_without_cache(), cache)
+    to_js_value(&value.to_value_container(&mut SharedReferencesCache::default()), cache)
 }
 
 /**

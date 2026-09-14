@@ -288,7 +288,7 @@ impl JSComHub {
                 .and_then(|v| v.dyn_into::<Object>())?;
 
         #[derive(Datex, Debug, Clone)]
-        #[datex(structural_recursive)]
+        #[datex(structural)]
         pub struct SocketPropertiesPartial {
             pub direction: InterfaceDirection,
             pub channel_factor: u32,
