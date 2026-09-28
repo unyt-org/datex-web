@@ -132,7 +132,7 @@ impl JSDIFInterface {
             .map_err(js_error)?;
 
         let result = SharedContainer::Referenced(shared_container)
-            .try_handle_update(update)
+            .try_handle_update(update, self.runtime.shared_references_cache_refcell())
             .map_err(DIFUpdateError::UpdateError)
             .map_err(js_error)?;
 
