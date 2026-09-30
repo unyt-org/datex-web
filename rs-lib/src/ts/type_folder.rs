@@ -20,7 +20,6 @@ use datex_core::{
                 list_slice::ListSliceCollectionTypeDefinition,
                 map::MapCollectionTypeDefinition,
             },
-            impl_type::ImplTypeDefinition,
             intersection::IntersectionTypeDefinition,
             list::ListTypeDefinition,
             map::MapTypeDefinition,
@@ -33,6 +32,7 @@ use datex_core::{
     values::core_values::integer::typed_integer::TypedInteger,
 };
 use datex_core::types::entity_type::EntityType;
+use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{TsKeywordType, TsType, TsTypeAliasDecl};
 
@@ -581,10 +581,9 @@ impl TypeFolder for TsTypeFolder {
         self.external_type_reference("Range", vec![start, end])
     }
 
-    fn fold_impl_type(
+    fn fold_impl_markers(
         &mut self,
-        source: &ImplTypeDefinition,
-        ty: Self::Output,
+        impl_markers: &ImplMarkers,
     ) -> Result<Self::Output, Self::Error> {
         todo!()
     }
@@ -621,8 +620,6 @@ impl TypeFolder for TsTypeFolder {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use crate::ts::{TsExport, TsTypeFolder};
     use datex_core::{
         macros::Datex,
@@ -631,6 +628,7 @@ mod tests {
     };
     use datex_core::traits::get_datex_type::GetDatexType;
     use dedent::dedent;
+    use indexmap::IndexMap;
 
     /// Helper function to fold a type into a TypeScript AST and convert it to a string.
     fn to_typescript(ty: Type) -> String {
@@ -682,7 +680,7 @@ mod tests {
         #[datex(structural)]
         struct Test {
             a: Vec<String>,
-            b: HashMap<String, i32>,
+            b: IndexMap<String, i32>,
         }
 
         assert_eq!(
