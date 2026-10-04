@@ -51,7 +51,7 @@ impl JSRuntime {
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            from_dif_js_value(config, &mut SharedValuesCache::default())
+            from_dif_js_value(config, &RefCell::new(SharedValuesCache::default()))
                 .unwrap();
         info!(
             "Initializing runtime with config: {}",
@@ -259,7 +259,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut SharedValuesCache::default(),
+            &RefCell::new(SharedValuesCache::default()),
         )
         .unwrap_or_default();
 
@@ -301,7 +301,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut SharedValuesCache::default(),
+            &RefCell::new(SharedValuesCache::default()),
         )
         .unwrap_or_default();
 
@@ -343,7 +343,7 @@ impl JSRuntime {
         let value_container = self.js_value_to_value_container(dif_value)?;
         let decompile_options: DecompileOptions = from_dif_js_value(
             decompile_options,
-            &mut SharedValuesCache::default(),
+            &RefCell::new(SharedValuesCache::default()),
         )
         .unwrap_or_default();
         Ok(value_to_source_code(&value_container, decompile_options))

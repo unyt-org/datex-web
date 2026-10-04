@@ -6,7 +6,7 @@ import type { Endpoint, Tagged } from "../../../../lib/mod.ts";
 
 export type NetworkTraceHopSocket = {
     interface_type: string;
-    interface_name: null | string;
+    interface_name: string | null;
     channel: string;
     socket_uuid: string;
 };

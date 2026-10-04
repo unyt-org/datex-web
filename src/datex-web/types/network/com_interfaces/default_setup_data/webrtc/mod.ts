@@ -14,8 +14,8 @@ export type WebRTCRoleDX = Tagged<"Offerer"> | Tagged<"Answerer">;
  */
 export type RTCIceServerDX = {
     urls: string[];
-    username: null | string;
-    credential: null | string;
+    username: string | null;
+    credential: string | null;
 };
 
 /**
@@ -25,7 +25,7 @@ export type WebRTCInterfaceSetupData = {
     role: WebRTCRoleDX;
     data_channel_label: string;
     ice_servers: RTCIceServerDX[];
-    negotiated_data_channel_id: null | number;
+    negotiated_data_channel_id: number | null;
     ordered: boolean;
 };
 
@@ -34,9 +34,9 @@ export type WebRTCInterfaceSetupData = {
  */
 export type RTCIceCandidateInitDX = {
     candidate: string;
-    sdp_mid: null | string;
-    sdp_mline_index: null | number;
-    username_fragment: null | string;
+    sdp_mid: string | null;
+    sdp_mline_index: number | null;
+    username_fragment: string | null;
 };
 
 /**
@@ -57,7 +57,7 @@ export type WebRTCSignalDX = Tagged<"Description", {
     sdp: string;
 }> | Tagged<"IceCandidate", {
     candidate: string;
-    sdp_mid: null | string;
-    sdp_mline_index: null | number;
-    username_fragment: null | string;
+    sdp_mid: string | null;
+    sdp_mline_index: number | null;
+    username_fragment: string | null;
 }> | Tagged<"EndOfCandidates">;

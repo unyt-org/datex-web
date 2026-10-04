@@ -129,7 +129,7 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &to_js_value(
                                 &setup_data,
-                                &mut dif_interface.borrow_mut().cache,
+                                &dif_interface.borrow().cache,
                             ),
                         )
                         .map_err(|e| {
@@ -248,7 +248,7 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-        cache: &mut SharedValuesCache,
+        cache: &RefCell<SharedValuesCache>,
     ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
@@ -278,7 +278,7 @@ impl JSComHub {
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-        cache: &mut SharedValuesCache,
+        cache: &RefCell<SharedValuesCache>,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,
@@ -414,7 +414,7 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        to_dif_js_value(metadata, &mut self.dif_interface.borrow_mut().cache)
+        to_dif_js_value(metadata, &self.dif_interface.borrow_mut().cache)
     }
 
     pub async fn get_trace_string(

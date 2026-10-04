@@ -44,7 +44,7 @@ impl JSDIFInterface {
             runtime,
         }
     }
-    pub fn cache(&'_ self) -> RefMut<'_, SharedValuesCache> {
+    pub fn cache(&'_ self) -> RefMut<'_, RefCell<SharedValuesCache>> {
         RefMut::map(self.dif_interface.borrow_mut(), |interface| {
             &mut interface.cache
         })
@@ -128,6 +128,7 @@ impl JSDIFInterface {
             .dif_interface
             .borrow()
             .cache
+            .borrow()
             .try_get_shared_container_mutable_reference(&address)
             .map_err(js_error)?;
 

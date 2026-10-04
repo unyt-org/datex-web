@@ -8,6 +8,6 @@ export type WebRTCInterfaceSetupDataJS = {
     role: WebRTCRoleDX;
     data_channel_label: string;
     ice_servers: RTCIceServerDX[];
-    negotiated_data_channel_id: null | number;
+    negotiated_data_channel_id: number | null;
     ordered: boolean;
 };
