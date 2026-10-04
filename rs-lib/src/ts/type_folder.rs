@@ -11,7 +11,6 @@ use datex_core::{
     },
     types::{
         literal_type_definition::LiteralTypeDefinition,
-        shared_container_containing_nominal_type::SharedContainerContainingNominalType,
         shared_container_containing_type::SharedContainerContainingType,
         r#type::Type,
         type_definition::{
@@ -21,7 +20,6 @@ use datex_core::{
                 list_slice::ListSliceCollectionTypeDefinition,
                 map::MapCollectionTypeDefinition,
             },
-            impl_type::ImplTypeDefinition,
             intersection::IntersectionTypeDefinition,
             list::ListTypeDefinition,
             map::MapTypeDefinition,
@@ -33,8 +31,10 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
+use datex_core::types::entity_type::EntityType;
+use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{TsType, TsTypeAliasDecl};
+use swc_ecma_ast::{TsKeywordType, TsType, TsTypeAliasDecl};
 
 use crate::ts::{
     TsExport,
@@ -511,11 +511,11 @@ impl TypeFolder for TsTypeFolder {
         todo!()
     }
 
-    fn fold_nominal_reference(
+    fn fold_entity_reference(
         &mut self,
-        _nominal: &SharedContainerContainingNominalType,
+        _nominal: &EntityType,
     ) -> Result<Self::Output, Self::Error> {
-        todo!()
+        Ok(ts_null()) // TODO
     }
 
     fn fold_core_type(
@@ -534,7 +534,7 @@ impl TypeFolder for TsTypeFolder {
                 }
                 CoreLibBaseTypeId::Unit => Ok(ts_void()),
                 CoreLibBaseTypeId::Never => Ok(ts_never()),
-                CoreLibBaseTypeId::Unknown => Ok(ts_unknown()),
+                CoreLibBaseTypeId::Any => Ok(ts_unknown()),
                 CoreLibBaseTypeId::List => Ok(ts_array(ts_unknown())),
                 CoreLibBaseTypeId::Map => Ok(ts_type_reference(
                     "Map",
@@ -551,6 +551,7 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Type => {
                     self.external_type_reference("Type", vec![ts_unknown()])
                 }
+                CoreLibBaseTypeId::Box => self.external_type_reference("Box", vec![ts_unknown()]),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
@@ -571,14 +572,6 @@ impl TypeFolder for TsTypeFolder {
         self.external_type_reference("Tagged", generics)
     }
 
-    fn fold_list_collection(
-        &mut self,
-        source: &ListCollectionTypeDefinition,
-        item: Self::Output,
-    ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_array(item))
-    }
-
     fn fold_range(
         &mut self,
         source: &RangeTypeDefinition,
@@ -588,12 +581,19 @@ impl TypeFolder for TsTypeFolder {
         self.external_type_reference("Range", vec![start, end])
     }
 
-    fn fold_impl_type(
+    fn fold_impl_markers(
         &mut self,
-        source: &ImplTypeDefinition,
-        ty: Self::Output,
+        impl_markers: &ImplMarkers,
     ) -> Result<Self::Output, Self::Error> {
         todo!()
+    }
+
+    fn fold_list_collection(
+        &mut self,
+        source: &ListCollectionTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(ts_array(item))
     }
 
     fn fold_list_slice_collection(
@@ -620,15 +620,15 @@ impl TypeFolder for TsTypeFolder {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use crate::ts::{TsExport, TsTypeFolder};
     use datex_core::{
-        datex_proxy::DatexProxyTypes, macros::Datex,
+        macros::Datex,
+        runtime::cache::shared_references_cache::SharedReferencesCache,
         types::r#type::Type,
     };
-    use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
+    use datex_core::traits::get_datex_type::GetDatexType;
     use dedent::dedent;
+    use indexmap::IndexMap;
 
     /// Helper function to fold a type into a TypeScript AST and convert it to a string.
     fn to_typescript(ty: Type) -> String {
@@ -653,13 +653,16 @@ mod tests {
     #[test]
     fn simple_types() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: String,
             b: i32,
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -674,13 +677,16 @@ mod tests {
     #[test]
     fn list_and_map() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: Vec<String>,
-            b: HashMap<String, i32>,
+            b: IndexMap<String, i32>,
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -695,12 +701,15 @@ mod tests {
     #[test]
     fn option() {
         #[derive(Datex)]
+        #[datex(structural)]
         struct Test {
             a: Option<String>,
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = {
@@ -714,13 +723,16 @@ mod tests {
     #[test]
     fn tagged() {
         #[derive(Datex)]
+        #[datex(structural)]
         enum Test {
             A { x: i32 },
             B,
         }
 
         assert_eq!(
-            to_typescript(Test::datex_type(&mut SharedReferencesCache::default())),
+            to_typescript(Test::datex_type(
+                &mut SharedReferencesCache::default()
+            )),
             dedent!(
                 r#"
                 export type Test = Tagged<"A", {

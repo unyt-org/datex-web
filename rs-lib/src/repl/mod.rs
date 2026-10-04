@@ -5,7 +5,7 @@ use datex_core::runtime::execution::{
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{
-    js_utils::{js_error, to_dif_js_value, to_js_value},
+    js_utils::{js_error, to_js_value},
     runtime::JSRuntime,
 };
 

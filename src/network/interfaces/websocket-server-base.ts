@@ -73,7 +73,6 @@ async function createSocketDataIterator(webSocket: WebSocket): Promise<ReadableS
         reject(new Error("WebSocket is already closed"));
     } else {
         // otherwise, wait for the open event
-        console.log("Waiting for WebSocket to open...");
     }
     await promise;
 

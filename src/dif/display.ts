@@ -99,7 +99,7 @@ export function difCoreValueToDisplayString(
             return "()";
         case CoreLibTypeId.Never:
             return "never";
-        case CoreLibTypeId.Unknown:
+        case CoreLibTypeId.Any:
             return "unknown";
         case CoreLibTypeId.Range:
             if (Array.isArray(coreValue)) {

@@ -48,6 +48,11 @@ export type DIFCoreValueList = Array<DIFValueContainer>;
 export type DIFCoreValueMap = Array<[DIFValueContainer, DIFValueContainer]>;
 
 /**
+ * Represents a callable definition with hash and optional name
+ */
+export type DIFCoreValueCallable = [string, string|null, boolean|null];
+
+/**
  * Represents a range of values in DIF, defined by a start and end value container, or as a tuple of two value containers.
  */
 export type DIFCoreValueRange = [DIFValueContainer, DIFValueContainer] | {
@@ -61,6 +66,7 @@ export type DIFCoreValue =
     | DIFCoreValueList // list
     | DIFCoreValueMap // map
     | DIFCoreValueRange // range
+    | DIFCoreValueCallable // callable
     | Record<string, DIFValueContainer> // StructuralMapWithStringKeys
     | string // text / endpoint
     | number // integer / decimal

@@ -11,5 +11,5 @@ export type TLSMode = Tagged<"HandledExternally"> | Tagged<"WithCertificate", {
 
 export type AcceptAddress = {
     address: string;
-    tls_mode: null | TLSMode;
+    tls_mode: TLSMode | null;
 };

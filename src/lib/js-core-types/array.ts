@@ -1,7 +1,7 @@
 import { CoreLibTypeId } from "../../dif/core.ts";
 import { type CustomReferenceMetadata, type DIFHandler, IS_PROXY_ACCESS } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
-import { interceptAccessors } from "../../dif/utils.ts";
+import { interceptAccessors } from "../../dif/reflect-utils.ts";
 import { DEBUG_MODE } from "../../global.ts";
 import type { PointerAddress } from "../../shared-container/mod.ts";
 import { Option } from "../../utils/option.ts";
@@ -23,7 +23,7 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
             this.difHandler,
             metadata,
         );
-        // catch acccess (get or set) to original array value, not via proxy - this check is only active in debug mode
+        // catch access (get or set) to original array value, not via proxy - this check is only active in debug mode
         if (DEBUG_MODE) {
             interceptAccessors(
                 target,
@@ -54,7 +54,6 @@ export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
                 });
             },
             set(_target, prop, value, receiver) {
-                console.log("=> array." + String(prop) + " =", value);
                 return self.allowOriginalValueAccess(proxy, () => {
                     const index = Number(prop);
                     if (
@@ -193,12 +192,16 @@ function generateInterceptedArrayPush<V>(
     difHandler: DIFHandler,
 ) {
     return (...items: V[]) => {
-        difHandler.triggerListSplice(
-            pointerAddress,
-            array.length,
-            0,
-            items,
-        );
+        if (items.length === 1) {
+            difHandler.triggerAppend(pointerAddress, items[0]);
+        } else {
+            difHandler.triggerListSplice(
+                pointerAddress,
+                array.length,
+                0,
+                items,
+            );
+        }
         return originalPush(...items);
     };
 }

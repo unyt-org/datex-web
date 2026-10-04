@@ -26,10 +26,12 @@ export class JSDIFInterface {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    apply(callee: any, value: any): any | undefined;
+    apply_async(callee: any, args: any): Promise<any>;
+    apply_sync(callee: any, args: any): any;
     create_pointer(value: any): string;
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
-    observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
+    observe_pointer(address: string, observe_options: any, callback: Function): number;
+    register_callable(callable: Function, name: string | null | undefined, signature: any, is_method: boolean): string;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */
@@ -85,6 +87,8 @@ export class Repl {
 }
 
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
+
+export function decompile_dxb_body(dxb: Uint8Array): string;
 
 export function disassemble_dxb_flat(dxb: Uint8Array): any;
 

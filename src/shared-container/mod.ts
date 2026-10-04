@@ -13,6 +13,11 @@ declare const PointerAddressWithOwnershipBrand: unique symbol;
 export type PointerAddressWithOwnership = string & { [PointerAddressWithOwnershipBrand]: never };
 export type PointerAddress = string & { [PointerAddressBrand]: never };
 
+/**
+ * Splits a PointerAddressWithOwnership into its ownership and address components.
+ * @param address The PointerAddressWithOwnership to split.
+ * @returns A array containing the ownership and the pointer address.
+ */
 export function splitPointerAddressWithOwnership(
     address: PointerAddressWithOwnership,
 ): [DIFSharedContainerOwnership, PointerAddress] {
@@ -20,24 +25,40 @@ export function splitPointerAddressWithOwnership(
     if (ownershipStr === "") {
         return [DIFSharedContainerOwnership.Owned, addressStr];
     } else if (ownershipStr === "'") {
-        return [DIFSharedContainerOwnership.Immutable, addressStr];
+        return [DIFSharedContainerOwnership.ImmutableRef, addressStr];
     } else if (ownershipStr === "'mut") {
-        return [DIFSharedContainerOwnership.Mutable, addressStr];
-    } else {
-        throw new Error(`Invalid pointer address with ownership: ${address}`);
+        return [DIFSharedContainerOwnership.MutableRef, addressStr];
     }
+    throw new Error(`Invalid pointer address with ownership: ${address}`);
 }
+
+/**
+ * Combines a pointer address with an ownership prefix to create a PointerAddressWithOwnership.
+ * @param address The pointer address to combine with ownership.
+ * @param ownership The ownership to prefix to the pointer address.
+ * @returns A PointerAddressWithOwnership that combines the ownership prefix and the pointer address.
+ */
 export function combinePointerAddressWithOwnership(
     address: PointerAddress,
     ownership: DIFSharedContainerOwnership,
 ): PointerAddressWithOwnership {
     let ownershipStr: string = "";
-    if (ownership === DIFSharedContainerOwnership.Immutable) {
+    if (ownership === DIFSharedContainerOwnership.ImmutableRef) {
         ownershipStr = "'";
-    } else if (ownership === DIFSharedContainerOwnership.Mutable) {
+    } else if (ownership === DIFSharedContainerOwnership.MutableRef) {
         ownershipStr = "'mut";
     }
     return `${ownershipStr}$${address}` as unknown as PointerAddressWithOwnership;
+}
+
+/**
+ * Strip the ownership prefix from a pointer address with ownership, returning just the pointer address.
+ * @param address The pointer address with ownership to normalize.
+ * @returns The normalized pointer address without ownership prefix.
+ */
+export function addressWithoutOwnership(address: PointerAddressWithOwnership): PointerAddress {
+    const [, addressStr] = splitPointerAddressWithOwnership(address);
+    return addressStr;
 }
 
 /**
@@ -62,6 +83,10 @@ export type SharedRef<
     ? ReferenceMutability extends SharedReferenceMutability.Mutable ? never
     : SharedReferenceInner<T, Mutability, ReferenceMutability>
     : SharedReferenceInner<T, Mutability, ReferenceMutability>;
+
+export type MaybeSharedRef<T, Mutability extends SharedContainerMutability> = T extends object
+    ? SharedRef<T, Mutability>
+    : T;
 
 type SharedReferenceInner<
     T extends object,

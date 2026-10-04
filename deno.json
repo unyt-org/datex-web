@@ -71,6 +71,10 @@
             "description": "Build the npm package only, then start the browser demo.",
             "command": "deno task build:npm && cd datex-browser-demo && npm install && npm run dev"
         },
+        "serve-npm-watch": {
+            "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
+            "command": "deno run -A scripts/serve-npm-watch.ts"
+        },
         "fmt": {
             "description": "Format Deno and Rust sources.",
             "command": "deno fmt && cargo fmt"

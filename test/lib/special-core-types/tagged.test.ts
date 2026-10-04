@@ -4,8 +4,12 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { DIFValue } from "datex/dif/types/mod.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
+import { arrayTypeBinding } from "../../../src/lib/js-core-types/array.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+});
 
 Deno.test("tagged value DIF representation", () => {
     const taggedDifValue = runtime.dif.convertJSValueToDIFValueContainer(

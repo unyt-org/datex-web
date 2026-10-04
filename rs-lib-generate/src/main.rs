@@ -1,4 +1,6 @@
-use datex_web::ts::{SharedReferencesCache, TsTypeFolder, resolve_registry_types};
+use datex_web::ts::{
+    SharedReferencesCache, TsTypeFolder, resolve_registry_types,
+};
 use std::{env, fs, path::PathBuf};
 
 const GENERATED_FILE_HEADER: &str = "\

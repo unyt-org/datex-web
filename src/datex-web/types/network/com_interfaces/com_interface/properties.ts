@@ -20,7 +20,7 @@ export type ReconnectionConfig = Tagged<"NoReconnect"> | Tagged<"InstantReconnec
 export type ComInterfaceProperties = {
     interface_type: string;
     channel: string;
-    name: null | string;
+    name: string | null;
     direction: InterfaceDirection;
     round_trip_time: number;
     max_bandwidth: number;
@@ -29,5 +29,5 @@ export type ComInterfaceProperties = {
     is_secure_channel: boolean;
     reconnection_config: ReconnectionConfig;
     auto_identify: boolean;
-    connectable_interfaces: null | RuntimeConfigInterface[];
+    connectable_interfaces: RuntimeConfigInterface[] | null;
 };

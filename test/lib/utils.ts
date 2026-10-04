@@ -12,5 +12,5 @@ export function performFakeRemoteUpdateWithSourceId(
     data: DIFUpdateData,
     sourceId: DIFTransceiverId,
 ) {
-    return runtime.dif._handle.update(address, [sourceId, ...data] as DIFUpdate);
+    return runtime.dif._handle.update(address, [sourceId, ...data] satisfies DIFUpdate);
 }

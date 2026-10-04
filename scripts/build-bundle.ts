@@ -27,10 +27,10 @@ if (code !== 0) {
     console.error("Error bundling the script");
     Deno.exit(code);
 } else {
-    console.log("Script bundled successfully to datex.js");
+    console.info("Script bundled successfully to datex.js");
 
     if (!inlineWASM) {
-        console.log("Skipping WASM embedding, inline flag not set.");
+        console.info("Skipping WASM embedding, inline flag not set.");
         Deno.exit(0);
     }
 
@@ -53,5 +53,5 @@ if (code !== 0) {
         `WebAssembly.instantiate(Uint8Array.fromBase64("${wasmBase64}")`,
     );
     await Deno.writeTextFile(bundleFile, bundleContent);
-    console.log("WASM file embedded into datex.js successfully");
+    console.info("WASM file embedded into datex.js successfully");
 }

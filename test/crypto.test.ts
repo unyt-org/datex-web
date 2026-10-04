@@ -11,11 +11,7 @@ Deno.test("crypto", async () => {
         return;
     }
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-    console.log(
-        await runtime._runtime.crypto_test_tmp(),
-    );
-    // .then(console.log)
-    // .catch(console.error);
+    await runtime._runtime.crypto_test_tmp();
 });
 
 /*
