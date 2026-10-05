@@ -9,6 +9,7 @@ use datex_core::preludes::derive::{ConvertValueContainer, FromParts};
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use datex_core::dif::deserialize_with_serde_context::DeserializeWithSerdeContext;
 use datex_core::dif::serialize_with_serde_context::SerializeWithSerdeContext;
+use serde::Deserialize;
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
 
@@ -108,13 +109,13 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
     }
 }
 
-/// Converts a JSValue to a DIF-serializable Rust value (e.g. [Value], [ValueContainer])
-pub fn from_js_value<'de, T>(
+/// Converts a JSValue to a deserializable value
+pub fn deserializable_from_js_value<'de, T>(
     value: impl Into<JsValue>,
     cache: &RefCell<SharedValuesCache>,
 ) -> Result<T, JsError>
 where
-    T: DeserializeWithSerdeContext<'de>,
+    T: Deserialize<'de>,
 {
     let context = SerdeContext::new(cache);
     DeserializeWithSerdeContext::deserialize_with_ctx(
@@ -124,7 +125,8 @@ where
     .map_err(js_error)
 }
 
-/// Convert a DIF format JsValue to a #[Datex] struct
+/// Convert a DIF format JsValue to a concrete type [T],
+/// using the DIF cache for resolving shared containers
 pub fn from_dif_js_value<'de, T: DeserializeWithSerdeContext<'de>>(
     value: impl Into<JsValue>,
     value_cache: &RefCell<SharedValuesCache>,

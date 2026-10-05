@@ -37,7 +37,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{from_dif_js_value, from_js_value, to_dif_js_value, to_js_value};
+use crate::js_utils::{from_dif_js_value, deserializable_from_js_value, to_dif_js_value, to_js_value};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -364,9 +364,9 @@ impl JSComHub {
         setup_data: JsValue,
         priority: Option<u16>,
     ) -> Result<String, JsError> {
-        let setup_data: ValueContainer = from_js_value(
+        let setup_data: ValueContainer = from_dif_js_value(
             setup_data,
-            &mut self.dif_interface.borrow_mut().cache,
+            &self.dif_interface.borrow_mut().cache,
         )
         .map_err(|e| JsError::new(&format!("{e:?}")))?;
 

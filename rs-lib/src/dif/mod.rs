@@ -1,4 +1,4 @@
-use crate::js_utils::{from_dif_js_value, from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_js_value, unwrap_or_report_js_error_debug};
+use crate::js_utils::{from_dif_js_value, deserializable_from_js_value, js_error, optional_value_container_to_optional_js_dif_value, to_js_value, unwrap_or_report_js_error_debug};
 use datex_core::{
     dif::{
         dif_interface::DIFInterface, error::DIFUpdateError,
@@ -67,7 +67,7 @@ impl JSDIFInterface {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let cb = callback.clone();
         let observe_options: ObserveOptions =
-            from_js_value(observe_options, self.cache().deref_mut())?;
+            deserializable_from_js_value(observe_options, self.cache().deref_mut())?;
         let self_clone = self.clone();
         let observer = move |update: &Update| {
             let value = to_js_value(update, &mut self_clone.cache());
@@ -102,7 +102,7 @@ impl JSDIFInterface {
     ) -> Result<(), JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let observe_options: ObserveOptions =
-            from_js_value(observe_options, &mut *self.cache())?;
+            deserializable_from_js_value(observe_options, &mut *self.cache())?;
         self.dif_interface
             .borrow_mut()
             .update_observer_options(
@@ -122,7 +122,7 @@ impl JSDIFInterface {
         update: JsValue,
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
-        let update: Update = from_js_value(update, &mut self.cache())?;
+        let update: Update = from_dif_js_value(update, &mut self.cache())?;
 
         let shared_container = self
             .dif_interface
@@ -148,7 +148,7 @@ impl JSDIFInterface {
         is_method: bool, // TODO
     ) -> Result<String, JsError> {
         let signature: CallableTypeDefinition =
-            from_js_value(signature, &mut self.cache())?;
+            from_dif_js_value(signature, &mut self.cache())?;
 
         let callable_clone = callable.clone();
         let self_clone = self.clone();
@@ -166,8 +166,8 @@ impl JSDIFInterface {
                             let result = unwrap_or_report_js_error_debug(wasm_bindgen_futures::JsFuture::from(promise).await);
                             result
                                 .map(|res| from_dif_js_value::<ValueContainer>(
-                                    res, 
-                                    &mut self_clone.cache(), 
+                                    res,
+                                    &mut self_clone.cache(),
                                 ).unwrap())
                         }
                         None => {
@@ -190,7 +190,7 @@ impl JSDIFInterface {
                 }
                 let res = result
                     .map(|res| from_dif_js_value::<ValueContainer>(
-                        res, 
+                        res,
                         &mut self_clone.cache(),
                     ).unwrap());
 
@@ -253,13 +253,13 @@ impl JSDIFInterface {
         args: JsValue,
     ) -> Result<(ValueContainer, Vec<ApplyArgument>), JsError> {
         let callee: ValueContainer =
-            from_js_value(callee, &mut self.cache())?;
+            from_dif_js_value(callee, &mut self.cache())?;
         let js_array: Array = args.into();
         let args = js_array
             .to_vec()
             .into_iter()
             .map(|v|
-                from_js_value::<ValueContainer>(
+                from_dif_js_value::<ValueContainer>(
                     v, &mut self.cache()
                 ).map(|v|ApplyArgument::from(v))
             )
@@ -269,7 +269,7 @@ impl JSDIFInterface {
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
         let value: BaseSharedValueContainer =
-            from_js_value(value, &mut self.cache())?;
+            from_dif_js_value(value, &mut self.cache())?;
         Ok(self
             .dif_interface
             .borrow_mut()
