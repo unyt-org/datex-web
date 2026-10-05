@@ -165,7 +165,10 @@ impl JSDIFInterface {
                         Some(promise) => {
                             let result = unwrap_or_report_js_error_debug(wasm_bindgen_futures::JsFuture::from(promise).await);
                             result
-                                .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap())
+                                .map(|res| from_dif_js_value::<ValueContainer>(
+                                    res, 
+                                    &mut self_clone.cache(), 
+                                ).unwrap())
                         }
                         None => {
                             panic!("Callable did not return a Promise, but signature requires async")
@@ -186,7 +189,10 @@ impl JSDIFInterface {
                     panic!("Callable returned a Promise, but signature does not require async")
                 }
                 let res = result
-                    .map(|res| from_dif_js_value::<ValueContainer>(res, &mut self_clone.cache()).unwrap());
+                    .map(|res| from_dif_js_value::<ValueContainer>(
+                        res, 
+                        &mut self_clone.cache(),
+                    ).unwrap());
 
                 Ok((res, get_borrowed_apply_argument_values(args)))
             })

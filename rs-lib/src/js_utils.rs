@@ -5,7 +5,7 @@ use datex_core::{
     runtime::cache::shared_values_cache::SharedValuesCache,
     values::value_container::ValueContainer,
 };
-use datex_core::preludes::derive::ConvertValueContainer;
+use datex_core::preludes::derive::{ConvertValueContainer, FromParts};
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use datex_core::dif::deserialize_with_serde_context::DeserializeWithSerdeContext;
 use datex_core::dif::serialize_with_serde_context::SerializeWithSerdeContext;
@@ -125,17 +125,16 @@ where
 }
 
 /// Convert a DIF format JsValue to a #[Datex] struct
-pub fn from_dif_js_value<T: ConvertValueContainer>(
+pub fn from_dif_js_value<'de, T: DeserializeWithSerdeContext<'de>>(
     value: impl Into<JsValue>,
-    cache: &RefCell<SharedValuesCache>,
+    value_cache: &RefCell<SharedValuesCache>,
 ) -> Result<T, JsError> {
-    let value_container: ValueContainer = from_js_value(value, cache)?;
-    value_container.try_into_value::<T>().map_err(|e| {
-        js_error(format!(
-            "Failed to convert ValueContainer to target type: {:?}",
-            e
-        ))
-    })
+    let ctx = SerdeContext::new(value_cache);
+    T::deserialize_with_ctx(
+        &ctx,
+        serde_wasm_bindgen::Deserializer::from(value.into())
+    )
+    .map_err(js_error)
 }
 
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers

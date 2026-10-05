@@ -32,6 +32,7 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::preludes::derive::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -146,7 +147,10 @@ impl JSComHub {
                         .await
                         .expect("Failed to get value from promise");
 
-                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration, &mut dif_interface.borrow_mut().cache)
+                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(
+                        &interface_configuration,
+                        &mut dif_interface.borrow_mut().cache,
+                    )
                         .map_err(|e| {
                             error!("Error parse_com_interface_configuration: {:?}", e);
 
@@ -179,7 +183,10 @@ impl JSComHub {
                                 let mut dif_interface = dif_interface.borrow_mut();
                                 let cache = &mut dif_interface.cache;
 
-                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&read_result.get_value(), cache) {
+                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(
+                                    &read_result.get_value(),
+                                    cache,
+                                ) {
                                     Ok(result) => result,
                                     Err(e) => {
                                         error!("Error parse_socket_configuration: {:?}", e);
@@ -248,13 +255,13 @@ impl JSComHub {
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-        cache: &RefCell<SharedValuesCache>,
+        values_cache: &RefCell<SharedValuesCache>,
     ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
 
         let properties: ComInterfaceProperties =
-            from_dif_js_value(properties, cache)?;
+            from_dif_js_value(properties, values_cache)?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -278,7 +285,7 @@ impl JSComHub {
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-        cache: &RefCell<SharedValuesCache>,
+        values_cache: &RefCell<SharedValuesCache>,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,
@@ -296,7 +303,7 @@ impl JSComHub {
         }
 
         let properties: SocketPropertiesPartial =
-            from_dif_js_value(properties, cache).map_err(|e| {
+            from_dif_js_value(properties, values_cache).map_err(|e| {
                 serde_wasm_bindgen::Error::new(&format!(
                     "Error parsing socket properties: {:?}",
                     e

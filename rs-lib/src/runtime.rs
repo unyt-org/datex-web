@@ -51,7 +51,10 @@ impl JSRuntime {
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            from_dif_js_value(config, &RefCell::new(SharedValuesCache::default()))
+            from_dif_js_value(
+                config,
+                &RefCell::new(SharedValuesCache::default()),
+            )
                 .unwrap();
         info!(
             "Initializing runtime with config: {}",
