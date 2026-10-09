@@ -5,10 +5,10 @@ use datex_core::{
     runtime::cache::shared_values_cache::SharedValuesCache,
     values::value_container::ValueContainer,
 };
-use datex_core::preludes::derive::{ConvertValueContainer, FromParts};
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use datex_core::dif::deserialize_with_serde_context::DeserializeWithSerdeContext;
 use datex_core::dif::serialize_with_serde_context::SerializeWithSerdeContext;
+use datex_core::traits::convert_value_container::ConvertValueContainer;
 use serde::Deserialize;
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::js_sys::{self, Array, ArrayBuffer, Object, Reflect};
@@ -112,17 +112,12 @@ impl<T, E: std::error::Error + 'static> ToJsError<T> for Result<T, E> {
 /// Converts a JSValue to a deserializable value
 pub fn deserializable_from_js_value<'de, T>(
     value: impl Into<JsValue>,
-    cache: &RefCell<SharedValuesCache>,
 ) -> Result<T, JsError>
 where
     T: Deserialize<'de>,
 {
-    let context = SerdeContext::new(cache);
-    DeserializeWithSerdeContext::deserialize_with_ctx(
-        &context,
-        serde_wasm_bindgen::Deserializer::from(value.into()),
-    )
-    .map_err(js_error)
+    T::deserialize(serde_wasm_bindgen::Deserializer::from(value.into()))
+        .map_err(js_error)
 }
 
 /// Convert a DIF format JsValue to a concrete type [T],

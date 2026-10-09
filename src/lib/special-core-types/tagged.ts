@@ -2,6 +2,7 @@ export const EMPTY_TAG = Symbol("EMPTY_TAG");
 
 /**
  * A simple wrapper type that allows to associate a string tag with a value.
+ * TODO: "enum classes" should extend Tagged class, e.g. class Example extends Tagged<...> but tag->value mapping must be defined somehow in type system
  */
 export class Tagged<Tag extends string, const Value = typeof EMPTY_TAG> {
     #tag: Tag;

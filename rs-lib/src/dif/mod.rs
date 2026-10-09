@@ -67,7 +67,7 @@ impl JSDIFInterface {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let cb = callback.clone();
         let observe_options: ObserveOptions =
-            deserializable_from_js_value(observe_options, self.cache().deref_mut())?;
+            deserializable_from_js_value(observe_options)?;
         let self_clone = self.clone();
         let observer = move |update: &Update| {
             let value = to_js_value(update, &mut self_clone.cache());
@@ -102,7 +102,7 @@ impl JSDIFInterface {
     ) -> Result<(), JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let observe_options: ObserveOptions =
-            deserializable_from_js_value(observe_options, &mut *self.cache())?;
+            deserializable_from_js_value(observe_options)?;
         self.dif_interface
             .borrow_mut()
             .update_observer_options(

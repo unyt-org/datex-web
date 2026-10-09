@@ -32,7 +32,6 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::preludes::derive::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
