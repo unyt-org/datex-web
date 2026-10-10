@@ -16,6 +16,6 @@ export type RuntimeConfigInterface = {
 
 export type RuntimeConfig = {
     endpoint: Endpoint;
-    interfaces: null | RuntimeConfigInterface[];
-    env: null | Record<string, string>;
+    interfaces: RuntimeConfigInterface[] | null;
+    env: Record<string, string> | null;
 };

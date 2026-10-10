@@ -30,7 +30,7 @@ export const CoreLibTypeId = {
     endpoint: 6,
     Unit: 7,
     Never: 8,
-    Unknown: 9,
+    Any: 9,
     List: 10,
     Map: 11,
     Callable: 12,

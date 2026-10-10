@@ -10,4 +10,4 @@ edition = "2024"
 publish = false
 
 [dependencies]
-datex-web = { path = "../rs-lib", version = "0.0.15" }
+datex-web = { path = "../rs-lib", version = "0.0.16" }

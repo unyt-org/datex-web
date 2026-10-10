@@ -25,7 +25,11 @@ import { assertEquals } from "@std/assert";
 import { Endpoint, Tagged } from "datex/lib/mod.ts";
 import type { FormattingMode } from "../../src/datex-web/types/decompiler/options.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+let runtime: Runtime;
+
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
+});
 
 Deno.test(`JSON parse compatibility`, async (t) => {
     for (const input of TEXT_INPUTS) {

@@ -4,13 +4,17 @@
  * This module contains all type definitions related to the representation of types in DIF.
  */
 
-import type { PointerAddress, SharedContainerMutability } from "../../shared-container/mod.ts";
+import type {
+    PointerAddress,
+    PointerAddressWithOwnership,
+    SharedContainerMutability,
+} from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 
 /**
  * A core lib is directly serialized as number.
  */
-type DIFCoreLibTypeDefinition = CoreLibTypeId;
+export type DIFCoreLibTypeDefinition = CoreLibTypeId;
 
 export type DIFTypeDefinitionMap = {
     literal: DIFLiteralTypeDefinition;
@@ -43,8 +47,8 @@ export const DIFLocalOwnership = {
 export type DIFLocalOwnership = typeof DIFLocalOwnership[keyof typeof DIFLocalOwnership];
 
 export const DIFSharedContainerOwnership = {
-    Immutable: 0,
-    Mutable: 1,
+    ImmutableRef: 0,
+    MutableRef: 1,
     Owned: null,
 } as const;
 export type DIFSharedContainerOwnership = typeof DIFSharedContainerOwnership[keyof typeof DIFSharedContainerOwnership];
@@ -63,7 +67,7 @@ export type DIFTypeDefinitionWithMetadata = [
     DIFTypeMetadata,
     DIFTypeDefinition,
 ];
-export type SharedContainerContainingNominalType = string; // $address
+export type SharedContainerContainingNominalType = PointerAddressWithOwnership; // $' <address>
 export type DIFType = DIFTypeDefinitionWithMetadata | SharedContainerContainingNominalType | CoreLibTypeId; // TODO alias / nominal or core lib type id
 
 /**
@@ -130,8 +134,7 @@ export type DIFTaggedTypeDefinition = [string, DIFType];
 
 export type DIFTypeMarker = "";
 
-export type DIFSharedTypeDefinition = null; // TODO
-export type DIFCallableTypeDefinition = null; // TODO
+export type DIFSharedTypeDefinition = PointerAddressWithOwnership; // TODO
 
 export type DIFCollectionTypeDefinition =
     | DIFCollectionListTypeDefinition
@@ -142,3 +145,18 @@ export type DIFCollectionTypeDefinition =
 export type DIFCollectionListTypeDefinition = DIFType;
 export type DIFCollectionListSliceTypeDefinition = [DIFType, number];
 export type DIFCollectionMapTypeDefinition = Array<[DIFType, DIFType]>;
+
+export const DIFCallableKind = {
+    Function: "function",
+    Procedure: "procedure",
+} as const;
+export type DIFCallableKind = typeof DIFCallableKind[keyof typeof DIFCallableKind];
+
+export type DIFCallableTypeDefinition = {
+    kind: DIFCallableKind,
+    requires_async: boolean,
+    parameters: [string|null, DIFType][],
+    rest_parameter: [string|null, DIFType]|null,
+    return_type: DIFType|null,
+    yeet_type: DIFType|null,
+}

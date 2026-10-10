@@ -6,5 +6,5 @@ import type { AcceptAddress } from "../http_common.ts";
 
 export type HTTPServerInterfaceSetupData = {
     bind_address: string;
-    accept_addresses: null | AcceptAddress[];
+    accept_addresses: AcceptAddress[] | null;
 };

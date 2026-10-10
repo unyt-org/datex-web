@@ -1,7 +1,7 @@
 import { Runtime } from "datex/runtime/runtime.ts";
 import { assert, assertEquals } from "@std/assert";
 import type { DIFValue } from "datex/dif/types/value.ts";
-import { Endpoint } from "datex/lib/mod.ts";
+import { arrayTypeBinding, Endpoint } from "datex/lib/mod.ts";
 import {
     isJsUndefined,
     isJsUndefinedTypeDefinition,
@@ -9,7 +9,10 @@ import {
     JS_UNDEFINED_TYPE_DEFINITION,
 } from "datex/lib/special-core-types/undefined.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+});
 
 Deno.test("undefined type definition", () => {
     assert(

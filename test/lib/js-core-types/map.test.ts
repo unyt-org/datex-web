@@ -1,16 +1,16 @@
 import { assertEquals } from "@std/assert/equals";
-import { mapTypeBinding } from "datex/lib/js-core-types/map.ts";
 import { Runtime } from "datex/runtime/runtime.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { Endpoint } from "datex/lib/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
-import { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
-import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
-import type { PointerAddress, SharedRef } from "datex/shared-container/mod.ts";
-import { clear, createDIFProperty, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
+import type { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
+import type { SharedRef } from "datex/shared-container/mod.ts";
+import { clear, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
 import { integer } from "datex/dif/helpers/typed-integer.ts";
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
-runtime.dif.type_registry.registerTypeBinding(mapTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+});
 
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
@@ -19,69 +19,68 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
         ) as T;
 }
 
-function createMapReference<T extends Map<unknown, unknown>, M extends SharedContainerMutability.Mutable>(
-    array: T,
-    mutability: M = SharedContainerMutability.Mutable as M,
-): [SharedRef<T, M>, PointerAddress] {
-    const arrayPtr = runtime.createSharedValueFromJSValue<T, M>(array, null, mutability) as SharedRef<T, M>;
-    const address = runtime.dif.getPointerAddressForValue(arrayPtr as CachedSharedContainer)!;
-    return [arrayPtr, address];
-}
-
 Deno.test("map set external", () => {
     // create mutable pointer to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
+    const mapRef = map.value;
+    const address = map.pointerAddress;
 
     // fake a remote update from transceiver 42
     performFakeRemoteUpdate(
         runtime,
         address,
         setEntry(
-            createDIFProperty("externalKey", DIFPropertyKind.Text),
+            runtime.dif.createDIFProperty("externalKey", DIFPropertyKind.Text),
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
-    assertEquals(map.get("externalKey"), "newValue");
+    assertEquals(mapRef.get("externalKey"), "newValue");
 });
 
 Deno.test("map delete external", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
-    performFakeRemoteUpdate(runtime, address, deleteEntry(createDIFProperty("key1", DIFPropertyKind.Text)));
-    assertEquals(map.has("key1"), false);
+    const mapRef = map.value;
+    const address = map.pointerAddress;
+    performFakeRemoteUpdate(runtime, address, deleteEntry(runtime.dif.createDIFProperty("key1", DIFPropertyKind.Text)));
+    assertEquals(mapRef.has("key1"), false);
 });
 
 Deno.test("map clear external", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
+    const mapRef = map.value;
+    const address = map.pointerAddress;
 
     performFakeRemoteUpdate(runtime, address, clear());
-    assertEquals(map.size, 0);
+    assertEquals(mapRef.size, 0);
 });
 
 Deno.test("map replace external", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
+    const mapRef = map.value;
+    const address = map.pointerAddress;
 
     performFakeRemoteUpdate(
         runtime,
@@ -96,7 +95,7 @@ Deno.test("map replace external", () => {
         ),
     );
     assertEquals(
-        map,
+        mapRef,
         new Map<string, string>([
             ["a", "valueA"],
             ["b", "valueB"],
@@ -106,16 +105,19 @@ Deno.test("map replace external", () => {
 
 Deno.test("map set local", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
+    const mapRef = map.value;
+    const address = map.pointerAddress;
 
     // 2. local update
-    map.set("localKey", "localValue");
-    assertEquals(map.get("localKey"), "localValue");
+    mapRef.set("localKey", "localValue");
+    assertEquals(mapRef.get("localKey"), "localValue");
+
     assertEquals(
         getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).get(
             "localKey",
@@ -126,17 +128,19 @@ Deno.test("map set local", () => {
 
 Deno.test("map delete local", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
             ["toBeDeleted", "value3"],
         ]),
     );
+    const address = map.pointerAddress;
+    const mapRef = map.value;
 
     // 2. local update
-    map.delete("toBeDeleted");
-    assertEquals(map.has("toBeDeleted"), false);
+    mapRef.delete("toBeDeleted");
+    assertEquals(mapRef.has("toBeDeleted"), false);
     assertEquals(
         getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).has(
             "toBeDeleted",
@@ -147,15 +151,18 @@ Deno.test("map delete local", () => {
 
 Deno.test("map clear local", () => {
     // create mutable ref to map
-    const [map, address] = createMapReference(
+    const map = runtime.createSharedValueFromJSValue(
         new Map<string | number, string>([
             ["key1", "value1"],
             [2, "value2"],
         ]),
     );
+    const mapRef = map.value;
+    const address = map.pointerAddress;
+
     // 2. local update
-    map.clear();
-    assertEquals(map.size, 0);
+    mapRef.clear();
+    assertEquals(mapRef.size, 0);
     assertEquals(
         getCurrentRuntimeLocalValue<Map<unknown, unknown>>(address).size,
         0,

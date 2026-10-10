@@ -22,7 +22,7 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 # git = "https://github.com/unyt-org/datex"
-datex-core = { version = "0.0.12", default-features = false, features = [
+datex-core = { version = "0.0.13", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",
@@ -65,6 +65,7 @@ swc_ecma_ast = "25"
 swc_ecma_codegen = "28"
 num-bigint = { version = "0.4", default-features = false }
 dedent = "0.1.1"
+indexmap = "2.14.2"
 
 # webrtc
 # tokio = { version = "1.43.0", default-features = false, features = [] }

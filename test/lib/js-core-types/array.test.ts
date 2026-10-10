@@ -1,24 +1,16 @@
 import { assertEquals } from "@std/assert/equals";
 import { Runtime } from "datex/runtime/runtime.ts";
-import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
+
 import { Endpoint } from "datex/lib/mod.ts";
-import { type PointerAddress, SharedContainerMutability } from "datex/shared-container/mod.ts";
-import type { CachedSharedContainer } from "datex/dif/dif-handler.ts";
+import type { SharedContainerMutability } from "datex/shared-container/mod.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
-import {
-    appendEntry,
-    clear,
-    createDIFProperty,
-    deleteEntry,
-    DIFPropertyKind,
-    listSplice,
-    replace,
-    setEntry,
-} from "datex/dif/update.ts";
+import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "datex/dif/update.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
-runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+});
 
 function getCurrentRuntimeLocalValue<T>(address: string) {
     return runtime.dif
@@ -27,93 +19,91 @@ function getCurrentRuntimeLocalValue<T>(address: string) {
         ) as T;
 }
 
-function createSharedArray<T extends Array<unknown>, M extends SharedContainerMutability.Mutable>(
-    array: T,
-    mutability: M = SharedContainerMutability.Mutable as M,
-): [SharedRef<T, M>, PointerAddress] {
-    const arrayRef = runtime.createSharedValueFromJSValue<T, M>(array, null, mutability) as SharedRef<T, M>;
-    const address = runtime.dif.getPointerAddressForValue(arrayRef as CachedSharedContainer)!;
-    return [arrayRef, address];
-}
-
 Deno.test("array set external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123];
-    const [arrayRef, address] = createSharedArray(array);
-    console.log("ptr", address);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
     // TODO: property updates are not yet implemented in DATEX Script
     // runtime.executeSync(`${address}.1 = 'newValue'`);
     // fake a remote update from transceiver 42
     performFakeRemoteUpdate(
         runtime,
-        address,
+        arrayRef.pointerAddress,
         setEntry(
-            createDIFProperty(0, DIFPropertyKind.Index),
+            runtime.dif.createDIFProperty(0, DIFPropertyKind.Index),
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
     // get current value of array via dif
-    const runtimeCurrentValue = getCurrentRuntimeLocalValue<string[]>(address);
+    const runtimeCurrentValue = getCurrentRuntimeLocalValue<string[]>(arrayRef.pointerAddress);
 
     // current runtime value should reflect the update
     assertEquals(runtimeCurrentValue[0], "newValue");
     // the js side value should also be updated
-    assertEquals(arrayRef[0], "newValue");
+    assertEquals(arrayRef.value[0], "newValue");
 });
 
 Deno.test("array append external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
     performFakeRemoteUpdate(
         runtime,
-        address,
+        arrayRef.pointerAddress,
         appendEntry(
             runtime.dif.convertJSValueToDIFValueContainer("newValueEnd"),
         ),
     );
-    assertEquals(arrayRef[3], "newValueEnd");
+    assertEquals(arrayRef.value[3], "newValueEnd");
 });
 
 Deno.test("array delete external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    performFakeRemoteUpdate(runtime, address, deleteEntry(createDIFProperty(0, DIFPropertyKind.Index)));
-    assertEquals(arrayRef, ["value2", 123]);
+    performFakeRemoteUpdate(
+        runtime,
+        arrayRef.pointerAddress,
+        deleteEntry(runtime.dif.createDIFProperty(0, DIFPropertyKind.Index)),
+    );
+    assertEquals(arrayRef.value, ["value2", 123]);
 });
 
 Deno.test("array clear external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    performFakeRemoteUpdate(runtime, address, clear());
+    performFakeRemoteUpdate(runtime, arrayRef.pointerAddress, clear());
 
-    assertEquals(arrayRef.length, 0);
+    assertEquals(arrayRef.value.length, 0);
 });
 
 Deno.test("array replace external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    arrayRef.push("toBeRemoved");
-    performFakeRemoteUpdate(runtime, address, replace(runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"])));
-    assertEquals(arrayRef, ["a", "b", "c"] as SharedRef<string[], SharedContainerMutability.Mutable>);
+    arrayRef.value.push("toBeRemoved");
+    performFakeRemoteUpdate(
+        runtime,
+        arrayRef.pointerAddress,
+        replace(runtime.dif.convertJSValueToDIFValueContainer(["a", "b", "c"])),
+    );
+    assertEquals(arrayRef.value, ["a", "b", "c"] as SharedRef<string[], SharedContainerMutability.Mutable>);
 });
 
 Deno.test("array splice external", () => {
     // create mutable ref to array
     const array = ["value1", "value2", 123, "value4"];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
     performFakeRemoteUpdate(
         runtime,
-        address,
+        arrayRef.pointerAddress,
         listSplice(
             1,
             2,
@@ -125,22 +115,22 @@ Deno.test("array splice external", () => {
     );
 
     assertEquals(
-        arrayRef,
+        arrayRef.value,
         ["value1", "newValueA", "newValueB", "value4"] as SharedRef<string[], SharedContainerMutability.Mutable>,
     );
 
-    performFakeRemoteUpdate(runtime, address, listSplice(2, 2, []));
-    assertEquals(arrayRef, ["value1", "newValueA"] as SharedRef<string[], SharedContainerMutability.Mutable>);
+    performFakeRemoteUpdate(runtime, arrayRef.pointerAddress, listSplice(2, 2, []));
+    assertEquals(arrayRef.value, ["value1", "newValueA"] as SharedRef<string[], SharedContainerMutability.Mutable>);
 });
 
 Deno.test("array set local", () => {
     // create mutable ref to array
     const array = ["a", "b", "c"];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    arrayRef[1] = "localValue";
+    arrayRef.value[1] = "localValue";
 
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "a",
         "localValue",
         "c",
@@ -150,11 +140,11 @@ Deno.test("array set local", () => {
 Deno.test("array set length local", () => {
     // create mutable ref to array
     const array = ["a", "b", "c"];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    arrayRef.length = 5;
+    arrayRef.value.length = 5;
 
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "a",
         "b",
         "c",
@@ -166,11 +156,11 @@ Deno.test("array set length local", () => {
 Deno.test("array push local", () => {
     // create mutable ref to array
     const array = ["a", "b", "c"];
-    const [arrayRef, address] = createSharedArray(array);
+    const arrayRef = runtime.createSharedValueFromJSValue(array);
 
-    arrayRef.push("localValue1", "localValue2");
+    arrayRef.value.push("localValue1", "localValue2");
 
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "a",
         "b",
         "c",
@@ -181,25 +171,25 @@ Deno.test("array push local", () => {
 
 Deno.test("array splice local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    arrayRef.splice(1, 2, "newValueA", "newValueB");
+    arrayRef.value.splice(1, 2, "newValueA", "newValueB");
 
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value1",
         "newValueA",
         "newValueB",
         "value4",
     ]);
 
-    arrayRef.splice(2, 1);
+    arrayRef.value.splice(2, 1);
 
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value1",
         "newValueA",
         "value4",
@@ -208,15 +198,15 @@ Deno.test("array splice local", () => {
 
 Deno.test("array reverse local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    arrayRef.reverse();
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.reverse();
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value4",
         123,
         "value2",
@@ -226,14 +216,14 @@ Deno.test("array reverse local", () => {
 
 Deno.test("array sort local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "banana",
         "apple",
         "cherry",
     ]);
 
-    arrayRef.sort();
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.sort();
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "apple",
         "banana",
         "cherry",
@@ -242,16 +232,16 @@ Deno.test("array sort local", () => {
 
 Deno.test("array pop local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    const popped = arrayRef.pop();
+    const popped = arrayRef.value.pop();
     assertEquals(popped, "value4");
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value1",
         "value2",
         123,
@@ -260,16 +250,16 @@ Deno.test("array pop local", () => {
 
 Deno.test("array shift local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    const shifted = arrayRef.shift();
+    const shifted = arrayRef.value.shift();
     assertEquals(shifted, "value1");
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value2",
         123,
         "value4",
@@ -278,15 +268,15 @@ Deno.test("array shift local", () => {
 
 Deno.test("array unshift local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    arrayRef.unshift("newValue1", "newValue2");
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.unshift("newValue1", "newValue2");
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "newValue1",
         "newValue2",
         "value1",
@@ -298,47 +288,47 @@ Deno.test("array unshift local", () => {
 
 Deno.test("array fill local", () => {
     // create mutable ref to array
-    const [arrayRef, address] = createSharedArray([
+    const arrayRef = runtime.createSharedValueFromJSValue([
         "value1",
         "value2",
         123,
         "value4",
     ]);
 
-    arrayRef.fill("filledValue", 1, 6);
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.fill("filledValue", 1, 6);
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "value1",
         "filledValue",
         "filledValue",
         "filledValue",
     ]);
 
-    arrayRef.fill("allFilled");
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.fill("allFilled");
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "allFilled",
         "allFilled",
         "allFilled",
         "allFilled",
     ]);
 
-    arrayRef.fill("noChange", 0, 0);
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.fill("noChange", 0, 0);
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "allFilled",
         "allFilled",
         "allFilled",
         "allFilled",
     ]);
 
-    arrayRef.fill("excludeLast", 0, -1);
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.fill("excludeLast", 0, -1);
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "excludeLast",
         "excludeLast",
         "excludeLast",
         "allFilled",
     ]);
 
-    arrayRef.fill("excludeFirst", 1);
-    assertEquals(getCurrentRuntimeLocalValue(address), [
+    arrayRef.value.fill("excludeFirst", 1);
+    assertEquals(getCurrentRuntimeLocalValue(arrayRef.pointerAddress), [
         "excludeLast",
         "excludeFirst",
         "excludeFirst",

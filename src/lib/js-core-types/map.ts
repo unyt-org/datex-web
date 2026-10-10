@@ -8,7 +8,7 @@ const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
 const ORIGINAL_CLEAR = Symbol("ORIGINAL_CLEAR");
 
-type MapMetadata<K = unknown, V = unknown> = {
+export type MapMetadata<K = unknown, V = unknown> = {
     [ORIGINAL_SET]: Map<K, V>["set"];
     [ORIGINAL_DELETE]: Map<K, V>["delete"];
     [ORIGINAL_CLEAR]: Map<K, V>["clear"];

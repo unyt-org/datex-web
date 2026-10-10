@@ -1,5 +1,6 @@
 import {
     create_runtime,
+    decompile_dxb_body,
     disassemble_dxb_flat,
     disassemble_dxb_to_string,
     disassemble_dxb_tree,
@@ -7,12 +8,17 @@ import {
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { type AsSharedMaybeOwned, SharedContainerMutability } from "../shared-container/mod.ts";
-import type { FlatInstruction, InstructionTree } from "./types.d.ts";
+import {
+    OwnedSharedContainer,
+    type ReferencedSharedContainer,
+    SharedContainerMutability,
+} from "../shared-container/mod.ts";
+import type { FlatResult, TreeResult} from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
+import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -27,7 +33,7 @@ interface DebugConfig {
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint: Endpoint;
-    interfaces?: { type: string; config: unknown }[];
+    interfaces?: { type: string; config: unknown; priority: InterfacePriority }[];
     env?: Record<string, string>;
 };
 
@@ -325,13 +331,11 @@ export class Runtime {
 
     /**
      * Creates a new reference containing the given JS value.
-     * For primitive values, a Ref wrapper is returned.
-     * For other values (objects, arrays, maps), the returned value is a proxy object that behaves like the original object.
      *
      * @param value The JS value to store in the pointer.
      * @param allowedType Optional DIF type container to restrict the type of the pointer.
      * @param mutability Optional mutability of the reference (default is Mutable).
-     * @returns A proxy object representing the pointer in JS.
+     * @returns A owned shared container wrapper containing the value. Independent of the structure in JS.
      */
     public createSharedValueFromJSValue<
         V,
@@ -340,7 +344,7 @@ export class Runtime {
         value: V,
         allowedType: DIFTypeDefinition | null = null,
         mutability: M = SharedContainerMutability.Mutable as M,
-    ): AsSharedMaybeOwned<V, M> {
+    ): OwnedSharedContainer<V, M> {
         return this.#difHandler.createSharedValueFromJSValue(
             value,
             allowedType,
@@ -368,7 +372,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string | null] {
+    public disassembleDXBFlat(dxb: Uint8Array): FlatResult {
         return disassemble_dxb_flat(dxb);
     }
 
@@ -377,7 +381,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string | null] {
+    public disassembleDXBTree(dxb: Uint8Array): TreeResult {
         return disassemble_dxb_tree(dxb);
     }
 
@@ -388,5 +392,42 @@ export class Runtime {
      */
     public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions | null): string {
         return disassemble_dxb_to_string(dxb, options);
+    }
+
+    /**
+     * Decompiles a DXB body to a DATEX script string.
+     * @param dxbBody
+     */
+    public decompileDXBBody(dxbBody: Uint8Array): string {
+        return decompile_dxb_body(dxbBody);
+    }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public ref<T>(value: T): ReferencedSharedContainer<T> {
+        const shared = this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        );
+        if (shared instanceof OwnedSharedContainer) {
+            return shared.deriveImmutableReference();
+        } else {
+            return shared as unknown as ReferencedSharedContainer<T>; // FIXME make sure this is a ReferencedSharedContainer
+        }
+    }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public shared<T>(value: T): OwnedSharedContainer<T> {
+        return this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        ) as OwnedSharedContainer<T>; // FIXME make sure this is an OwnedSharedContainer
     }
 }

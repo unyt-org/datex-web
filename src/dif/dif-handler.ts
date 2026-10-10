@@ -3,11 +3,14 @@
  * Represents the main interface for interacting with the DATEX Core via DIF from JavaScript.
  */
 
-import type { JSDIFInterface, JSRuntime } from "../datex.ts";
-import { Endpoint } from "../lib/special-core-types/endpoint.ts";
-import { Range } from "../lib/special-core-types/range.ts";
+import type {JSDIFInterface, JSRuntime} from "../datex.ts";
+import {Endpoint} from "../lib/special-core-types/endpoint.ts";
+import {Range} from "../lib/special-core-types/range.ts";
 import {
+    DIFCallableKind,
+    DIFCallableTypeDefinition,
     type DIFCoreValue,
+    DIFCoreValueCallable,
     type DIFOptionalValueContainer,
     type DIFProperty,
     type DIFTypeDefinition,
@@ -18,25 +21,34 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./types/mod.ts";
-import { CoreLibTypeId } from "./core.ts";
-import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
-import { panic, unimplemented, unreachable } from "../utils/exceptions.ts";
-import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
-import type { DIFBaseSharedValueContainer } from "./types/value.ts";
-import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
-import type { AsSharedMaybeOwned, PointerAddress } from "../shared-container/mod.ts";
-import { type AsShared, BaseSharedContainer, type SharedRef } from "../shared-container/mod.ts";
-import { DIFSharedContainerOwnership } from "./types/type.ts";
-import { splitPointerAddressWithOwnership } from "../shared-container/mod.ts";
-import { combinePointerAddressWithOwnership } from "../shared-container/mod.ts";
-import type { DIFUpdateReturn } from "./types/update.ts";
-import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "./update.ts";
-import { createDIFProperty } from "./update.ts";
-import { JsLibTypeAddress } from "./js-lib.ts";
-import { isJsMapTypeDefinition } from "../lib/mod.ts";
-import { OwnedSharedContainer } from "../shared-container/owned.ts";
-import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
-import { ibig } from "./helpers/mod.ts";
+import {CoreLibTypeId} from "./core.ts";
+import {type TypeBinding, TypeRegistry} from "./type-registry.ts";
+import {panic, unimplemented, unreachable} from "../utils/exceptions.ts";
+import {isJsUndefined, JS_UNDEFINED} from "../lib/special-core-types/undefined.ts";
+import type {DIFBaseSharedValueContainer} from "./types/value.ts";
+import {SharedContainerMutability} from "../shared-container/base-shared-container.ts";
+import {
+    addressWithoutOwnership,
+    type AsShared,
+    BaseSharedContainer,
+    combinePointerAddressWithOwnership,
+    type MaybeSharedRef,
+    type PointerAddress,
+    ReferencedSharedContainer,
+    type SharedContainer,
+    type SharedRef,
+    splitPointerAddressWithOwnership,
+} from "../shared-container/mod.ts";
+import {DIFSharedContainerOwnership} from "./types/type.ts";
+import type {DIFUpdateReturn} from "./types/update.ts";
+import {appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry} from "./update.ts";
+import {JsLibTypeAddress} from "./js-lib.ts";
+import {isJsMapTypeDefinition, registerCoreTypeBindings} from "../lib/mod.ts";
+import {OwnedSharedContainer} from "../shared-container/owned.ts";
+import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
+import {ibig} from "./helpers/mod.ts";
+import {isCoreLibTypeDefinition, isSharedContainerTypeDefinition} from "./helpers/type-definition.ts";
+import {getCoreLibTypeIdForJSValue} from "./helpers/type-id.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -91,8 +103,10 @@ export type ReferenceMetadata<M extends CustomReferenceMetadata> = {
 };
 
 export type CachedSharedContainer =
-    | SharedRef<object, SharedContainerMutability>
-    | BaseSharedContainer<unknown, SharedContainerMutability>;
+    | SharedRef<object>
+    | BaseSharedContainer<unknown, SharedContainerMutability>
+    | OwnedSharedContainer<unknown>
+    | ReferencedSharedContainer<unknown>;
 
 /**
  * A value that can either be a direct JS value, or a shared value container.
@@ -100,6 +114,16 @@ export type CachedSharedContainer =
  * Each ValueContainer from Rust can be represented as Value<T> on the JS side.
  */
 type Value<T> = T | AsShared<T, SharedContainerMutability>;
+
+
+export type CacheData = {
+    value: WeakRef<BaseSharedContainer<unknown, SharedContainerMutability>>;
+    maxOwnership: DIFSharedContainerOwnership;
+    originalValue: object | null;
+    observerId: number | null;
+};
+
+const DATEX_CALLABLE_HASH: unique symbol = Symbol("DATEX_CALLABLE_HASH");
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -114,33 +138,34 @@ export class DIFHandler {
     // always 0 for now - potentially used for multi DIF transceivers using the same underlying runtime
     readonly #transceiver_id = 0;
 
+    // The set of observers that are currently registered for cache updates.
+    readonly #cacheObservers = new Set<() => void>();
+
     /**
      * The reference cache for storing and reusing object instances on the JS side
      * The observerId is only set if the reference is being observed (if not final).
      */
-    readonly #cache = new Map<
-        PointerAddress,
-        {
-            value: WeakRef<
-                CachedSharedContainer
-            >;
-            maxOwnership: DIFSharedContainerOwnership;
-            originalValue: object | null;
-            observerId: number | null;
-        }
-    >();
+    readonly #cache = new Map<PointerAddress, CacheData>();
 
     /**
      * Maps the original value to a proxy value
      * (if the values is bound to a custom proxy wrapper)
      */
-    readonly #proxyMapping = new WeakMap<WeakKey, WeakRef<WeakKey>>();
+    readonly #proxyMapping = new WeakMap<WeakKey, WeakRef<BaseSharedContainer<unknown, SharedContainerMutability>>>();
 
     /**
      * The reference metadata map, storing metadata for each cached reference.
      */
-    readonly #referenceMetadata = new WeakMap<
-        CachedSharedContainer,
+    readonly #baseSharedContainerMetadata = new WeakMap<
+        BaseSharedContainer<unknown, SharedContainerMutability>,
+        ReferenceMetadata<CustomReferenceMetadata>
+    >();
+
+    /**
+     * The reference metadata map, storing metadata for each shared reference.
+     */
+    readonly #jsValueSharedContainerMetadata = new WeakMap<
+        object,
         ReferenceMetadata<CustomReferenceMetadata>
     >();
 
@@ -168,6 +193,14 @@ export class DIFHandler {
     }
 
     /**
+     * This should only be used for debugging purposes, not for modifying the cache.
+     * @returns The map of cached references.
+     */
+    get _cache(): Map<PointerAddress, CacheData> {
+        return this.#cache;
+    }
+
+    /**
      * Internal property
      * @returns The transceiver ID of the DIF client.
      */
@@ -181,6 +214,7 @@ export class DIFHandler {
 
     /**
      * Creates a new DIFHandler instance.
+     * This also sets up all type bindings for core types (array, map, ...) on the runtime.
      * @param runtime - The JSRuntime instance for executing Datex scripts.
      */
     constructor(
@@ -188,6 +222,9 @@ export class DIFHandler {
     ) {
         this.#runtime = runtime;
         this.#handle = runtime.dif_interface();
+
+        // setup all core type bindings on the runtime (array, map, ...)
+        registerCoreTypeBindings(this.#type_registry);
     }
 
     /**
@@ -250,6 +287,7 @@ export class DIFHandler {
         if (allowedType) {
             (baseSharedValueContainer as unknown[])[2] = allowedType;
         }
+
         return this.#handle.create_pointer(baseSharedValueContainer) as PointerAddress;
     }
 
@@ -279,7 +317,6 @@ export class DIFHandler {
         options: ObserveOptions = { relay_own_updates: false },
     ): number {
         return this.#runtime.dif_interface().observe_pointer(
-            this.#transceiver_id,
             address,
             options,
             callback,
@@ -361,7 +398,7 @@ export class DIFHandler {
         let cached = this.#cache.get(address);
         if (!cached) {
             // first resolve the pointer to make sure it's loaded in the cache
-            this.resolvePointerAddress(DIFSharedContainerOwnership.Immutable, address);
+            this.resolvePointerAddress(DIFSharedContainerOwnership.ImmutableRef, address);
             cached = this.#cache.get(address)!;
         }
 
@@ -412,6 +449,30 @@ export class DIFHandler {
     }
 
     /**
+     * Calls a sync callable DIF value identified by the given hash with the specified arguments.
+     */
+    private callCallableSync(hash: string, args: unknown[]) {
+        const result = collapseDIFOption(this.#handle.apply_sync(
+            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
+        ));
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
+     * Calls an async callable DIF value identified by the given hash with the specified arguments.
+     */
+    private async callCallableAsync(hash: string, args: unknown[]) {
+        const result = collapseDIFOption(await this.#handle.apply_async(
+            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
+        ));
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
      * Resolves a DIFValue to its corresponding JS value.
      * This function handles core types and custom types (not yet implemented).
      * It returns the resolved value as the specified type T.
@@ -435,7 +496,6 @@ export class DIFHandler {
 
         // custom interpretation means
         if (!Array.isArray(value) || value.length < 2 || value.length > 3) {
-            console.log("value", value);
             throw new Error(
                 "Invalid DIFValue format: expected an array for non-primitive types",
             );
@@ -572,6 +632,24 @@ export class DIFHandler {
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
+
+        }
+        else if (type === CoreLibTypeId.Callable) {
+            const [hash, name, requiresAsync] = core as DIFCoreValueCallable;
+            const callableBuilder = new Function(
+                "fn",
+                "hash",
+                `return ${requiresAsync?'async ' : ''}function ${name||""}(...args) {return fn(hash, args)}`
+            );
+            const boundCallable = requiresAsync
+                ? this.callCallableAsync.bind(this)
+                : this.callCallableSync.bind(this)
+            const callable = callableBuilder(boundCallable, hash);
+            callable[DATEX_CALLABLE_HASH] = hash;
+            return callable;
+        }
+        else {
+            throw new Error(`Unsupported DIF type: ${type}`);
         }
 
         // for tagged type definition, wrap in Tagged
@@ -640,12 +718,12 @@ export class DIFHandler {
     public resolvePointerAddress<T extends unknown>(
         ownership: DIFSharedContainerOwnership,
         address: PointerAddress,
-    ): AsShared<T, SharedContainerMutability> {
+    ): SharedContainer<T, SharedContainerMutability> {
         const addressWithOwnership = combinePointerAddressWithOwnership(address, ownership);
         // check cache first
         const cached = this.getCachedStateForSharedContainer<T>(address, ownership);
         if (cached === "insufficient_ownership") {
-            // try to resolve with with upgraded owership if possible
+            // try to resolve with upgraded ownership if possible
             if (
                 !this.#handle.has_address_with_ownership(
                     addressWithOwnership,
@@ -662,21 +740,21 @@ export class DIFHandler {
         } else if (cached === "not_cached") {
             // if not in cache, resolve from runtime
             const base: DIFBaseSharedValueContainer = this.#handle.resolve_pointer_address(
-                addressWithOwnership,
+                address,
             );
             const value = this.resolveDIFValueContainer<T>(
                 base[0],
             );
             // init pointer
-            return this.initSharedValue<T, SharedContainerMutability>(
+            const shared = this.initSharedValue<T, SharedContainerMutability>(
                 address,
                 value,
                 base[1],
                 ownership,
-                base[2],
             );
+            return shared.withOwnership(ownership);
         } else {
-            // falltrough case, already in cache with correct ownership
+            // fallthrough case, already in cache with correct ownership
             return cached;
         }
     }
@@ -735,48 +813,45 @@ export class DIFHandler {
      */
     protected initSharedValue<T, Mutability extends SharedContainerMutability>(
         pointerAddress: PointerAddress,
-        value: Value<T>,
+        value: T,
         mutability: Mutability,
         ownership: DIFSharedContainerOwnership,
-        allowedType?: DIFTypeDefinition,
-    ): AsShared<T, Mutability> {
-        let wrappedValue = this.wrapJSValue(
-            value,
-            pointerAddress,
-            mutability,
-            allowedType,
-        );
-
+    ): BaseSharedContainer<T, Mutability> {
         let typeBinding: TypeBinding | null = null;
         let metadata: CustomReferenceMetadata | undefined = undefined;
+        const originalValue = value;
         // bind js value (if mutable, nominal type)
+        const actualType: DIFTypeDefinition = getCoreLibTypeIdForJSValue(value)!; // FIXME, support custom types and other types
 
-        const implType = typeof allowedType === "object" && allowedType !== null && "impl_type" in allowedType
-            ? allowedType.impl_type
-            : null;
-        if (implType && implType[0] === CoreLibTypeId.Map) {
-            // FIXME can we make this cleaner, or do we need it more generic?
-            allowedType = implType[0];
-        }
+        // only bind the value, if we have a shared container or a core lib type
+        const bindJSValue = typeof value === "object" && value !== null &&
+            mutability !== SharedContainerMutability.Immutable && (
+                isCoreLibTypeDefinition(actualType) || isSharedContainerTypeDefinition(actualType)
+            );
 
-        const bindJSValue = mutability !== SharedContainerMutability.Immutable &&
-            (typeof allowedType === "string" || typeof allowedType === "number");
+        if (bindJSValue) {
+            typeBinding = isSharedContainerTypeDefinition(actualType)
+                ? this.type_registry.getTypeBinding(addressWithoutOwnership(actualType.shared))
+                : this.type_registry.getTypeBindingByCoreLibTypeId(actualType as CoreLibTypeId); // TS Bug
 
-        if (bindJSValue && !(wrappedValue instanceof BaseSharedContainer)) {
-            typeBinding = typeof allowedType == "number"
-                ? this.type_registry.getTypeBindingByCoreLibTypeId(allowedType)
-                : this.type_registry.getTypeBinding(allowedType as unknown as string); // TS Bug
             if (typeBinding) {
-                const { value, metadata: newMetadata } =
-                    (typeBinding as TypeBinding<SharedRef<object, SharedContainerMutability>>)
-                        .bindValue(
-                            wrappedValue,
-                            pointerAddress,
-                        );
+                const { value: proxifiedValue, metadata: newMetadata } = typeBinding
+                    .bindValue(
+                        value as object,
+                        pointerAddress,
+                    );
+                value = proxifiedValue as T;
                 metadata = newMetadata;
-                wrappedValue = value;
             }
         }
+
+        // wrap the value in a BaseSharedContainer
+        const wrappedValue = new BaseSharedContainer(
+            value as MaybeSharedRef<T, Mutability>,
+            pointerAddress,
+            mutability,
+            this,
+        );
 
         // if not immutable, observe to keep the pointer 'live' and receive updates
         let observerId: number | null = null;
@@ -792,7 +867,7 @@ export class DIFHandler {
                                 pointerAddress,
                                 wrappedValue,
                                 data,
-                                typeBinding,
+                                typeBinding as T extends object ? TypeBinding<T> : null,
                             );
                         } catch (e) {
                             console.error(
@@ -816,7 +891,6 @@ export class DIFHandler {
                             }
                         }
                     }
-                    console.debug("Pointer update received", update);
                 },
             );
         }
@@ -824,14 +898,14 @@ export class DIFHandler {
         this.cacheWrappedReferenceValue(
             pointerAddress,
             ownership,
-            value,
+            originalValue,
             wrappedValue,
             observerId,
             metadata,
         );
 
         // set up observers
-        return wrappedValue as AsShared<T, Mutability>;
+        return wrappedValue;
     }
 
     /**
@@ -844,7 +918,7 @@ export class DIFHandler {
      */
     protected handlePointerUpdate<T extends object>(
         pointerAddress: string,
-        value: T,
+        value: BaseSharedContainer<T>,
         update: DIFUpdateData,
         typeBinding: TypeBinding<T> | null,
     ): boolean;
@@ -858,13 +932,13 @@ export class DIFHandler {
      */
     protected handlePointerUpdate<T>(
         pointerAddress: PointerAddress,
-        value: T,
+        value: BaseSharedContainer<T>,
         update: DIFUpdateData,
         typeBinding: null,
     ): boolean;
     protected handlePointerUpdate<T extends object>(
         pointerAddress: PointerAddress,
-        value: T,
+        value: BaseSharedContainer<T>,
         update: DIFUpdateData,
         typeBinding?: TypeBinding<T> | null,
     ): boolean {
@@ -873,21 +947,39 @@ export class DIFHandler {
         const deref = cached.value.deref();
         if (!deref) return false;
 
-        if (deref instanceof BaseSharedContainer && update[0] === DIFUpdateKind.Replace) {
+        if (!typeBinding?.getUpdateHandlerTypes().has(DIFUpdateKind.Replace) && update[1] === DIFUpdateKind.Replace) {
+            const path = update[0]; // TODO handle path
             deref.updateValueSilently(this.resolveDIFValueContainer(
-                update[1],
+                update[2],
             ));
         }
         // handle generic updates for values (depending on type interface definition)
         if (typeBinding) {
             typeBinding.handleDifUpdate(
-                value as WeakKey & T,
+                value,
                 pointerAddress,
                 update,
             );
         }
 
         return true;
+    }
+
+    /**
+     * Udate the inner value of a BaseSharedContainer in the JS side cache
+     * @param base
+     */
+    protected updateBaseSharedContainerValueCache(
+        base: BaseSharedContainer<unknown, SharedContainerMutability>,
+    ) {
+        if (this.isWeakKey(base.value)) {
+            const metadata = this.#baseSharedContainerMetadata.get(base);
+            if (metadata) {
+                this.#jsValueSharedContainerMetadata.set(base.value as object, metadata);
+            } else {
+                unreachable!(`No metadata found for base shared container at address ${base.pointerAddress}`);
+            }
+        }
     }
 
     /**
@@ -898,31 +990,37 @@ export class DIFHandler {
         address: PointerAddress,
         ownership: DIFSharedContainerOwnership,
         originalValue: unknown,
-        proxiedValue: CachedSharedContainer,
+        baseSharedContainer: BaseSharedContainer<unknown, SharedContainerMutability>,
         observerId: number | null,
-        metadata: CustomReferenceMetadata = {},
+        customMetadata: CustomReferenceMetadata = {},
     ): void {
+        // check if the value in the base shared container was proxified, or is still the original JS value (for primitive types)
         const isProxifiedValue = this.isWeakKey(originalValue) &&
-            originalValue !== proxiedValue;
+            this.isWeakKey(baseSharedContainer.value) &&
+            originalValue !== baseSharedContainer.value;
 
+        // store the address, with the mapping between BaseSharedContainer and original JS value
         this.#cache.set(address, {
-            value: new WeakRef(proxiedValue),
+            value: new WeakRef(baseSharedContainer),
             maxOwnership: ownership,
             originalValue: isProxifiedValue ? originalValue : null,
             observerId,
         });
 
-        this.#referenceMetadata.set(proxiedValue, {
+        // store base shared container with metadata
+        this.#baseSharedContainerMetadata.set(baseSharedContainer, {
             address,
-            customMetadata: metadata,
+            customMetadata,
         });
+        // update the cache for the original value if it is a weak key
+        this.updateBaseSharedContainerValueCache(baseSharedContainer);
 
         // store in proxy mapping if original value is not identical to proxied value
         // and original value is a weak key
         if (isProxifiedValue) {
             this.#proxyMapping.set(
                 originalValue,
-                new WeakRef(proxiedValue),
+                new WeakRef(baseSharedContainer),
             );
         }
 
@@ -942,46 +1040,63 @@ export class DIFHandler {
                 if (observerId !== null) {
                     this.unobserveSharedValueBindDirect(address, observerId);
                 }
+                // trigger cache change observers
+                this.#triggerCacheObservers();
             },
         );
-        finalizationRegistry.register(proxiedValue, address);
+        finalizationRegistry.register(baseSharedContainer, address);
+
+        // trigger cache change observers
+        this.#triggerCacheObservers();
+    }
+
+    #triggerCacheObservers() {
+        for (const observer of this.#cacheObservers) {
+            try {
+                observer();
+            } catch (e) {
+                console.error("Error in cache observer callback", e);
+            }
+        }
+    }
+
+    /**
+     * Registers a callback to be invoked whenever the cache changes (e.g., when a reference is added or removed).
+     * @param callback
+     */
+    public registerCacheObserver(callback: () => void) {
+        this.#cacheObservers.add(callback);
     }
 
     protected getCachedStateForSharedContainer<T>(
         address: PointerAddress,
         ownership: DIFSharedContainerOwnership,
-    ): AsShared<T, SharedContainerMutability> | "not_cached" | "insufficient_ownership" {
+    ): SharedContainer<T, SharedContainerMutability> | "not_cached" | "insufficient_ownership" {
         if (!this.#cache.has(address)) {
             return "not_cached";
         }
         const cached = this.#cache.get(address)!;
-        const deref = cached.value.deref();
+        const deref = cached.value.deref() as BaseSharedContainer<T, SharedContainerMutability>;
         if (!deref) {
             throw new Error(`Cached reference for address ${address} is not dereferenceable`);
         }
 
         if (
-            // owership mismatch
+            // ownership mismatch
             (
                 ownership === DIFSharedContainerOwnership.Owned &&
                 cached.maxOwnership !== DIFSharedContainerOwnership.Owned
-            ) || (cached.maxOwnership === DIFSharedContainerOwnership.Immutable &&
-                ownership === DIFSharedContainerOwnership.Mutable)
+            ) || (cached.maxOwnership === DIFSharedContainerOwnership.ImmutableRef &&
+                ownership === DIFSharedContainerOwnership.MutableRef)
         ) {
             return "insufficient_ownership";
         }
-        if (deref instanceof BaseSharedContainer) {
-            return deref.withOwnership(ownership) as AsShared<T, SharedContainerMutability>;
-        } else {
-            return deref as AsShared<T, SharedContainerMutability>;
-        }
+        return deref.withOwnership(ownership);
     }
 
     /**
      * Creates a new reference containg the given JS value.
-     * The returned value is a proxy object that behaves like the original object,
-     * but also propagates changes between JS and the DATEX runtime.
-     * If a reference for the given value already exists, an error is thrown.
+     * The returned value is a wrapped {@link OwnedSharedContainer} that can be used to access the value and its pointer address.
      */
     public createSharedValueFromJSValue<
         V,
@@ -990,7 +1105,7 @@ export class DIFHandler {
         value: V,
         allowedType: DIFTypeDefinition | null = null,
         mutability: M = SharedContainerMutability.Mutable as M,
-    ): AsSharedMaybeOwned<V, M> {
+    ): OwnedSharedContainer<V, M> {
         const pointerAddress = this.getPointerAddressForValue(value as unknown as CachedSharedContainer);
         if (pointerAddress) {
             throw new Error(
@@ -1005,23 +1120,18 @@ export class DIFHandler {
             allowedType,
         );
         // get inferred allowed type from pointer if not explicitly set
-        if (!allowedType) {
-            allowedType = (this.#handle.resolve_pointer_address(
-                ptrAddress,
-            ) as DIFBaseSharedValueContainer)[2];
-        }
-        const base = this.initSharedValue(
+        // if (!allowedType) {
+        //     allowedType = (this.#handle.resolve_pointer_address(
+        //         ptrAddress,
+        //     ) as DIFBaseSharedValueContainer)[2];
+        // }
+
+        return new OwnedSharedContainer(this.initSharedValue(
             ptrAddress,
             value,
             mutability,
             DIFSharedContainerOwnership.Owned,
-            allowedType,
-        );
-        if (base instanceof BaseSharedContainer) {
-            return new OwnedSharedContainer(base) as AsSharedMaybeOwned<V, M>;
-        } else {
-            return base as AsSharedMaybeOwned<V, M>;
-        }
+        ));
     }
 
     protected isPrimitiveValue(
@@ -1040,61 +1150,27 @@ export class DIFHandler {
             !this.isPrimitiveValue(value);
     }
 
-    /**
-     * Wraps a given JS value in a Ref proxy if necessary.
-     */
-    protected wrapJSValue<T>(
-        value: T,
-        pointerAddress: PointerAddress,
-        mutability: SharedContainerMutability,
-        _type: DIFTypeDefinition | null = null,
-    ): CachedSharedContainer {
-        // primitive values are always wrapped in a Ref proxy
-        if (this.isWeakKey(value)) {
-            return value;
-        } else {
-            return new BaseSharedContainer(value, pointerAddress, mutability, this);
-        }
-    }
-
     private isBaseSharedContainer(value: unknown): value is BaseSharedContainer<unknown, SharedContainerMutability> {
         return value instanceof BaseSharedContainer;
     }
 
-    private wrapJSObjectInProxy<T extends object>(
-        value: T,
-    ): SharedRef<T, SharedContainerMutability> {
-        // deno-lint-ignore no-this-alias
-        const self = this;
-        return new Proxy(value, {
-            get(target, prop, receiver) {
-                const val = Reflect.get(target, prop, receiver);
-                if (val && typeof val === "object" && !self.isBaseSharedContainer(val)) {
-                    return self.wrapJSObjectInProxy(val);
-                }
-                return val;
-            },
-            set(target, prop, newValue, receiver) {
-                const oldValue = Reflect.get(target, prop, receiver);
-                if (!self.isBaseSharedContainer(oldValue)) {
-                    throw new Error(
-                        `Cannot modify non-Ref property "${String(prop)}"`,
-                    );
-                }
-                oldValue.value = newValue;
-                return true;
-            },
-            deleteProperty() {
-                throw new Error(
-                    "Cannot delete properties from a Refs-only object",
-                );
-            },
-            defineProperty() {
-                throw new Error(
-                    "Cannot define new properties on a Refs-only object",
-                );
-            },
-        }) as SharedRef<T, SharedContainerMutability>;
+    /**
+     * Tries to collapse a value to a {@link BaseSharedContainer} if it is a {@link ReferencedSharedContainer}
+     * or {@link OwnedSharedContainer}, otherwise returns null.
+     * If the value is already a {@link BaseSharedContainer}, it is returned as is.
+     * @param value
+     * @private
+     */
+    private tryAsBaseSharedContainer<T = unknown>(
+        value: unknown,
+    ): BaseSharedContainer<T, SharedContainerMutability> | null {
+        if (value instanceof BaseSharedContainer) {
+            return value;
+        } else if (value instanceof ReferencedSharedContainer || value instanceof OwnedSharedContainer) {
+            return value._base;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -1103,7 +1179,12 @@ export class DIFHandler {
     public getPointerAddressForValue(
         value: CachedSharedContainer,
     ): PointerAddress | null {
-        return this.#referenceMetadata.get(value)?.address || null;
+        const maybeBase = this.tryAsBaseSharedContainer(value);
+        if (maybeBase) {
+            return maybeBase.pointerAddress;
+        } else {
+            return this.#jsValueSharedContainerMetadata.get(value)?.address || null;
+        }
     }
 
     /**
@@ -1131,13 +1212,20 @@ export class DIFHandler {
     >(
         value: CachedSharedContainer,
     ): ReferenceMetadata<M> | null {
-        return (
-            this.#referenceMetadata.get(value) ??
-                this.#referenceMetadata.get(
-                    this.#proxyMapping.get(value)?.deref() as CachedSharedContainer,
-                ) ??
-                null
-        ) as ReferenceMetadata<M> | null;
+        // if passed value is a BaseSharedContainer, return its metadata directly
+        const maybeBase = this.tryAsBaseSharedContainer(value);
+        if (maybeBase) {
+            return this.#baseSharedContainerMetadata.get(maybeBase) as ReferenceMetadata<M> | null ?? null;
+        }
+
+        // request for the proxied (BaseSharedContainer.value) value
+        if (this.#jsValueSharedContainerMetadata.has(value)) {
+            return this.#jsValueSharedContainerMetadata.get(value) as ReferenceMetadata<M> | null ?? null;
+        }
+
+        // otherwise the value is a non-proxied JS object
+        const base = this.#proxyMapping.get(value)?.deref();
+        return base ? this.#baseSharedContainerMetadata.get(base) as ReferenceMetadata<M> | null ?? null : null;
     }
 
     // FIXME do we need these two methods still?
@@ -1175,26 +1263,21 @@ export class DIFHandler {
         forceExplicitFormat = false,
     ): DIFValueContainer<T> {
         // if the value is a registered reference, return its address
+        const ref = (value instanceof ReferencedSharedContainer || value instanceof OwnedSharedContainer)
+            ? value._base
+            : value;
         const existingReference = difHandlerInstance &&
             difHandlerInstance.tryGetReferenceMetadata(
-                value as CachedSharedContainer,
+                ref as CachedSharedContainer,
             );
         if (existingReference) {
-            const ownership = difHandlerInstance.#cache.get(existingReference.address);
-            if (!ownership) {
-                throw new Error(
-                    `Reference metadata found for address ${existingReference.address} but no ownership info in cache`,
-                );
-            }
-
-            // move(x) -> function (x: OwnedValue) {}
-            return { $: combinePointerAddressWithOwnership(existingReference.address, ownership.maxOwnership) };
+            return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
         }
         // TODO: handle custom types
+
+        // core lib prefixed dif core types
         if (value === null) {
             return forceExplicitFormat ? [CoreLibTypeId.null, null] as DIFValue : null;
-        } else if (value === undefined) {
-            return JS_UNDEFINED;
         } else if (typeof value === "string") {
             return forceExplicitFormat ? [CoreLibTypeId.text, value] as DIFValue : value;
         } else if (typeof value === "boolean") {
@@ -1205,6 +1288,14 @@ export class DIFHandler {
             return ibig(value);
         } else if (value instanceof Endpoint) {
             return [CoreLibTypeId.endpoint, value.toString()] as DIFValue;
+        } else if (value instanceof Range) {
+            return [CoreLibTypeId.Range, [
+                this.convertJSValueToDIFValueContainer(value.start),
+                this.convertJSValueToDIFValueContainer(value.end),
+            ]];
+        } // special treatment
+        else if (value === undefined) {
+            return JS_UNDEFINED;
         } else if (value instanceof Tagged) {
             // special case: empty tagged value
             if (value.value === EMPTY_TAG) {
@@ -1226,11 +1317,6 @@ export class DIFHandler {
                     "convertJSValueToDIFValueContainer with forceExplicitFormat should return an array or object",
                 );
             }
-        } else if (value instanceof Range) {
-            return [CoreLibTypeId.Range, [
-                this.convertJSValueToDIFValueContainer(value.start),
-                this.convertJSValueToDIFValueContainer(value.end),
-            ]];
         } else if (Array.isArray(value)) {
             return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v))] as DIFValue;
         } else if (value instanceof Map) {
@@ -1250,8 +1336,92 @@ export class DIFHandler {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
             return [CoreLibTypeId.Map, map] as DIFValue;
+        } else if (typeof value == "function") {
+            // function originating from JS side, register it as shared value with pointer address
+            if (!(DATEX_CALLABLE_HASH in (value as any))) {
+                if (!difHandlerInstance) {
+                    throw new Error(
+                        "Cannot register callable function without a DIFHandler instance",
+                    );
+                }
+                // register the JS function as native callable via DIF
+                difHandlerInstance.registerCallable(value as (...args: unknown[]) => unknown);
+                // after registration, the function should be in cache, so we can get its reference metadata and return the pointer address
+                const existingReference = difHandlerInstance.tryGetReferenceMetadata(value as CachedSharedContainer);
+                if (!existingReference) {
+                    throw new Error(
+                        "Failed to register callable function and retrieve its reference metadata",
+                    );
+                }
+                return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
+            }
+            // local DATEX function with hash
+            else {
+                const hash = (value as any)[DATEX_CALLABLE_HASH] as string;
+                return [CoreLibTypeId.Callable, [hash, null]];
+            }
         }
         throw new Error("Unsupported type for conversion to DIFValue");
+    }
+
+    /**
+     * Registers a callable function with the DATEX core runtime and stores its hash in the function's metadata.
+     */
+    private registerCallable(
+        callable: (...args: unknown[]) => unknown,
+        typeDefinition?: DIFCallableTypeDefinition,
+        isMethod = false,
+    ) {
+        const isAsync = callable.constructor.name === "AsyncFunction";
+
+        typeDefinition ??= {
+            kind: DIFCallableKind.Procedure,
+            requires_async: isAsync,
+            parameters: this.extractFunctionParameterNames(callable).map((name) => ([name, CoreLibTypeId.Any])),
+            rest_parameter: null,
+            return_type: CoreLibTypeId.Any,
+            yeet_type: CoreLibTypeId.Any
+        } satisfies DIFCallableTypeDefinition;
+
+        const wrapperFn = (args: DIFValueContainer[]) => {
+            return callable(...args.map((arg) => this.resolveDIFValueContainer(arg)));
+        }
+        const address = this.#handle.register_callable(wrapperFn, callable.name || null, typeDefinition, isMethod) as PointerAddress;
+        const shared = this.initSharedValue(
+            address,
+            callable,
+            SharedContainerMutability.Immutable,
+            DIFSharedContainerOwnership.ImmutableRef,
+        );
+    }
+
+    private extractFunctionParameterNames(
+        fn: (...args: unknown[]) => unknown,
+    ): string[] {
+        const fnStr = fn.toString();
+        const result = fnStr.match(/\(([^)]*)\)/);
+        if (!result) {
+            throw new Error("Could not extract parameter names from function");
+        }
+        const params = result[1].split(",").map((param) => param.trim());
+        return params;
+    }
+
+    /**
+     * Generates the DIF representation for a cached pointer address, using the ownership information from the cache.
+     */
+    private generateDIFValueContainerForCachedPointer(
+        address: PointerAddress,
+    ) {
+        const ownership = this.#cache.get(address);
+        if (!ownership) {
+            throw new Error(
+                `Reference metadata found for address ${address} but no ownership info in cache`,
+            );
+        }
+
+        // move(x) -> function (x: OwnedValue) {}
+        return { $: combinePointerAddressWithOwnership(address, ownership.maxOwnership) };
     }
 
     /**
@@ -1283,7 +1453,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             setEntry(
-                createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+                this.createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
                 difValue,
             ),
         );
@@ -1304,7 +1474,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             setEntry(
-                createDIFProperty(Number(index), DIFPropertyKind.Index),
+                this.createDIFProperty(Number(index), DIFPropertyKind.Index),
                 difValue,
             ),
         );
@@ -1343,7 +1513,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             deleteEntry(
-                createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+                this.createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
             ),
         );
     }
@@ -1373,5 +1543,31 @@ export class DIFHandler {
                 difItems,
             ),
         );
+    }
+
+    /**
+     * Creates a DIFProperty from a given value and property kind.
+     * @param value The value to be wrapped in a DIFProperty.
+     * @param propertyKind The kind of DIFProperty to create.
+     * @returns The created DIFProperty.
+     */
+    public createDIFProperty(
+        value: string | number | DIFValueContainer,
+        propertyKind: DIFPropertyKind,
+    ) {
+        switch (propertyKind) {
+            case DIFPropertyKind.Index:
+                if (typeof value !== "number") {
+                    throw new Error("Expected number for index property");
+                }
+                return value;
+            case DIFPropertyKind.Text:
+                if (typeof value !== "string") {
+                    throw new Error("Expected string for text property");
+                }
+                return value;
+            case DIFPropertyKind.ValueContainer:
+                return { value };
+        }
     }
 }

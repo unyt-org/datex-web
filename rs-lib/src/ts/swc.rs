@@ -44,6 +44,10 @@ pub fn ts_unknown() -> Box<TsType> {
     ts_keyword(TsKeywordTypeKind::TsUnknownKeyword)
 }
 
+pub fn ts_date() -> Box<TsType> {
+    ts_type_reference("Date", vec![])
+}
+
 pub fn ts_void() -> Box<TsType> {
     ts_keyword(TsKeywordTypeKind::TsVoidKeyword)
 }
