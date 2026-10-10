@@ -153,7 +153,7 @@ pub fn to_dif_js_value<T: ConvertValueContainer>(
     value: T,
     cache: &RefCell<SharedValuesCache>,
 ) -> JsValue {
-    to_js_value(&value.to_value_container(&mut SharedReferencesCache::default()), cache)
+    to_js_value(&value.to_value_container(), cache)
 }
 
 /**

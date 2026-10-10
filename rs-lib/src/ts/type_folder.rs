@@ -552,6 +552,7 @@ impl TypeFolder for TsTypeFolder {
                     self.external_type_reference("Type", vec![ts_unknown()])
                 }
                 CoreLibBaseTypeId::Box => self.external_type_reference("Box", vec![ts_unknown()]),
+                CoreLibBaseTypeId::Instant => Ok(ts_date()),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
