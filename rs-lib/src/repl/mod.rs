@@ -5,7 +5,7 @@ use datex_core::runtime::execution::{
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{
-    js_utils::{js_error, to_js_value},
+    js_utils::{js_error, to_js_dif},
     runtime::JSRuntime,
 };
 
@@ -50,7 +50,7 @@ impl Repl {
             .await
             .map_err(js_error)?;
         Ok(result.map(|v| {
-            to_js_value(&v, &mut self.runtime.dif_interface().cache())
+            to_js_dif(&v, &mut self.runtime.dif_interface().cache())
         }))
     }
 }

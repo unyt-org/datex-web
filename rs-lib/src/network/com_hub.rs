@@ -36,7 +36,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{from_dif_js_value, deserializable_from_js_value, to_dif_js_value, to_js_value};
+use crate::js_utils::{from_js_dif, deserializable_from_js_value, to_js_dif_value_container, to_js_dif, from_js_dif_value_container};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -127,7 +127,7 @@ impl JSComHub {
                     let interface_configuration_promise = factory
                         .call1(
                             &JsValue::UNDEFINED,
-                            &to_js_value(
+                            &to_js_dif(
                                 &setup_data,
                                 &dif_interface.borrow().cache,
                             ),
@@ -260,7 +260,7 @@ impl JSComHub {
             Reflect::get(interface_configuration, &"properties".into())?;
 
         let properties: ComInterfaceProperties =
-            from_dif_js_value(properties, values_cache)?;
+            from_js_dif_value_container(properties, values_cache)?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -302,7 +302,7 @@ impl JSComHub {
         }
 
         let properties: SocketPropertiesPartial =
-            from_dif_js_value(properties, values_cache).map_err(|e| {
+            from_js_dif_value_container(properties, values_cache).map_err(|e| {
                 serde_wasm_bindgen::Error::new(&format!(
                     "Error parsing socket properties: {:?}",
                     e
@@ -363,7 +363,7 @@ impl JSComHub {
         setup_data: JsValue,
         priority: Option<u16>,
     ) -> Result<String, JsError> {
-        let setup_data: ValueContainer = from_dif_js_value(
+        let setup_data: ValueContainer = from_js_dif(
             setup_data,
             &self.dif_interface.borrow_mut().cache,
         )
@@ -420,7 +420,7 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        to_dif_js_value(metadata, &self.dif_interface.borrow_mut().cache)
+        to_js_dif_value_container(metadata, &self.dif_interface.borrow_mut().cache)
     }
 
     pub async fn get_trace_string(

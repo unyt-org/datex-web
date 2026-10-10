@@ -1,6 +1,6 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_dif_js_value, js_array, js_error},
+    js_utils::{from_js_dif, js_array, js_error},
     network::com_hub::JSComHub,
 };
 use datex_core::{
@@ -14,7 +14,7 @@ use datex_crypto_facade::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::{optional_value_container_to_optional_js_dif_value, to_js_value};
+use crate::js_utils::{from_js_dif_value_container, optional_value_container_to_optional_js_dif_value, to_js_dif};
 use datex_core::{
     compiler::{CompileOptions, compile_template},
     crypto::CryptoImpl,
@@ -51,7 +51,7 @@ impl JSRuntime {
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
         let config: RuntimeConfig =
-            from_dif_js_value(
+            from_js_dif_value_container(
                 config,
                 &RefCell::new(SharedValuesCache::default()),
             )
@@ -260,7 +260,7 @@ impl JSRuntime {
         inserted_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let decompile_options: DecompileOptions = from_dif_js_value(
+        let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
             &RefCell::new(SharedValuesCache::default()),
         )
@@ -302,7 +302,7 @@ impl JSRuntime {
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let decompile_options: DecompileOptions = from_dif_js_value(
+        let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
             &RefCell::new(SharedValuesCache::default()),
         )
@@ -344,7 +344,7 @@ impl JSRuntime {
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
         let value_container = self.js_value_to_value_container(dif_value)?;
-        let decompile_options: DecompileOptions = from_dif_js_value(
+        let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
             &RefCell::new(SharedValuesCache::default()),
         )
@@ -370,7 +370,7 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_dif_js_value::<ValueContainer>(
+        from_js_dif::<ValueContainer>(
             value,
             &mut self.dif_interface.cache(),
         )

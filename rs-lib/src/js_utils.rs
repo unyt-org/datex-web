@@ -122,7 +122,7 @@ where
 
 /// Convert a DIF format JsValue to a concrete type [T],
 /// using the DIF cache for resolving shared containers
-pub fn from_dif_js_value<'de, T: DeserializeWithSerdeContext<'de>>(
+pub fn from_js_dif<'de, T: DeserializeWithSerdeContext<'de>>(
     value: impl Into<JsValue>,
     value_cache: &RefCell<SharedValuesCache>,
 ) -> Result<T, JsError> {
@@ -134,8 +134,18 @@ pub fn from_dif_js_value<'de, T: DeserializeWithSerdeContext<'de>>(
     .map_err(js_error)
 }
 
+/// Convert a DIF format JsValue to a [ValueContainer] and then to a concrete type [T] using the [ConvertValueContainer] trait,
+/// using the DIF cache for resolving shared containers
+pub fn from_js_dif_value_container<'de, T: ConvertValueContainer>(
+    value: impl Into<JsValue>,
+    value_cache: &RefCell<SharedValuesCache>,
+) -> Result<T, JsError> {
+    let value_container: ValueContainer = from_js_dif(value, value_cache)?;
+    Ok(T::try_cast_from_value_container(value_container))
+}
+
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_js_value<T>(
+pub fn to_js_dif<T>(
     value: &T,
     cache: &RefCell<SharedValuesCache>,
 ) -> JsValue
@@ -148,12 +158,13 @@ where
         .unwrap()
 }
 
-/// Convert a serializable #[Datex] struct to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_dif_js_value<T: ConvertValueContainer>(
+/// Convert a [ConvertValueContainer] to a value container and serializes
+/// the value container to a JsValue in the DIF format.
+pub fn to_js_dif_value_container<T: ConvertValueContainer>(
     value: T,
     cache: &RefCell<SharedValuesCache>,
 ) -> JsValue {
-    to_js_value(&value.to_value_container(), cache)
+    to_js_dif(&value.to_value_container(), cache)
 }
 
 /**
@@ -168,7 +179,7 @@ pub fn optional_value_container_to_optional_js_dif_value(
     match value {
         Some(value) => {
             let inner_value =
-                to_js_value(&value, cache);
+                to_js_dif(&value, cache);
             // wrap in array
             js_array(&[inner_value])
         }
