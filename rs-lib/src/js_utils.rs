@@ -8,6 +8,7 @@ use datex_core::{
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use datex_core::dif::deserialize_with_serde_context::DeserializeWithSerdeContext;
 use datex_core::dif::serialize_with_serde_context::SerializeWithSerdeContext;
+use datex_core::traits::convert_parts::FromParts;
 use datex_core::traits::convert_value_container::ConvertValueContainer;
 use serde::Deserialize;
 use wasm_bindgen::{JsError, JsValue};
@@ -136,12 +137,14 @@ pub fn from_js_dif<'de, T: DeserializeWithSerdeContext<'de>>(
 
 /// Convert a DIF format JsValue to a [ValueContainer] and then to a concrete type [T] using the [ConvertValueContainer] trait,
 /// using the DIF cache for resolving shared containers
-pub fn from_js_dif_value_container<'de, T: ConvertValueContainer>(
+pub fn from_js_dif_value_container<'de, T: ConvertValueContainer + FromParts>(
     value: impl Into<JsValue>,
     value_cache: &RefCell<SharedValuesCache>,
 ) -> Result<T, JsError> {
+    // FIXME: (optimization) - for structural types, we should be able to transparently deserialize/serialize directly to T, only for entity types we need to go through ValueContainer.
+    // So we can decide based on the classification of T if we want to go through ValueContainer or not
     let value_container: ValueContainer = from_js_dif(value, value_cache)?;
-    Ok(T::try_cast_from_value_container(value_container))
+    T::try_cast_from_value_container(value_container).map_err(|e| js_error("Failed to convert ValueContainer to target type"))
 }
 
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
