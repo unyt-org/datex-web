@@ -27,6 +27,7 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use datex_core::compiler::compilation_result::CompilationResult;
 use datex_core::decompiler::ast_to_source_code::value_to_source_code;
 use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
@@ -387,7 +388,10 @@ impl JSRuntime {
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
     ) -> Result<Vec<u8>, JsValue> {
-        let (dxb, _) = compile_template(
+        let CompilationResult {
+            dxb_with_shared_values,
+            ..
+        } = compile_template(
             script,
             self.js_values_to_value_containers(inserted_values)?
                 .into_iter()
@@ -398,7 +402,7 @@ impl JSRuntime {
         )
         .map_err(js_error)?;
         // TODO: handle dxb.values?
-        Ok(dxb.dxb)
+        Ok(dxb_with_shared_values.dxb)
     }
 
     /// Start the LSP server, returning a JS function to send messages to Rust

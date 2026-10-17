@@ -398,7 +398,7 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         Ok(match literal {
             LiteralTypeDefinition::Text(text) => {
-                ts_string_literal(text.0.to_string())
+                ts_string_literal(text.as_string())
             }
             LiteralTypeDefinition::Integer(integer) => {
                 ts_number_literal(integer.as_f64())
