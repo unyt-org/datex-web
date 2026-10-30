@@ -301,6 +301,7 @@ export class Runtime {
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
     ): string {
+        console.log("VAL", this.#difHandler.convertJSValueToDIFValueContainer(decompileOptions))
         return this.#runtime.value_to_string(
             this.#difHandler.convertJSValueToDIFValueContainer(value),
             this.#difHandler.convertJSValueToDIFValueContainer(decompileOptions),

@@ -87,31 +87,3 @@ export const mapTypeBinding: TypeBindingDefinition<
         }
     },
 };
-
-const JS_MAP_IMPL_TYPE_DEFINITION: DIFImplTypeDefinition = [
-    CoreLibTypeId.Map,
-    [JsLibTypeAddress.object],
-];
-function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition {
-    return (
-        Array.isArray(impl) &&
-        impl.length === 2 &&
-        impl[0] === CoreLibTypeId.Map &&
-        Array.isArray(impl[1]) &&
-        impl[1].length === 1 &&
-        impl[1][0] === JsLibTypeAddress.object
-    );
-}
-
-export const JS_MAP_TYPE_DEFINITION: DIFTypeDefinition = {
-    impl_type: JS_MAP_IMPL_TYPE_DEFINITION,
-};
-
-export function isJsMapTypeDefinition(typeDef: DIFTypeDefinition): boolean {
-    return (
-        typeof typeDef === "object" &&
-        typeDef !== null &&
-        "impl_type" in typeDef &&
-        isJsMapImplTypeDefinition(typeDef.impl_type)
-    );
-}

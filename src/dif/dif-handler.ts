@@ -43,7 +43,7 @@ import {DIFSharedContainerOwnership} from "./types/type.ts";
 import type {DIFUpdateReturn} from "./types/update.ts";
 import {appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry} from "./update.ts";
 import {JsLibTypeAddress} from "./js-lib.ts";
-import {isJsMapTypeDefinition, registerCoreTypeBindings} from "../lib/mod.ts";
+import {registerCoreTypeBindings} from "../lib/mod.ts";
 import {OwnedSharedContainer} from "../shared-container/owned.ts";
 import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
 import {ibig} from "./helpers/mod.ts";
@@ -516,17 +516,6 @@ export class DIFHandler {
             if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
                 return undefined as T;
             }
-            // special JS object value (convert Map to JS object)
-            else if (classificationHasImpl(classification, JsLibTypeAddress.object)) {
-                assert('v' in value, "Invalid DIFValue format: expected a tagged value with 'v' property");
-                let val = this.resolveDIFValue(value.v);
-                if (val instanceof Map) {
-                    return Object.fromEntries(val.entries()) as T;
-                }
-                else {
-                    unreachable(`Invalid DIFValue format: expected a Map for object type, got ${typeof val}`);
-                }
-            }
             else {
                 unimplemented("TODO: entity class resolution")
             }
@@ -668,15 +657,13 @@ export class DIFHandler {
                         this.resolveDIFValueContainer(value),
                     );
                 }
-                // TODO: js object classification check
                 return map;
             } else if (typeof raw_value === "object" && raw_value !== null) {
-                const map: Map<string, unknown> = new Map();
+                const object: Record<string, unknown> = {};
                 for (const [key, value] of Object.entries(raw_value)) {
-                    map.set(key, this.resolveDIFValueContainer(value));
+                    object[key] = this.resolveDIFValueContainer(value);
                 }
-                // TODO: js object classification check
-                return map;
+                return object;
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
@@ -1339,7 +1326,7 @@ export class DIFHandler {
             }
             else {
                 assert(Array.isArray(inner), "inner tagged value must be a DIFCoreValue");
-                return createDIFValueWithTag(inner, value.tag, true);
+                return createDIFValueWithTag(inner, value.tag);
             }
         } else if (Array.isArray(value)) {
             return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v))] as DIFValue;
@@ -1357,7 +1344,7 @@ export class DIFHandler {
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
-            return createDIFValueWithImplClassification([CoreLibTypeId.Map, map], [JsLibTypeAddress.object]) as DIFValue;
+            return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value == "function") {
             // function originating from JS side, register it as shared value with pointer address
             if (!(DATEX_CALLABLE_HASH in (value as any))) {
