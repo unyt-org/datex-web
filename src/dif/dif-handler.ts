@@ -8,11 +8,11 @@ import {Endpoint} from "../lib/special-core-types/endpoint.ts";
 import {Range} from "../lib/special-core-types/range.ts";
 import {
     DIFCallableKind,
-    DIFCallableTypeDefinition,
+    DIFCallableTypeDefinition, DIFClassification,
     type DIFCoreValue,
     DIFCoreValueCallable,
     type DIFOptionalValueContainer,
-    type DIFProperty,
+    type DIFProperty, DIFSharedValue, DIFTaggedValue,
     type DIFTypeDefinition,
     type DIFUpdate,
     type DIFUpdateData,
@@ -23,7 +23,7 @@ import {
 } from "./types/mod.ts";
 import {CoreLibTypeId} from "./core.ts";
 import {type TypeBinding, TypeRegistry} from "./type-registry.ts";
-import {panic, unimplemented, unreachable} from "../utils/exceptions.ts";
+import {assert, panic, unimplemented, unreachable} from "../utils/exceptions.ts";
 import {isJsUndefined, JS_UNDEFINED} from "../lib/special-core-types/undefined.ts";
 import type {DIFBaseSharedValueContainer} from "./types/value.ts";
 import {SharedContainerMutability} from "../shared-container/base-shared-container.ts";
@@ -33,7 +33,7 @@ import {
     BaseSharedContainer,
     combinePointerAddressWithOwnership,
     type MaybeSharedRef,
-    type PointerAddress,
+    type PointerAddress, PointerAddressWithOwnership,
     ReferencedSharedContainer,
     type SharedContainer,
     type SharedRef,
@@ -49,6 +49,12 @@ import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
 import {ibig} from "./helpers/mod.ts";
 import {isCoreLibTypeDefinition, isSharedContainerTypeDefinition} from "./helpers/type-definition.ts";
 import {getCoreLibTypeIdForJSValue} from "./helpers/type-id.ts";
+import {
+    classificationHasImpl, createDIFValueWithImplClassification,
+    createDIFValueWithTag,
+    hasImplClassification, isSharedValueContainer,
+    tryGetClassification
+} from "./helpers/values.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -481,11 +487,11 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T {
+        let classification: DIFClassification|null = null;
+
         // direct interpretation of trivial types without type annotation
         if (value === null) {
             return null as T;
-        } else if (isJsUndefined(value)) {
-            return undefined as T;
         } else if (typeof value === "string") {
             return value as T;
         } else if (typeof value === "boolean") {
@@ -495,29 +501,70 @@ export class DIFHandler {
         }
 
         // custom interpretation means
-        if (!Array.isArray(value) || value.length < 2 || value.length > 3) {
-            throw new Error(
-                "Invalid DIFValue format: expected an array for non-primitive types",
-            );
+        else if (typeof value !== "object") {
+            unreachable(`Invalid DIFValue format: expected an object / array for non-primitive types, got ${typeof value}`);
         }
 
-        const [type, core, definition] = value as [CoreLibTypeId, DIFCoreValue] | [
-            CoreLibTypeId,
-            DIFCoreValue,
-            DIFTypeDefinition,
-        ];
+        // direct core value
+        else if (Array.isArray(value)) {
+            return this.resolveDIFCoreValue(value as DIFCoreValue) as T;
+        }
 
-        let val: unknown = null;
-        if (type === CoreLibTypeId.null) {
-            if (core !== null) {
-                throw new Error("Expected null value for null type");
+        // classified value
+        else if ((classification = tryGetClassification(value))) {
+            // special JS undefined value
+            if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
+                return undefined as T;
             }
-            val = null;
-        } else if (type === CoreLibTypeId.boolean) {
-            if (typeof core !== "boolean") {
-                throw new Error("Expected boolean value for boolean type");
+            // special JS object value (convert Map to JS object)
+            else if (classificationHasImpl(classification, JsLibTypeAddress.object)) {
+                assert('v' in value, "Invalid DIFValue format: expected a tagged value with 'v' property");
+                let val = this.resolveDIFValue(value.v);
+                if (val instanceof Map) {
+                    return Object.fromEntries(val.entries()) as T;
+                }
+                else {
+                    unreachable(`Invalid DIFValue format: expected a Map for object type, got ${typeof val}`);
+                }
             }
-            val = core;
+            else {
+                unimplemented("TODO: entity class resolution")
+            }
+        }
+        else if (value._ === 't') {
+            assert('t' in value, "Invalid DIFValue format: expected a tagged value with 't' property");
+            return this.resolveDIFTaggedValue(value as DIFTaggedValue) as T;
+        }
+        unreachable(`Invalid DIFValue format: expected a tagged value, got ${typeof value}`);
+    }
+
+    private resolveDIFTaggedValue(
+        value: DIFTaggedValue,
+    ): unknown {
+        const val = this.resolveDIFCoreValue(value.v);
+        const [tag, is_empty] = value.t;
+        if (is_empty) {
+            return new Tagged(tag, EMPTY_TAG);
+        } else {
+            return new Tagged(tag, val);
+        }
+    }
+
+    private resolveDIFCoreValue(
+        value: DIFCoreValue,
+    ): unknown {
+        const [type_id, raw_value] = value;
+
+        if (type_id === CoreLibTypeId.null) {
+            if (raw_value !== null) {
+                unreachable("Expected null value for null type");
+            }
+            return raw_value;
+        } else if (type_id === CoreLibTypeId.boolean) {
+            if (typeof raw_value !== "boolean") {
+                unreachable("Expected boolean value for boolean type");
+            }
+            return raw_value;
         } else if (
             ([
                 CoreLibTypeId.integer_i8,
@@ -527,115 +574,116 @@ export class DIFHandler {
                 CoreLibTypeId.integer_u16,
                 CoreLibTypeId.integer_u32,
                 CoreLibTypeId.integer_i64,
-            ] as CoreLibTypeId[]).includes(type)
+            ] as CoreLibTypeId[]).includes(type_id)
         ) {
-            if (typeof core !== "number") {
-                throw new Error("Expected number value for integer type");
+            if (typeof raw_value !== "number") {
+                unreachable("Expected number value for integer type");
             }
-            val = core;
-        } else if (type === CoreLibTypeId.integer) {
-            if (typeof core === "string") {
-                val = parseInt(core, 10);
-            } else throw new Error("Expected number value for integer type");
+            return raw_value;
+        } else if (type_id === CoreLibTypeId.integer) {
+            if (typeof raw_value === "string") {
+                return parseInt(raw_value, 10);
+            } else {
+                unreachable("Expected number value for integer type");
+            }
         } else if (
             ([
                 CoreLibTypeId.integer_i128,
                 CoreLibTypeId.integer_u64,
                 CoreLibTypeId.integer_u128,
                 CoreLibTypeId.integer_ibig,
-            ] as CoreLibTypeId[]).includes(type)
+            ] as CoreLibTypeId[]).includes(type_id)
         ) {
-            if (typeof core !== "string" && typeof core !== "number") {
-                throw new Error("Expected string or number value for big integer type");
+            if (typeof raw_value !== "string" && typeof raw_value !== "number") {
+                unreachable("Expected string or number value for big integer type");
             }
-            val = BigInt(core);
+            return BigInt(raw_value);
         } else if (
             ([
                 CoreLibTypeId.decimal_dbig,
                 CoreLibTypeId.decimal, // FIXME rational notation 3/4
-            ] as CoreLibTypeId[]).includes(type)
+            ] as CoreLibTypeId[]).includes(type_id)
         ) {
-            if (typeof core !== "string") {
-                throw new Error(
-                    "Expected string value for decimal big type" + typeof core + " " + JSON.stringify(core),
+            if (typeof raw_value !== "string") {
+                unreachable(
+                    "Expected string value for decimal big type" + typeof raw_value + " " + JSON.stringify(raw_value),
                 );
             }
-            if (isSpecialDIFFloatString(core)) {
-                val = specialDIFFloatToNumber(core);
+            if (isSpecialDIFFloatString(raw_value)) {
+                return specialDIFFloatToNumber(raw_value);
             } // FIXME this is a temporary solution until we have a proper decimal implementation
-            else if (core.includes("/")) {
-                const [numerator, denominator] = core.split("/").map((part) => part.trim());
-                val = parseFloat(numerator) / parseFloat(denominator);
-            } else if (core.includes(".")) {
-                val = parseFloat(core);
+            else if (raw_value.includes("/")) {
+                const [numerator, denominator] = raw_value.split("/").map((part) => part.trim());
+                return parseFloat(numerator) / parseFloat(denominator);
+            } else if (raw_value.includes(".")) {
+                return parseFloat(raw_value);
             } else {
-                throw new Error("Expected a valid decimal string for decimal big type");
+                unreachable("Expected a valid decimal string for decimal big type");
             }
         } else if (
             ([
                 CoreLibTypeId.decimal_f32,
                 CoreLibTypeId.decimal_f64,
-            ] as CoreLibTypeId[]).includes(type)
+            ] as CoreLibTypeId[]).includes(type_id)
         ) {
-            if (typeof core === "string") {
-                val = specialDIFFloatToNumber(core);
-            } else if (typeof core === "number") {
-                val = core;
+            if (typeof raw_value === "string") {
+                return specialDIFFloatToNumber(raw_value);
+            } else if (typeof raw_value === "number") {
+                return raw_value;
             } else {
-                throw new Error("Expected number value for decimal type");
+                unreachable("Expected number value for decimal type");
             }
-        } else if (type === CoreLibTypeId.text) {
-            if (typeof core !== "string") {
-                throw new Error("Expected string value for text type");
+        } else if (type_id === CoreLibTypeId.text) {
+            if (typeof raw_value !== "string") {
+                unreachable("Expected string value for text type");
             }
-            val = core;
-        } else if (type === CoreLibTypeId.endpoint) {
-            if (typeof core !== "string") {
-                throw new Error("Expected string value for endpoint type");
+            return raw_value;
+        } else if (type_id === CoreLibTypeId.endpoint) {
+            if (typeof raw_value !== "string") {
+                unreachable("Expected string value for endpoint type");
             }
-            val = Endpoint.get(core);
-        } else if (type === CoreLibTypeId.Range) {
-            if (!Array.isArray(core) || core.length !== 2) {
-                throw new Error("Expected array of length 2 for range type");
+            return Endpoint.get(raw_value);
+        } else if (type_id === CoreLibTypeId.Range) {
+            if (!Array.isArray(raw_value) || raw_value.length !== 2) {
+                unreachable("Expected array of length 2 for range type");
             }
-            const [start, end] = core as [DIFValueContainer, DIFValueContainer];
+            const [start, end] = raw_value as [DIFValueContainer, DIFValueContainer];
             const res = [
                 this.resolveDIFValueContainer<number>(start),
                 this.resolveDIFValueContainer<number>(end),
             ];
             // FIXME fix range
-            val = new Range(res[0] as number, res[1] as number) as T;
-        } else if (type === CoreLibTypeId.List) {
-            if (!Array.isArray(core)) {
-                throw new Error("Expected array value for list type");
+            return new Range(res[0] as number, res[1] as number);
+        } else if (type_id === CoreLibTypeId.List) {
+            if (!Array.isArray(raw_value)) {
+                unreachable("Expected array value for list type");
             }
-            val = (core as DIFValueContainer[]).map((v) => this.resolveDIFValueContainer(v)) as T;
-        } else if (type === CoreLibTypeId.Map) {
-            if (Array.isArray(core)) {
+            return (raw_value as DIFValueContainer[]).map((v) => this.resolveDIFValueContainer(v));
+        } else if (type_id === CoreLibTypeId.Map) {
+            if (Array.isArray(raw_value)) {
                 const map = new Map<unknown, unknown>();
-                for (const [key, value] of core as [DIFValueContainer, DIFValueContainer][]) {
+                for (const [key, value] of raw_value as [DIFValueContainer, DIFValueContainer][]) {
                     map.set(
                         this.resolveDIFValueContainer(key),
                         this.resolveDIFValueContainer(value),
                     );
                 }
-                val = map as T;
-            } else if (typeof core === "object" && core !== null) {
-                const obj: Record<string, unknown> = {};
-                for (const [key, value] of Object.entries(core)) {
-                    obj[key] = this.resolveDIFValueContainer(value);
+                // TODO: js object classification check
+                return map;
+            } else if (typeof raw_value === "object" && raw_value !== null) {
+                const map: Map<string, unknown> = new Map();
+                for (const [key, value] of Object.entries(raw_value)) {
+                    map.set(key, this.resolveDIFValueContainer(value));
                 }
-                val = obj as T;
-                if (definition && isJsMapTypeDefinition(definition)) {
-                    val = new Map(Object.entries(obj)) as T;
-                }
+                // TODO: js object classification check
+                return map;
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
 
         }
-        else if (type === CoreLibTypeId.Callable) {
-            const [hash, name, requiresAsync] = core as DIFCoreValueCallable;
+        else if (type_id === CoreLibTypeId.Callable) {
+            const [hash, name, requiresAsync] = raw_value as DIFCoreValueCallable;
             const callableBuilder = new Function(
                 "fn",
                 "hash",
@@ -648,28 +696,10 @@ export class DIFHandler {
             callable[DATEX_CALLABLE_HASH] = hash;
             return callable;
         }
-        else {
-            throw new Error(`Unsupported DIF type: ${type}`);
-        }
 
-        // for tagged type definition, wrap in Tagged
-        if (definition && typeof definition === "object" && "tagged_type" in definition) {
-            const [tag, innerType] = definition.tagged_type;
-            // special case: empty tag
-            if (val === null && innerType === CoreLibTypeId.Unit) {
-                val = new Tagged(tag, EMPTY_TAG);
-            } else {
-                // TODO: handle other innerTypes if not default type
-                val = new Tagged(tag, val) as T;
-            }
-        }
-
-        // FIXME custom type resolution not implemented yet, just return the core value for now
-        return val as T;
-
-        // custom types not implemented yet
-        // throw new Error("Custom type resolution not implemented yet");
+        throw new Error(`Unsupported DIF type: ${type_id}`);
     }
+
 
     /**
      * Resolves a DIFValueContainer (either a DIFValue or a pointer address) to its corresponding JS value.
@@ -681,12 +711,12 @@ export class DIFHandler {
     public resolveDIFValueContainer<T>(
         value: DIFValueContainer,
     ): T {
-        if (typeof value === "object" && value !== null && !Array.isArray(value) && "$" in value) {
+        if (isSharedValueContainer(value)) {
             return this.resolvePointerAddress(
-                ...splitPointerAddressWithOwnership(value.$),
+                ...splitPointerAddressWithOwnership(value._),
             ) as unknown as T;
         } else {
-            return this.resolveDIFValue<T>(value);
+            return this.resolveDIFValue<T>(value as DIFValue);
         }
     }
 
@@ -1299,23 +1329,17 @@ export class DIFHandler {
         } else if (value instanceof Tagged) {
             // special case: empty tagged value
             if (value.value === EMPTY_TAG) {
-                return [CoreLibTypeId.null, null, {
-                    tagged_type: [value.tag, CoreLibTypeId.Unit],
-                }] as DIFValue;
+                return createDIFValueWithTag([CoreLibTypeId.Unit, null], value.tag, true);
             }
             const inner = this.convertJSValueToDIFValueContainer(value.value, difHandlerInstance, true);
-            if (inner instanceof Array) {
-                return [inner[0], inner[1], {
-                    tagged_type: [value.tag, inner[2] || inner[0]], // TODO: nullable type
-                }] as DIFValue;
-            } else if (typeof inner === "object" && inner !== null) {
+            if (isSharedValueContainer(inner)) {
                 unimplemented(
                     "Support nested shared reference value in tagged value",
                 );
-            } else {
-                unreachable(
-                    "convertJSValueToDIFValueContainer with forceExplicitFormat should return an array or object",
-                );
+            }
+            else {
+                assert(Array.isArray(inner), "inner tagged value must be a DIFCoreValue");
+                return createDIFValueWithTag(inner, value.tag, true);
             }
         } else if (Array.isArray(value)) {
             return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v))] as DIFValue;
@@ -1327,15 +1351,13 @@ export class DIFHandler {
                     this.convertJSValueToDIFValueContainer(k),
                     this.convertJSValueToDIFValueContainer(v),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
-            return [CoreLibTypeId.Map, map, {
-                impl_type: [CoreLibTypeId.Map, [JsLibTypeAddress.map]],
-            }] as DIFValue;
+            return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value === "object") {
             const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {
                 map[key] = this.convertJSValueToDIFValueContainer(val);
             }
-            return [CoreLibTypeId.Map, map] as DIFValue;
+            return createDIFValueWithImplClassification([CoreLibTypeId.Map, map], [JsLibTypeAddress.object]) as DIFValue;
         } else if (typeof value == "function") {
             // function originating from JS side, register it as shared value with pointer address
             if (!(DATEX_CALLABLE_HASH in (value as any))) {
@@ -1412,7 +1434,7 @@ export class DIFHandler {
      */
     private generateDIFValueContainerForCachedPointer(
         address: PointerAddress,
-    ) {
+    ): DIFSharedValue {
         const ownership = this.#cache.get(address);
         if (!ownership) {
             throw new Error(
@@ -1421,7 +1443,7 @@ export class DIFHandler {
         }
 
         // move(x) -> function (x: OwnedValue) {}
-        return { $: combinePointerAddressWithOwnership(address, ownership.maxOwnership) };
+        return { _: combinePointerAddressWithOwnership(address, ownership.maxOwnership) };
     }
 
     /**

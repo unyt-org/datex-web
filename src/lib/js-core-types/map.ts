@@ -90,7 +90,7 @@ export const mapTypeBinding: TypeBindingDefinition<
 
 const JS_MAP_IMPL_TYPE_DEFINITION: DIFImplTypeDefinition = [
     CoreLibTypeId.Map,
-    [JsLibTypeAddress.map],
+    [JsLibTypeAddress.object],
 ];
 function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition {
     return (
@@ -99,7 +99,7 @@ function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition
         impl[0] === CoreLibTypeId.Map &&
         Array.isArray(impl[1]) &&
         impl[1].length === 1 &&
-        impl[1][0] === JsLibTypeAddress.map
+        impl[1][0] === JsLibTypeAddress.object
     );
 }
 

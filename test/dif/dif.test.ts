@@ -220,7 +220,7 @@ Deno.test("pointer create and resolve", () => {
         DIFSharedContainerOwnership.Owned,
     );
     const resolved = runtime.dif.resolveDIFValueContainer(
-        { $: ptr },
+        { _: ptr },
     ) as BaseSharedContainer<string, SharedContainerMutability.Mutable>;
     assertEquals(resolved.value, "unyt.org");
 });
