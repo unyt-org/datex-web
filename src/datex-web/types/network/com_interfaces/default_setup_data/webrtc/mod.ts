@@ -5,6 +5,21 @@
 import type { Tagged } from "../../../../../../lib/mod.ts";
 
 /**
+ * Represents the type of a WebRTC session description.
+ */
+export type RTCSdpTypeDX = Tagged<"Unspecified"> | Tagged<"Answer"> | Tagged<"Offer">;
+
+export type WebRTCSignalDX = Tagged<"Description", {
+    type: RTCSdpTypeDX;
+    sdp: string;
+}> | Tagged<"IceCandidate", {
+    candidate: string;
+    sdp_mid: string | null;
+    sdp_mline_index: number | null;
+    username_fragment: string | null;
+}> | Tagged<"EndOfCandidates">;
+
+/**
  * Represents the role of a WebRTC participant in a connection.
  */
 export type WebRTCRoleDX = Tagged<"Offerer"> | Tagged<"Answerer">;
@@ -19,14 +34,11 @@ export type RTCIceServerDX = {
 };
 
 /**
- * Represents the setup data required for establishing a WebRTC interface.
+ * Represents a WebRTC session description.
  */
-export type WebRTCInterfaceSetupData = {
-    role: WebRTCRoleDX;
-    data_channel_label: string;
-    ice_servers: RTCIceServerDX[];
-    negotiated_data_channel_id: number | null;
-    ordered: boolean;
+export type RTCSessionDescriptionDX = {
+    type: RTCSdpTypeDX;
+    sdp: string;
 };
 
 /**
@@ -40,24 +52,12 @@ export type RTCIceCandidateInitDX = {
 };
 
 /**
- * Represents the type of a WebRTC session description.
+ * Represents the setup data required for establishing a WebRTC interface.
  */
-export type RTCSdpTypeDX = Tagged<"Unspecified"> | Tagged<"Answer"> | Tagged<"Offer">;
-
-/**
- * Represents a WebRTC session description.
- */
-export type RTCSessionDescriptionDX = {
-    type: RTCSdpTypeDX;
-    sdp: string;
+export type WebRTCInterfaceSetupData = {
+    role: WebRTCRoleDX;
+    data_channel_label: string;
+    ice_servers: RTCIceServerDX[];
+    negotiated_data_channel_id: number | null;
+    ordered: boolean;
 };
-
-export type WebRTCSignalDX = Tagged<"Description", {
-    type: RTCSdpTypeDX;
-    sdp: string;
-}> | Tagged<"IceCandidate", {
-    candidate: string;
-    sdp_mid: string | null;
-    sdp_mline_index: number | null;
-    username_fragment: string | null;
-}> | Tagged<"EndOfCandidates">;
