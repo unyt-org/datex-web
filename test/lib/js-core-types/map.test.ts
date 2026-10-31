@@ -5,7 +5,7 @@ import { Endpoint } from "datex/lib/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
 import type { SharedContainerMutability } from "datex/shared-container/base-shared-container.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
-import { clear, deleteEntry, DIFPropertyKind, replace, setEntry } from "datex/dif/update.ts";
+import { clear, deleteEntry, replace, setEntry } from "datex/dif/update.ts";
 import { integer } from "datex/dif/helpers/typed-integer.ts";
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
@@ -35,7 +35,7 @@ Deno.test("map set external", () => {
         runtime,
         address,
         setEntry(
-            runtime.dif.createDIFProperty("externalKey", DIFPropertyKind.Text),
+            runtime.dif.convertJSValueToDIFValueContainer("externalKey"),
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
@@ -52,7 +52,7 @@ Deno.test("map delete external", () => {
     );
     const mapRef = map.value;
     const address = map.pointerAddress;
-    performFakeRemoteUpdate(runtime, address, deleteEntry(runtime.dif.createDIFProperty("key1", DIFPropertyKind.Text)));
+    performFakeRemoteUpdate(runtime, address, deleteEntry(runtime.dif.convertJSValueToDIFValueContainer("key1")));
     assertEquals(mapRef.has("key1"), false);
 });
 

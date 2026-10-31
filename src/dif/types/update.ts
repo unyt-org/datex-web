@@ -4,15 +4,7 @@
  * This module contains all type definitions related to the representation of updates in DIF.
  */
 
-import type { DIFValueContainer } from "./value.ts";
-
-/**
- * Representation of a property in DIF, which can be a text key, an index, or a generic value.
- */
-export type DIFProperty =
-    | string
-    | number
-    | { value: DIFValueContainer };
+import type { DIFValueContainer } from "./mod.ts";
 
 /**
  * Kinds of updates that can be applied to a DIF value.
@@ -35,9 +27,9 @@ export type DIFUpdateBaseData<Kind extends DIFUpdateKind> = {
 export type DIFUpdateDataReplace = [DIFValueContainer];
 export type DIFUpdateDataPush = [DIFValueContainer];
 
-export type DIFUpdateDataDelete = [DIFProperty];
+export type DIFUpdateDataDelete = [DIFValueContainer];
 
-export type DIFUpdateDataSet = [DIFProperty, DIFValueContainer];
+export type DIFUpdateDataSet = [DIFValueContainer, DIFValueContainer];
 
 export type DIFUpdateDataListSplice = [number, number, DIFValueContainer[]];
 
@@ -47,26 +39,26 @@ export type DIFUpdateReturn = ["none"] | ["single_value", DIFValueContainer] | [
 ];
 
 export type DIFUpdateData = [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.Replace,
     ...DIFUpdateDataReplace,
 ] | [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.AppendEntry,
     ...DIFUpdateDataPush,
 ] | [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.DeleteEntry,
     ...DIFUpdateDataDelete,
 ] | [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.SetEntry,
     ...DIFUpdateDataSet,
 ] | [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.Clear,
 ] | [
-    DIFProperty[],
+    DIFValueContainer[],
     typeof DIFUpdateKind.ListSplice,
     ...DIFUpdateDataListSplice,
 ];

@@ -1,7 +1,7 @@
 /**
  * Helper methods for creating update data dif structures.
  */
-import type { DIFProperty, DIFValueContainer } from "./types/mod.ts";
+import type { DIFValueContainer } from "./types/mod.ts";
 import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
 
 /**
@@ -10,7 +10,7 @@ import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
  * - Text: Represents a string key in an object or map.
  * - ValueContainer: Represents a value container that holds a DIF value.
  */
-export enum DIFPropertyKind {
+export enum DIFValueContainerKind {
     /**
      * Represents an index in an array or list.
      */
@@ -30,7 +30,7 @@ export enum DIFPropertyKind {
  * @param path The path to the property being updated (optional).
  * @returns A DIFUpdateData structure representing the clear operation.
  */
-export function clear(path: DIFProperty[] = []): DIFUpdateData {
+export function clear(path: DIFValueContainer[] = []): DIFUpdateData {
     return [path, DIFUpdateKind.Clear];
 }
 
@@ -40,7 +40,7 @@ export function clear(path: DIFProperty[] = []): DIFUpdateData {
  * @param path The path to the property being updated (optional).
  * @returns A DIFUpdateData structure representing the replace operation.
  */
-export function replace(value: DIFValueContainer, path: DIFProperty[] = []): DIFUpdateData {
+export function replace(value: DIFValueContainer, path: DIFValueContainer[] = []): DIFUpdateData {
     return [path, DIFUpdateKind.Replace, value];
 }
 
@@ -50,7 +50,7 @@ export function replace(value: DIFValueContainer, path: DIFProperty[] = []): DIF
  * @param path The path to the property being updated (optional).
  * @returns A DIFUpdateData structure representing the append entry operation.
  */
-export function appendEntry(value: DIFValueContainer, path: DIFProperty[] = []): DIFUpdateData {
+export function appendEntry(value: DIFValueContainer, path: DIFValueContainer[] = []): DIFUpdateData {
     return [path, DIFUpdateKind.AppendEntry, value];
 }
 
@@ -62,9 +62,9 @@ export function appendEntry(value: DIFValueContainer, path: DIFProperty[] = []):
  * @returns A DIFUpdateData structure representing the set entry operation.
  */
 export function setEntry(
-    key: DIFProperty,
+    key: DIFValueContainer,
     value: DIFValueContainer,
-    path: DIFProperty[] = [],
+    path: DIFValueContainer[] = [],
 ): DIFUpdateData {
     return [path, DIFUpdateKind.SetEntry, key, value];
 }
@@ -76,8 +76,8 @@ export function setEntry(
  * @returns A DIFUpdateData structure representing the delete entry operation.
  */
 export function deleteEntry(
-    key: DIFProperty,
-    path: DIFProperty[] = [],
+    key: DIFValueContainer,
+    path: DIFValueContainer[] = [],
 ): DIFUpdateData {
     return [path, DIFUpdateKind.DeleteEntry, key];
 }
@@ -94,7 +94,7 @@ export function listSplice(
     start: number,
     deleteCount: number,
     items: DIFValueContainer[],
-    path: DIFProperty[] = [],
+    path: DIFValueContainer[] = [],
 ): DIFUpdateData {
     return [path, DIFUpdateKind.ListSplice, start, deleteCount, items];
 }

@@ -3,16 +3,18 @@
  * Represents the main interface for interacting with the DATEX Core via DIF from JavaScript.
  */
 
-import type {JSDIFInterface, JSRuntime} from "../datex.ts";
-import {Endpoint} from "../lib/special-core-types/endpoint.ts";
-import {Range} from "../lib/special-core-types/range.ts";
+import type { JSDIFInterface, JSRuntime } from "../datex.ts";
+import { Endpoint } from "../lib/special-core-types/endpoint.ts";
+import { Range } from "../lib/special-core-types/range.ts";
 import {
     DIFCallableKind,
-    DIFCallableTypeDefinition, DIFClassification,
+    DIFCallableTypeDefinition,
+    DIFClassification,
     type DIFCoreValue,
     DIFCoreValueCallable,
     type DIFOptionalValueContainer,
-    type DIFProperty, DIFSharedValue, DIFTaggedValue,
+    DIFSharedValue,
+    DIFTaggedValue,
     type DIFTypeDefinition,
     type DIFUpdate,
     type DIFUpdateData,
@@ -21,39 +23,42 @@ import {
     type DIFValueContainer,
     type ObserveOptions,
 } from "./types/mod.ts";
-import {CoreLibTypeId} from "./core.ts";
-import {type TypeBinding, TypeRegistry} from "./type-registry.ts";
-import {assert, panic, unimplemented, unreachable} from "../utils/exceptions.ts";
-import {isJsUndefined, JS_UNDEFINED} from "../lib/special-core-types/undefined.ts";
-import type {DIFBaseSharedValueContainer} from "./types/value.ts";
-import {SharedContainerMutability} from "../shared-container/base-shared-container.ts";
+import { CoreLibTypeId } from "./core.ts";
+import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
+import { assert, panic, unimplemented, unreachable } from "../utils/exceptions.ts";
+import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
+import type { DIFBaseSharedValueContainer } from "./types/value.ts";
+import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
 import {
     addressWithoutOwnership,
     type AsShared,
     BaseSharedContainer,
     combinePointerAddressWithOwnership,
     type MaybeSharedRef,
-    type PointerAddress, PointerAddressWithOwnership,
+    type PointerAddress,
+    PointerAddressWithOwnership,
     ReferencedSharedContainer,
     type SharedContainer,
     type SharedRef,
     splitPointerAddressWithOwnership,
 } from "../shared-container/mod.ts";
-import {DIFSharedContainerOwnership} from "./types/type.ts";
-import type {DIFUpdateReturn} from "./types/update.ts";
-import {appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry} from "./update.ts";
-import {JsLibTypeAddress} from "./js-lib.ts";
-import {registerCoreTypeBindings} from "../lib/mod.ts";
-import {OwnedSharedContainer} from "../shared-container/owned.ts";
-import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
-import {ibig} from "./helpers/mod.ts";
-import {isCoreLibTypeDefinition, isSharedContainerTypeDefinition} from "./helpers/type-definition.ts";
-import {getCoreLibTypeIdForJSValue} from "./helpers/type-id.ts";
+import { DIFSharedContainerOwnership } from "./types/type.ts";
+import type { DIFUpdateReturn } from "./types/update.ts";
+import { appendEntry, clear, deleteEntry, listSplice, replace, setEntry } from "./update.ts";
+import { JsLibTypeAddress } from "./js-lib.ts";
+import { registerCoreTypeBindings } from "../lib/mod.ts";
+import { OwnedSharedContainer } from "../shared-container/owned.ts";
+import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
+import { ibig } from "./helpers/mod.ts";
+import { isCoreLibTypeDefinition, isSharedContainerTypeDefinition } from "./helpers/type-definition.ts";
+import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
 import {
-    classificationHasImpl, createDIFValueWithImplClassification,
+    classificationHasImpl,
+    createDIFValueWithImplClassification,
     createDIFValueWithTag,
-    hasImplClassification, isSharedValueContainer,
-    tryGetClassification
+    hasImplClassification,
+    isSharedValueContainer,
+    tryGetClassification,
 } from "./helpers/values.ts";
 
 /**
@@ -120,7 +125,6 @@ export type CachedSharedContainer =
  * Each ValueContainer from Rust can be represented as Value<T> on the JS side.
  */
 type Value<T> = T | AsShared<T, SharedContainerMutability>;
-
 
 export type CacheData = {
     value: WeakRef<BaseSharedContainer<unknown, SharedContainerMutability>>;
@@ -303,6 +307,12 @@ export class DIFHandler {
      * @param update_data - The DIFUpdate object containing the update information.
      */
     public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData): DIFUpdateReturn {
+        console.log(
+            "Updating shared value at address:",
+            address,
+            "with update data:",
+            update_data,
+        );
         return this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
@@ -460,7 +470,7 @@ export class DIFHandler {
     private callCallableSync(hash: string, args: unknown[]) {
         const result = collapseDIFOption(this.#handle.apply_sync(
             [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
-            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
+            args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
         ));
         if (result === undefined) return result;
         return this.resolveDIFValueContainer(result);
@@ -470,10 +480,12 @@ export class DIFHandler {
      * Calls an async callable DIF value identified by the given hash with the specified arguments.
      */
     private async callCallableAsync(hash: string, args: unknown[]) {
-        const result = collapseDIFOption(await this.#handle.apply_async(
-            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
-            args.map((arg) => this.convertJSValueToDIFValueContainer(arg))
-        ));
+        const result = collapseDIFOption(
+            await this.#handle.apply_async(
+                [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+                args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
+            ),
+        );
         if (result === undefined) return result;
         return this.resolveDIFValueContainer(result);
     }
@@ -487,7 +499,7 @@ export class DIFHandler {
     public resolveDIFValue<T extends unknown>(
         value: DIFValue,
     ): T {
-        let classification: DIFClassification|null = null;
+        let classification: DIFClassification | null = null;
 
         // direct interpretation of trivial types without type annotation
         if (value === null) {
@@ -498,30 +510,24 @@ export class DIFHandler {
             return value as T;
         } else if (typeof value === "number") {
             return value as T;
-        }
-
-        // custom interpretation means
+        } // custom interpretation means
         else if (typeof value !== "object") {
-            unreachable(`Invalid DIFValue format: expected an object / array for non-primitive types, got ${typeof value}`);
-        }
-
-        // direct core value
+            unreachable(
+                `Invalid DIFValue format: expected an object / array for non-primitive types, got ${typeof value}`,
+            );
+        } // direct core value
         else if (Array.isArray(value)) {
             return this.resolveDIFCoreValue(value as DIFCoreValue) as T;
-        }
-
-        // classified value
+        } // classified value
         else if ((classification = tryGetClassification(value))) {
             // special JS undefined value
             if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
                 return undefined as T;
+            } else {
+                unimplemented("TODO: entity class resolution");
             }
-            else {
-                unimplemented("TODO: entity class resolution")
-            }
-        }
-        else if (value._ === 't') {
-            assert('t' in value, "Invalid DIFValue format: expected a tagged value with 't' property");
+        } else if (value._ === "t") {
+            assert("t" in value, "Invalid DIFValue format: expected a tagged value with 't' property");
             return this.resolveDIFTaggedValue(value as DIFTaggedValue) as T;
         }
         unreachable(`Invalid DIFValue format: expected a tagged value, got ${typeof value}`);
@@ -667,18 +673,14 @@ export class DIFHandler {
             } else {
                 throw new Error("Expected array of key-value pairs or object for map type");
             }
-
-        }
-        else if (type_id === CoreLibTypeId.Callable) {
+        } else if (type_id === CoreLibTypeId.Callable) {
             const [hash, name, requiresAsync] = raw_value as DIFCoreValueCallable;
             const callableBuilder = new Function(
                 "fn",
                 "hash",
-                `return ${requiresAsync?'async ' : ''}function ${name||""}(...args) {return fn(hash, args)}`
+                `return ${requiresAsync ? "async " : ""}function ${name || ""}(...args) {return fn(hash, args)}`,
             );
-            const boundCallable = requiresAsync
-                ? this.callCallableAsync.bind(this)
-                : this.callCallableSync.bind(this)
+            const boundCallable = requiresAsync ? this.callCallableAsync.bind(this) : this.callCallableSync.bind(this);
             const callable = callableBuilder(boundCallable, hash);
             callable[DATEX_CALLABLE_HASH] = hash;
             return callable;
@@ -686,7 +688,6 @@ export class DIFHandler {
 
         throw new Error(`Unsupported DIF type: ${type_id}`);
     }
-
 
     /**
      * Resolves a DIFValueContainer (either a DIFValue or a pointer address) to its corresponding JS value.
@@ -705,24 +706,6 @@ export class DIFHandler {
         } else {
             return this.resolveDIFValue<T>(value as DIFValue);
         }
-    }
-
-    /**
-     * Resolves a DIFProperty to its corresponding JS value.
-     */
-    public resolveDIFProperty<T extends unknown>(
-        property: DIFProperty,
-    ): Value<T> {
-        if (typeof property === "number") {
-            return property as unknown as T;
-        }
-        if (typeof property === "string") {
-            return property as unknown as T;
-        }
-        if (typeof property === "object" && property !== null && !Array.isArray(property) && "value" in property) {
-            return this.resolveDIFValueContainer<T>(property.value);
-        }
-        throw new Error("Invalid DIFProperty format");
     }
 
     /**
@@ -1323,8 +1306,7 @@ export class DIFHandler {
                 unimplemented(
                     "Support nested shared reference value in tagged value",
                 );
-            }
-            else {
+            } else {
                 assert(Array.isArray(inner), "inner tagged value must be a DIFCoreValue");
                 return createDIFValueWithTag(inner, value.tag);
             }
@@ -1363,8 +1345,7 @@ export class DIFHandler {
                     );
                 }
                 return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
-            }
-            // local DATEX function with hash
+            } // local DATEX function with hash
             else {
                 const hash = (value as any)[DATEX_CALLABLE_HASH] as string;
                 return [CoreLibTypeId.Callable, [hash, null]];
@@ -1386,16 +1367,21 @@ export class DIFHandler {
         typeDefinition ??= {
             kind: DIFCallableKind.Procedure,
             requires_async: isAsync,
-            parameters: this.extractFunctionParameterNames(callable).map((name) => ([name, CoreLibTypeId.Any])),
+            parameters: this.extractFunctionParameterNames(callable).map((name) => [name, CoreLibTypeId.Any]),
             rest_parameter: null,
             return_type: CoreLibTypeId.Any,
-            yeet_type: CoreLibTypeId.Any
+            yeet_type: CoreLibTypeId.Any,
         } satisfies DIFCallableTypeDefinition;
 
         const wrapperFn = (args: DIFValueContainer[]) => {
             return callable(...args.map((arg) => this.resolveDIFValueContainer(arg)));
-        }
-        const address = this.#handle.register_callable(wrapperFn, callable.name || null, typeDefinition, isMethod) as PointerAddress;
+        };
+        const address = this.#handle.register_callable(
+            wrapperFn,
+            callable.name || null,
+            typeDefinition,
+            isMethod,
+        ) as PointerAddress;
         const shared = this.initSharedValue(
             address,
             callable,
@@ -1462,7 +1448,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             setEntry(
-                this.createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+                difKey,
                 difValue,
             ),
         );
@@ -1483,7 +1469,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             setEntry(
-                this.createDIFProperty(Number(index), DIFPropertyKind.Index),
+                this.convertJSValueToDIFValueContainer(Number(index)),
                 difValue,
             ),
         );
@@ -1522,7 +1508,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             deleteEntry(
-                this.createDIFProperty(difKey, DIFPropertyKind.ValueContainer),
+                difKey,
             ),
         );
     }
@@ -1552,31 +1538,5 @@ export class DIFHandler {
                 difItems,
             ),
         );
-    }
-
-    /**
-     * Creates a DIFProperty from a given value and property kind.
-     * @param value The value to be wrapped in a DIFProperty.
-     * @param propertyKind The kind of DIFProperty to create.
-     * @returns The created DIFProperty.
-     */
-    public createDIFProperty(
-        value: string | number | DIFValueContainer,
-        propertyKind: DIFPropertyKind,
-    ) {
-        switch (propertyKind) {
-            case DIFPropertyKind.Index:
-                if (typeof value !== "number") {
-                    throw new Error("Expected number for index property");
-                }
-                return value;
-            case DIFPropertyKind.Text:
-                if (typeof value !== "string") {
-                    throw new Error("Expected string for text property");
-                }
-                return value;
-            case DIFPropertyKind.ValueContainer:
-                return { value };
-        }
     }
 }
