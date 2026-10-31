@@ -13,7 +13,7 @@ import {
     type ReferencedSharedContainer,
     SharedContainerMutability,
 } from "../shared-container/mod.ts";
-import type { FlatResult, TreeResult} from "./types.d.ts";
+import type { FlatResult, TreeResult } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
@@ -65,7 +65,7 @@ export class Runtime {
     ): Promise<Runtime> {
         // workaround: temp dif handler without runtime to convert config to DIF
         const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
-        console.log("DIFF", configDIF)
+        console.log("DIFF", configDIF);
         const jsRuntime = await create_runtime(configDIF, debugConfig);
         return new Runtime(jsRuntime);
     }
@@ -301,7 +301,6 @@ export class Runtime {
         value: unknown,
         decompileOptions: DecompileOptions | null = null,
     ): string {
-        console.log("VAL", this.#difHandler.convertJSValueToDIFValueContainer(decompileOptions))
         return this.#runtime.value_to_string(
             this.#difHandler.convertJSValueToDIFValueContainer(value),
             this.#difHandler.convertJSValueToDIFValueContainer(decompileOptions),

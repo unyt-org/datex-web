@@ -5,7 +5,7 @@ import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { DIFValue } from "datex/dif/types/mod.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
 import { arrayTypeBinding } from "../../../src/lib/js-core-types/array.ts";
-import {createDIFValueWithTag} from "../../../src/dif/helpers/values.ts";
+import { createDIFValueWithTag } from "../../../src/dif/helpers/values.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
@@ -49,6 +49,7 @@ Deno.test("tagged empty value round-trip", () => {
     const difValue = runtime.dif.convertJSValueToDIFValueContainer(
         originalValue,
     ) as DIFValue;
+    console.log(difValue);
     const jsValue = runtime.dif.resolveDIFValueContainer(difValue);
 
     assertEquals(jsValue, originalValue);

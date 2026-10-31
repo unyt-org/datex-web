@@ -530,17 +530,18 @@ export class DIFHandler {
             assert("t" in value, "Invalid DIFValue format: expected a tagged value with 't' property");
             return this.resolveDIFTaggedValue(value as DIFTaggedValue) as T;
         }
+        console.log(value);
         unreachable(`Invalid DIFValue format: expected a tagged value, got ${typeof value}`);
     }
 
     private resolveDIFTaggedValue(
         value: DIFTaggedValue,
     ): unknown {
-        const val = this.resolveDIFCoreValue(value.v);
         const [tag, is_empty] = value.t;
         if (is_empty) {
             return new Tagged(tag, EMPTY_TAG);
         } else {
+            const val = this.resolveDIFCoreValue(value.v);
             return new Tagged(tag, val);
         }
     }
@@ -548,9 +549,10 @@ export class DIFHandler {
     private resolveDIFCoreValue(
         value: DIFCoreValue,
     ): unknown {
+        console.log(value, "<--");
         const [type_id, raw_value] = value;
 
-        if (type_id === CoreLibTypeId.null) {
+        if (type_id === CoreLibTypeId.null || type_id === CoreLibTypeId.Unit) {
             if (raw_value !== null) {
                 unreachable("Expected null value for null type");
             }

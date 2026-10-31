@@ -243,7 +243,7 @@ export class TypeBinding<
                     this.#definition.handleSet.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFProperty(
+                        this.#difHandler.resolveDIFValueContainer(
                             difUpdateData[2],
                         ),
                         this.#difHandler.resolveDIFValueContainer(
@@ -279,9 +279,7 @@ export class TypeBinding<
                     this.#definition.handleDelete.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFProperty(
-                            difUpdateData[2],
-                        ),
+                        difUpdateData[2],
                     );
                 } else if (
                     kind === DIFUpdateKind.Clear &&

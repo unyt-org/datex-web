@@ -48,7 +48,7 @@ Deno.test(`JSON stringify compatibility`, async (t) => {
             const stringFromRuntime = runtime.valueToString(value, {
                 formatting_options: {
                     json_compat: true,
-                    mode: new Tagged("Compacxxt") as FormattingMode,
+                    mode: new Tagged("Compact") as FormattingMode,
                     colorized: false,
                 },
                 resolve_slots: false,

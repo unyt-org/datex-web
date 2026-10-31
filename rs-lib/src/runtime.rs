@@ -14,22 +14,27 @@ use datex_crypto_facade::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::{from_js_dif_value_container, optional_value_container_to_optional_js_dif_value, to_js_dif};
+use crate::js_utils::{
+    from_js_dif_value_container,
+    optional_value_container_to_optional_js_dif_value, to_js_dif,
+};
 use datex_core::{
-    compiler::{CompileOptions, compile_template},
+    compiler::{
+        CompileOptions, compilation_result::CompilationResult, compile_template,
+    },
     crypto::CryptoImpl,
-    decompiler::DecompileOptions,
+    decompiler::{DecompileOptions, ast_to_source_code::value_to_source_code},
     dif::dif_interface::DIFInterface,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner,
-        cache::shared_values_cache::SharedValuesCache,
+        cache::{
+            shared_references_cache::SharedReferencesCache,
+            shared_values_cache::SharedValuesCache,
+        },
     },
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
-use datex_core::compiler::compilation_result::CompilationResult;
-use datex_core::decompiler::ast_to_source_code::value_to_source_code;
-use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -51,18 +56,14 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
-        let config: RuntimeConfig =
-            from_js_dif_value_container(
-                config,
-                &RefCell::new(SharedValuesCache::default()),
-            )
-                .unwrap();
+        let config: RuntimeConfig = from_js_dif_value_container(
+            config,
+            &RefCell::new(SharedValuesCache::default()),
+        )
+        .unwrap();
         info!(
             "Initializing runtime with config: {}",
-            value_to_source_code(
-                &config,
-                DecompileOptions::colorized_pretty(),
-            ),
+            value_to_source_code(&config, DecompileOptions::colorized_pretty(),),
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -84,7 +85,10 @@ impl JSRuntime {
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
-        let dif_interface = JSDIFInterface::new(runtime.clone(), runtime.create_dif_interface());
+        let dif_interface = JSDIFInterface::new(
+            runtime.clone(),
+            runtime.create_dif_interface(),
+        );
         let com_hub =
             JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {
@@ -275,7 +279,9 @@ impl JSRuntime {
             .map_err(js_error)?;
         match result {
             None => Ok("".to_string()),
-            Some(result) => Ok(value_to_source_code(&result, decompile_options)),
+            Some(result) => {
+                Ok(value_to_source_code(&result, decompile_options))
+            }
         }
     }
 
@@ -294,7 +300,10 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
+        Ok(optional_value_container_to_optional_js_dif_value(
+            result,
+            &mut self.dif_interface.cache(),
+        ))
     }
 
     pub fn execute_sync_with_string_result(
@@ -319,7 +328,9 @@ impl JSRuntime {
             .map_err(js_error)?;
         match input {
             None => Ok("".to_string()),
-            Some(result) => Ok(value_to_source_code(&result, decompile_options)),
+            Some(result) => {
+                Ok(value_to_source_code(&result, decompile_options))
+            }
         }
     }
 
@@ -336,7 +347,10 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(optional_value_container_to_optional_js_dif_value(result, &mut self.dif_interface.cache()))
+        Ok(optional_value_container_to_optional_js_dif_value(
+            result,
+            &mut self.dif_interface.cache(),
+        ))
     }
 
     pub fn value_to_string(
@@ -345,11 +359,13 @@ impl JSRuntime {
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
         let value_container = self.js_value_to_value_container(dif_value)?;
-        let decompile_options: DecompileOptions = from_js_dif_value_container(
-            decompile_options,
-            &RefCell::new(SharedValuesCache::default()),
-        )
-        .unwrap_or_default();
+        let decompile_options =
+            from_js_dif_value_container::<Option<DecompileOptions>>(
+                decompile_options,
+                &RefCell::new(SharedValuesCache::default()),
+            )
+            .expect("DecompileOptions are invalid")
+            .unwrap_or_default();
         Ok(value_to_source_code(&value_container, decompile_options))
     }
 
@@ -371,10 +387,7 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_js_dif::<ValueContainer>(
-            value,
-            &mut self.dif_interface.cache(),
-        )
+        from_js_dif::<ValueContainer>(value, &mut self.dif_interface.cache())
     }
 
     /// Get a handle to the DIF interface of the runtime
