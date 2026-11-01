@@ -549,7 +549,6 @@ export class DIFHandler {
     private resolveDIFCoreValue(
         value: DIFCoreValue,
     ): unknown {
-        console.log(value, "<--");
         const [type_id, raw_value] = value;
 
         if (type_id === CoreLibTypeId.null || type_id === CoreLibTypeId.Unit) {

@@ -65,7 +65,6 @@ export class Runtime {
     ): Promise<Runtime> {
         // workaround: temp dif handler without runtime to convert config to DIF
         const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
-        console.log("DIFF", configDIF);
         const jsRuntime = await create_runtime(configDIF, debugConfig);
         return new Runtime(jsRuntime);
     }
