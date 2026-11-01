@@ -44,7 +44,7 @@ import {
 } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import type { DIFUpdateReturn } from "./types/update.ts";
-import { appendEntry, clear, deleteEntry, listSplice, replace, setEntry } from "./update.ts";
+import {appendEntry, clear, deleteEntry, listSplice, replace, setArrayEntry, setEntry} from "./update.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
 import { registerCoreTypeBindings } from "../lib/mod.ts";
 import { OwnedSharedContainer } from "../shared-container/owned.ts";
@@ -1470,7 +1470,7 @@ export class DIFHandler {
         const difValue = this.convertJSValueToDIFValueContainer(value);
         this.updateSharedValue(
             pointerAddress,
-            setEntry(
+            setArrayEntry(
                 this.convertJSValueToDIFValueContainer(Number(index)),
                 difValue,
             ),

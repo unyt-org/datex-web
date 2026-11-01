@@ -5,7 +5,16 @@ import { Endpoint } from "datex/lib/mod.ts";
 import type { SharedContainerMutability } from "datex/shared-container/mod.ts";
 import type { SharedRef } from "datex/shared-container/mod.ts";
 import { performFakeRemoteUpdate } from "../utils.ts";
-import { appendEntry, clear, deleteEntry, listSplice, replace, setEntry } from "datex/dif/update.ts";
+import {
+    appendEntry,
+    clear,
+    deleteArrayEntry,
+    deleteEntry,
+    listSplice,
+    replace,
+    setArrayEntry,
+    setEntry
+} from "datex/dif/update.ts";
 
 let runtime: Runtime;
 Deno.test.beforeEach(async () => {
@@ -30,8 +39,8 @@ Deno.test("array set external", () => {
     performFakeRemoteUpdate(
         runtime,
         arrayRef.pointerAddress,
-        setEntry(
-            runtime.dif.convertJSValueToDIFValueContainer(0),
+        setArrayEntry(
+            0,
             runtime.dif.convertJSValueToDIFValueContainer("newValue"),
         ),
     );
@@ -67,7 +76,7 @@ Deno.test("array delete external", () => {
     performFakeRemoteUpdate(
         runtime,
         arrayRef.pointerAddress,
-        deleteEntry(runtime.dif.convertJSValueToDIFValueContainer(0)),
+        deleteArrayEntry(runtime.dif.convertJSValueToDIFValueContainer(0)),
     );
     assertEquals(arrayRef.value, ["value2", 123]);
 });

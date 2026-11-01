@@ -1,8 +1,9 @@
 /**
  * Helper methods for creating update data dif structures.
  */
-import type { DIFValueContainer } from "./types/mod.ts";
+import type {DIFValueContainer} from "./types/mod.ts";
 import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
+import {CoreLibTypeId} from "./core.ts";
 
 /**
  * The kinds of properties that can be used in a DIF update.
@@ -70,6 +71,21 @@ export function setEntry(
 }
 
 /**
+ * Creates a DIFUpdateData structure representing a set entry operation for an array.
+ * @param index The index of the entry to set.
+ * @param value The value to set for the specified key.
+ * @param path The path to the property being updated (optional).
+ * @returns A DIFUpdateData structure representing the set entry operation.
+ */
+export function setArrayEntry(
+    index: number,
+    value: DIFValueContainer,
+    path: DIFValueContainer[] = [],
+): DIFUpdateData {
+    return setEntry([CoreLibTypeId.integer_u32, index], value, path);
+}
+
+/**
  * Creates a DIFUpdateData structure representing a delete entry operation.
  * @param key The key of the entry to delete.
  * @param path The path to the property being updated (optional).
@@ -83,6 +99,18 @@ export function deleteEntry(
 }
 
 /**
+ * Creates a DIFUpdateData structure representing a delete entry operation for an array.
+ * @param index
+ * @param path
+ */
+export function deleteArrayEntry(
+    index: number,
+    path: DIFValueContainer[] = [],
+): DIFUpdateData {
+    return deleteEntry([CoreLibTypeId.integer_u32, index], path);
+}
+
+    /**
  * Creates a DIFUpdateData structure representing a list splice operation.
  * @param start The starting index of the splice operation.
  * @param deleteCount The number of elements to delete.
