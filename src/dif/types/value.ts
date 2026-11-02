@@ -49,8 +49,8 @@ export type DIFCoreValue = [CoreLibTypeId, DIFRawValue] // core lib type id, raw
 
 
 export type DIFClassification = [
-    PointerAddress | null, // entity address
-    PointerAddress[] | null, // impls
+    PointerAddressWithOwnership | null, // entity address
+    PointerAddressWithOwnership[] | null, // impls
 ]
 
 /**
@@ -81,6 +81,17 @@ export type DIFCoreValueRange = [DIFValueContainer, DIFValueContainer] | {
     start: DIFValueContainer;
     end: DIFValueContainer;
 };
+
+
+export type DIFCoreValueEntityTypeDefinition = [
+    string, // name
+    DIFTypeDefinition, // type definition
+    [
+        [CoreLibTypeId.Callable, DIFCoreValueCallable][], // methods
+        [CoreLibTypeId.Callable, DIFCoreValueCallable][] // static methods
+    ][]
+]
+
 /**
  * Represents a core value in DIF, which can be a primitive value, a structured object, a list, or a map.
  */
@@ -92,6 +103,7 @@ export type DIFRawValue =
     | Record<string, DIFValueContainer> // StructuralMapWithStringKeys
     | DIFTypeDefinition // type
     | DIFDirectRepresentationValue
+    | DIFCoreValueEntityTypeDefinition // entity type definition
 
 /**
  * Base struct for the shared value container.

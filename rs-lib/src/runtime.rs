@@ -35,6 +35,7 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::ops::DerefMut;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -59,6 +60,7 @@ impl JSRuntime {
         let config: RuntimeConfig = from_js_dif_value_container(
             config,
             &RefCell::new(SharedValuesCache::default()),
+            &RefCell::new(SharedReferencesCache::default()),
         )
         .unwrap();
         info!(
@@ -267,7 +269,8 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            &RefCell::new(SharedValuesCache::default()),
+            self.dif_interface.cache().deref(),
+            self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
 
@@ -303,6 +306,7 @@ impl JSRuntime {
         Ok(optional_value_container_to_optional_js_dif_value(
             result,
             &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
         ))
     }
 
@@ -314,7 +318,8 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            &RefCell::new(SharedValuesCache::default()),
+            self.dif_interface.cache().deref(),
+            self.runtime.shared_references_cache_refcell()
         )
         .unwrap_or_default();
 
@@ -350,6 +355,7 @@ impl JSRuntime {
         Ok(optional_value_container_to_optional_js_dif_value(
             result,
             &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
         ))
     }
 
@@ -362,7 +368,8 @@ impl JSRuntime {
         let decompile_options =
             from_js_dif_value_container::<Option<DecompileOptions>>(
                 decompile_options,
-                &RefCell::new(SharedValuesCache::default()),
+                self.dif_interface.cache().deref(),
+                self.runtime.shared_references_cache_refcell(),
             )
             .expect("DecompileOptions are invalid")
             .unwrap_or_default();
@@ -387,7 +394,7 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_js_dif::<ValueContainer>(value, &mut self.dif_interface.cache())
+        from_js_dif::<ValueContainer>(value, &mut self.dif_interface.cache(), self.runtime.shared_references_cache_refcell())
     }
 
     /// Get a handle to the DIF interface of the runtime

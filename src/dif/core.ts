@@ -38,6 +38,7 @@ export const CoreLibTypeId = {
     Range: 14,
     Type: 15,
     Container: 16,
+    EntityTypeDefinition: 17,
 } as const;
 
 /**

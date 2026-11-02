@@ -134,8 +134,9 @@ where
 pub fn from_js_dif<'de, T: DeserializeWithSerdeContext<'de>>(
     value: impl Into<JsValue>,
     value_cache: &RefCell<SharedValuesCache>,
+    references_cache: &RefCell<SharedReferencesCache>,
 ) -> Result<T, JsError> {
-    let ctx = SerdeContext::new(value_cache);
+    let ctx = SerdeContext::new(value_cache, references_cache);
     T::deserialize_with_ctx(
         &ctx,
         serde_wasm_bindgen::Deserializer::from(value.into()),
@@ -151,21 +152,22 @@ pub fn from_js_dif_value_container<
 >(
     value: impl Into<JsValue>,
     value_cache: &RefCell<SharedValuesCache>,
+    references_cache: &RefCell<SharedReferencesCache>,
 ) -> Result<T, JsError> {
     // FIXME: (optimization) - for structural types, we should be able to transparently deserialize/serialize directly to T, only for entity types we need to go through ValueContainer.
     // So we can decide based on the classification of T if we want to go through ValueContainer or not
-    let value_container: ValueContainer = from_js_dif(value, value_cache)?;
+    let value_container: ValueContainer = from_js_dif(value, value_cache, references_cache)?;
     T::try_convert_from_value_container(value_container).map_err(|e| {
         js_error("Failed to convert ValueContainer to target type")
     })
 }
 
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_js_dif<T>(value: &T, cache: &RefCell<SharedValuesCache>) -> JsValue
+pub fn to_js_dif<T>(value: &T, value_cache: &RefCell<SharedValuesCache>, references_cache: &RefCell<SharedReferencesCache>) -> JsValue
 where
     T: SerializeWithSerdeContext,
 {
-    let context = SerdeContext::new(cache);
+    let context = SerdeContext::new(value_cache, references_cache);
     value
         .serialize_with_ctx(
             &context,
@@ -178,9 +180,10 @@ where
 /// the value container to a JsValue in the DIF format.
 pub fn to_js_dif_value_container<T: ConvertValueContainer>(
     value: T,
-    cache: &RefCell<SharedValuesCache>,
+    value_cache: &RefCell<SharedValuesCache>,
+    references_cache: &RefCell<SharedReferencesCache>,
 ) -> JsValue {
-    to_js_dif(&value.to_value_container(), cache)
+    to_js_dif(&value.to_value_container(), value_cache, references_cache)
 }
 
 /**
@@ -190,11 +193,12 @@ pub fn to_js_dif_value_container<T: ConvertValueContainer>(
  */
 pub fn optional_value_container_to_optional_js_dif_value(
     value: Option<ValueContainer>,
-    cache: &RefCell<SharedValuesCache>,
+    value_cache: &RefCell<SharedValuesCache>,
+    references_cache: &RefCell<SharedReferencesCache>,
 ) -> JsValue {
     match value {
         Some(value) => {
-            let inner_value = to_js_dif(&value, cache);
+            let inner_value = to_js_dif(&value, value_cache, references_cache);
             // wrap in array
             js_array(&[inner_value])
         }

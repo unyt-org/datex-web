@@ -32,6 +32,7 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -122,6 +123,7 @@ impl JSComHub {
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let dif_interface = dif_interface.clone();
+                let runtime = runtime.clone();
 
                 Box::pin(async move {
                     let interface_configuration_promise = factory
@@ -130,6 +132,7 @@ impl JSComHub {
                             &to_js_dif(
                                 &setup_data,
                                 &dif_interface.borrow().cache,
+                                runtime.shared_references_cache_refcell(),
                             ),
                         )
                         .map_err(|e| {
@@ -149,6 +152,7 @@ impl JSComHub {
                     let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(
                         &interface_configuration,
                         &mut dif_interface.borrow_mut().cache,
+                        runtime.shared_references_cache_refcell(),
                     )
                         .map_err(|e| {
                             error!("Error parse_com_interface_configuration: {:?}", e);
@@ -180,11 +184,13 @@ impl JSComHub {
                                 }
 
                                 let mut dif_interface = dif_interface.borrow_mut();
-                                let cache = &mut dif_interface.cache;
+                                let shared_values_cache = &mut dif_interface.cache;
+                                let shared_references_cache = runtime.shared_references_cache_refcell();
 
                                 let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(
                                     &read_result.get_value(),
-                                    cache,
+                                    shared_values_cache,
+                                    shared_references_cache,
                                 ) {
                                     Ok(result) => result,
                                     Err(e) => {
@@ -255,12 +261,13 @@ impl JSComHub {
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
         values_cache: &RefCell<SharedValuesCache>,
+        references_cache: &RefCell<SharedReferencesCache>,
     ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
 
         let properties: ComInterfaceProperties =
-            from_js_dif_value_container(properties, values_cache)?;
+            from_js_dif_value_container(properties, values_cache, references_cache)?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -285,6 +292,7 @@ impl JSComHub {
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
         values_cache: &RefCell<SharedValuesCache>,
+        ref_cache: &RefCell<SharedReferencesCache>,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,
@@ -302,7 +310,7 @@ impl JSComHub {
         }
 
         let properties: SocketPropertiesPartial =
-            from_js_dif_value_container(properties, values_cache).map_err(|e| {
+            from_js_dif_value_container(properties, values_cache, ref_cache).map_err(|e| {
                 serde_wasm_bindgen::Error::new(&format!(
                     "Error parsing socket properties: {:?}",
                     e
@@ -366,6 +374,7 @@ impl JSComHub {
         let setup_data: ValueContainer = from_js_dif(
             setup_data,
             &self.dif_interface.borrow_mut().cache,
+            self.runtime.shared_references_cache_refcell(),
         )
         .map_err(|e| JsError::new(&format!("{e:?}")))?;
 
@@ -420,7 +429,7 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        to_js_dif_value_container(metadata, &self.dif_interface.borrow_mut().cache)
+        to_js_dif_value_container(metadata, &self.dif_interface.borrow_mut().cache, self.runtime.shared_references_cache_refcell())
     }
 
     pub async fn get_trace_string(

@@ -11,7 +11,7 @@ import {
     DIFCallableTypeDefinition,
     DIFClassification,
     type DIFCoreValue,
-    DIFCoreValueCallable,
+    DIFCoreValueCallable, DIFCoreValueEntityTypeDefinition,
     type DIFOptionalValueContainer,
     DIFSharedValue,
     DIFTaggedValue,
@@ -60,6 +60,7 @@ import {
     isSharedValueContainer,
     tryGetClassification,
 } from "./helpers/values.ts";
+import {createClassForEntityType} from "../lib/js-classes/mod.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -528,13 +529,16 @@ export class DIFHandler {
             if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
                 return undefined as T;
             } else {
-                unimplemented("TODO: entity class resolution");
+                const jsClass = this.resolvePointerAddress(...splitPointerAddressWithOwnership(classification[0]));
+                assert(this.isClass(jsClass.value), "Expected a JS class for the entity type definition");
+                const instance = new jsClass.value();
+                // FIXME: hydration
+                return instance as T;
             }
         } else if (value._ === "t") {
             assert("t" in value, "Invalid DIFValue format: expected a tagged value with 't' property");
             return this.resolveDIFTaggedValue(value as DIFTaggedValue) as T;
         }
-        console.log(value);
         unreachable(`Invalid DIFValue format: expected a tagged value, got ${typeof value}`);
     }
 
@@ -703,6 +707,10 @@ export class DIFHandler {
             callable.ctx = ctx;
             return callable;
         }
+        else if (type_id === CoreLibTypeId.EntityTypeDefinition) {
+            const typeDef = raw_value as DIFCoreValueEntityTypeDefinition;
+            return createClassForEntityType(typeDef);
+        }
 
         throw new Error(`Unsupported DIF type: ${type_id}`);
     }
@@ -730,6 +738,7 @@ export class DIFHandler {
      * Resolves a pointer address to its corresponding JS value.
      * If the pointer address is not yet loaded in memory, it returns a Promise that resolves to the value.
      * Otherwise, it returns the resolved value directly.
+     * @param ownership
      * @param address - The pointer address to resolve.
      * @returns The resolved value as type T, or a Promise that resolves to type T.
      */
@@ -765,7 +774,7 @@ export class DIFHandler {
             );
 
             // if immutable function value inside, replace inner Callable with call via shared container
-            if (mutability === SharedContainerMutability.Immutable && typeof value === "function") {
+            if (mutability === SharedContainerMutability.Immutable && typeof value === "function" && !this.isClass(value)) {
                 assert(this.isDatexCallable(value), "Expected a Datex callable function");
                 this.bindSharedContainerCallable(value, address);
             }
@@ -782,6 +791,11 @@ export class DIFHandler {
             // fallthrough case, already in cache with correct ownership
             return cached;
         }
+    }
+
+    private isClass(fn: unknown): boolean {
+        return typeof fn === 'function' &&
+            /^class\s/.test(Function.prototype.toString.call(fn));
     }
 
     public isDatexCallable(value: unknown): value is Callable {
@@ -858,18 +872,17 @@ export class DIFHandler {
         let metadata: CustomReferenceMetadata | undefined = undefined;
         const originalValue = value;
         // bind js value (if mutable, nominal type)
-        const actualType: DIFTypeDefinition = getCoreLibTypeIdForJSValue(value)!; // FIXME, support custom types and other types
+        const coreLibId: CoreLibTypeId = getCoreLibTypeIdForJSValue(value)!; // FIXME, support custom types and other types
 
         // only bind the value, if we have a shared container or a core lib type
         const bindJSValue = typeof value === "object" && value !== null &&
-            mutability !== SharedContainerMutability.Immutable && (
-                isCoreLibTypeDefinition(actualType) || isSharedContainerTypeDefinition(actualType)
-            );
+            mutability !== SharedContainerMutability.Immutable;
 
         if (bindJSValue) {
-            typeBinding = isSharedContainerTypeDefinition(actualType)
-                ? this.type_registry.getTypeBinding(addressWithoutOwnership(actualType.shared))
-                : this.type_registry.getTypeBindingByCoreLibTypeId(actualType as CoreLibTypeId); // TS Bug
+            // if value class is registered in cache, this is an entity type - don't add type binding
+            const isEntityType = value.constructor && this.getPointerAddressForValue(value.constructor) != null;
+
+            typeBinding = !isEntityType && this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId as CoreLibTypeId); // TS Bug
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
