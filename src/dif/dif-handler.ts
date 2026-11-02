@@ -134,6 +134,10 @@ export type CacheData = {
 };
 
 const DATEX_CALLABLE_HASH: unique symbol = Symbol("DATEX_CALLABLE_HASH");
+const DATEX_CALLABLE: unique symbol = Symbol("CALLABLE");
+
+export type Callable = (...args: unknown[]) => unknown & {ctx: {[typeof DATEX_CALLABLE]:  (...args: unknown[]) => unknown}};
+
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -467,9 +471,9 @@ export class DIFHandler {
     /**
      * Calls a sync callable DIF value identified by the given hash with the specified arguments.
      */
-    private callCallableSync(hash: string, args: unknown[]) {
+    private callCallableSync(value: DIFValueContainer, args: unknown[]) {
         const result = collapseDIFOption(this.#handle.apply_sync(
-            [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+            value,
             args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
         ));
         if (result === undefined) return result;
@@ -479,10 +483,10 @@ export class DIFHandler {
     /**
      * Calls an async callable DIF value identified by the given hash with the specified arguments.
      */
-    private async callCallableAsync(hash: string, args: unknown[]) {
+    private async callCallableAsync(value: DIFValueContainer, args: unknown[]) {
         const result = collapseDIFOption(
             await this.#handle.apply_async(
-                [CoreLibTypeId.Callable, [hash, null]] satisfies DIFValue,
+                value,
                 args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
             ),
         );
@@ -676,14 +680,27 @@ export class DIFHandler {
             }
         } else if (type_id === CoreLibTypeId.Callable) {
             const [hash, name, requiresAsync] = raw_value as DIFCoreValueCallable;
+            const ctx = {};
             const callableBuilder = new Function(
-                "fn",
-                "hash",
-                `return ${requiresAsync ? "async " : ""}function ${name || ""}(...args) {return fn(hash, args)}`,
+                "ctx",
+                "DATEX_CALLABLE",
+                `return ${requiresAsync ? "async " : ""}function ${name || ""}(...args) {return ctx[DATEX_CALLABLE](args)}`,
             );
-            const boundCallable = requiresAsync ? this.callCallableAsync.bind(this) : this.callCallableSync.bind(this);
-            const callable = callableBuilder(boundCallable, hash);
+            let callable = callableBuilder(ctx, DATEX_CALLABLE);
             callable[DATEX_CALLABLE_HASH] = hash;
+
+            const difCallee = [CoreLibTypeId.Callable, [hash, null]];
+
+            Object.defineProperty(ctx, DATEX_CALLABLE, {
+                value: requiresAsync ?
+                    (args) => this.callCallableAsync(difCallee, args) :
+                    (args) => this.callCallableSync(difCallee, args),
+                configurable: false,
+                enumerable: false,
+                writable: true,
+            });
+            Object.seal(ctx);
+            callable.ctx = ctx;
             return callable;
         }
 
@@ -740,17 +757,24 @@ export class DIFHandler {
             return upgraded;
         } else if (cached === "not_cached") {
             // if not in cache, resolve from runtime
-            const base: DIFBaseSharedValueContainer = this.#handle.resolve_pointer_address(
+            const [container, mutability]: DIFBaseSharedValueContainer = this.#handle.resolve_pointer_address(
                 address,
             );
             const value = this.resolveDIFValueContainer<T>(
-                base[0],
+                container,
             );
+
+            // if immutable function value inside, replace inner Callable with call via shared container
+            if (mutability === SharedContainerMutability.Immutable && typeof value === "function") {
+                assert(this.isDatexCallable(value), "Expected a Datex callable function");
+                this.bindSharedContainerCallable(value, address);
+            }
+
             // init pointer
             const shared = this.initSharedValue<T, SharedContainerMutability>(
                 address,
                 value,
-                base[1],
+                mutability,
                 ownership,
             );
             return shared.withOwnership(ownership);
@@ -758,6 +782,18 @@ export class DIFHandler {
             // fallthrough case, already in cache with correct ownership
             return cached;
         }
+    }
+
+    public isDatexCallable(value: unknown): value is Callable {
+        return typeof value === "function" && value.hasOwnProperty("ctx") && value.ctx.hasOwnProperty(DATEX_CALLABLE);
+    }
+
+    private bindSharedContainerCallable(callable: Callable, address: PointerAddress) {
+        const requiresAsync = callable.constructor.name === "AsyncFunction";
+        const difCallee: DIFSharedValue = { _: combinePointerAddressWithOwnership(address, DIFSharedContainerOwnership.ImmutableRef) };
+        callable.ctx[DATEX_CALLABLE] = requiresAsync ?
+            (args) => this.callCallableAsync(difCallee, args) :
+            (args) => this.callCallableSync(difCallee, args);
     }
 
     /**
@@ -1096,7 +1132,7 @@ export class DIFHandler {
     }
 
     /**
-     * Creates a new reference containg the given JS value.
+     * Creates a new reference containing the given JS value.
      * The returned value is a wrapped {@link OwnedSharedContainer} that can be used to access the value and its pointer address.
      */
     public createSharedValueFromJSValue<
