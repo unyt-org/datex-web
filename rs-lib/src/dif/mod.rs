@@ -251,6 +251,51 @@ impl JSDIFInterface {
         ))
     }
 
+    pub fn call_method_sync(
+        &mut self,
+        callee: JsValue,
+        method_name: String,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .call_method_sync(&self.runtime, callee, method_name, args)
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
+    pub async fn call_method_async(
+        &mut self,
+        callee: JsValue,
+        method_name: String,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .call_method_async(&self.runtime, callee, method_name, args)
+            .await
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
     fn get_callee_and_args_from_js_values(
         &mut self,
         callee: JsValue,

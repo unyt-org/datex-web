@@ -496,6 +496,44 @@ export class DIFHandler {
     }
 
     /**
+     * Calls a sync method on a DIF value
+     */
+    public callMethodSync(
+        callee: DIFValueContainer,
+        method: string,
+        args: unknown[],
+    ): unknown {
+        const result = collapseDIFOption(
+            this.#handle.call_method_sync(
+                callee,
+                method,
+                args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
+            ),
+        );
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
+     * Calls an async method on a DIF value
+     */
+    public async callMethodAsync(
+        callee: DIFValueContainer,
+        method: string,
+        args: unknown[],
+    ): Promise<unknown> {
+        const result = collapseDIFOption(
+            await this.#handle.call_method_async(
+                callee,
+                method,
+                args.map((arg) => this.convertJSValueToDIFValueContainer(arg)),
+            ),
+        );
+        if (result === undefined) return result;
+        return this.resolveDIFValueContainer(result);
+    }
+
+    /**
      * Resolves a DIFValue to its corresponding JS value.
      * This function handles core types and custom types (not yet implemented).
      * It returns the resolved value as the specified type T.
@@ -709,7 +747,7 @@ export class DIFHandler {
         }
         else if (type_id === CoreLibTypeId.EntityTypeDefinition) {
             const typeDef = raw_value as DIFCoreValueEntityTypeDefinition;
-            return createClassForEntityType(typeDef);
+            return createClassForEntityType(typeDef, this);
         }
 
         throw new Error(`Unsupported DIF type: ${type_id}`);
