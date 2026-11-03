@@ -27,7 +27,7 @@ pub struct TsFileAst {
 #[derive(Debug, Clone)]
 pub struct TsDeclaration {
     pub docs: Option<String>,
-    pub declaration: TsTypeAliasDecl,
+    pub declaration: Decl,
 }
 
 impl TsAst {
@@ -71,14 +71,18 @@ impl TsAst {
         &mut self,
         file: &Path,
         name: String,
-        declaration: TsDeclaration,
+        docs: Option<String>,
+        declaration: Decl,
     ) -> bool {
         let file = self.files.entry(file.to_path_buf()).or_default();
         if file.declarations.contains_key(&name) {
             return false;
         }
         file.declaration_order.push(name.clone());
-        file.declarations.insert(name, declaration);
+        file.declarations.insert(name, TsDeclaration {
+            declaration,
+            docs,
+        });
         true
     }
 }
@@ -138,9 +142,7 @@ impl TsFileAst {
                 body: vec![
                     ExportDecl {
                         span: DUMMY_SP,
-                        decl: Decl::TsTypeAlias(Box::new(
-                            declaration.declaration.clone(),
-                        )),
+                        decl: declaration.declaration.clone(),
                     }
                     .into(),
                 ],

@@ -31,11 +31,11 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
+use datex_core::types::entities::entity_type_definition::EntityTypeDefinition;
 use datex_core::types::entity_type::EntityType;
 use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{TsKeywordType, TsType, TsTypeAliasDecl};
-
+use swc_ecma_ast::{ClassDecl, ClassMember, Decl, EmptyStmt, Ident, TsEntityName, TsKeywordType, TsType, TsTypeAliasDecl, TsTypeRef};
 use crate::ts::{
     TsExport,
     ast::{TsAst, TsDeclaration},
@@ -77,6 +77,7 @@ pub enum TsTypeFolderError {
     IncompleteAlias {
         name: String,
     },
+    UnexpectedDeclaration,
 }
 
 impl Display for TsTypeFolderError {
@@ -112,6 +113,10 @@ impl Display for TsTypeFolderError {
             Self::IncompleteAlias { name } => write!(
                 f,
                 "TypeScript alias `{name}` was registered but did not produce a complete declaration",
+            ),
+            Self::UnexpectedDeclaration => write!(
+                f,
+                "TypeScript alias was expected to be a type alias declaration, but was not",
             ),
         }
     }
@@ -190,9 +195,9 @@ impl TsTypeFolder {
         for (file, exports) in &modules {
             self.current_file = Some(file.clone());
             for export in exports {
-                let definition =
+                let declaration =
                     datex_core::types::visitor::fold_type(self, &export.ty)?;
-                self.ensure_declared(export.name, definition)?;
+                self.ensure_declared(export.name, declaration)?;
             }
         }
 
@@ -250,7 +255,7 @@ impl TsTypeFolder {
     fn ensure_declared(
         &mut self,
         name: &str,
-        definition: Box<TsType>,
+        declaration: TsTypeOrClassDeclaration,
     ) -> Result<(), TsTypeFolderError> {
         match self.aliases.get(name) {
             Some(AliasState::Complete) => Ok(()),
@@ -259,7 +264,7 @@ impl TsTypeFolder {
                     name: name.to_string(),
                 })
             }
-            None => self.complete_alias(name, definition),
+            None => self.complete_alias(name, declaration),
         }
     }
 
@@ -267,7 +272,7 @@ impl TsTypeFolder {
     fn complete_alias(
         &mut self,
         name: &str,
-        definition: Box<TsType>,
+        declaration: TsTypeOrClassDeclaration,
     ) -> Result<(), TsTypeFolderError> {
         let registration =
             self.exports.get(name).cloned().ok_or_else(|| {
@@ -281,16 +286,8 @@ impl TsTypeFolder {
         let inserted = self.ast.add_declaration(
             &registration.file,
             name.to_string(),
-            TsDeclaration {
-                docs: registration.docs,
-                declaration: TsTypeAliasDecl {
-                    span: DUMMY_SP,
-                    declare: false,
-                    id: ts_ident(name),
-                    type_params: None,
-                    type_ann: definition,
-                },
-            },
+            registration.docs,
+            declaration.create_declaration(name),
         );
 
         if !inserted {
@@ -333,8 +330,8 @@ impl TsTypeFolder {
     fn external_type_reference(
         &mut self,
         name: &str,
-        generics: Vec<Box<TsType>>,
-    ) -> Result<Box<TsType>, TsTypeFolderError> {
+        generics: Vec<TsType>,
+    ) -> Result<TsType, TsTypeFolderError> {
         if let Some(source) = self.known_types.get(name).cloned() {
             let current_file = self.current_file.clone().ok_or_else(|| {
                 TsTypeFolderError::NoActiveFile {
@@ -350,8 +347,69 @@ impl TsTypeFolder {
     }
 }
 
+
+#[derive(Debug, Clone)]
+pub enum TsTypeOrClassDeclaration {
+    TsType(Box<TsType>),
+    ClassDecl(ClassDecl),
+}
+
+impl TsTypeOrClassDeclaration {
+    /// Convert a TsTypeDefinition into a TsType, converting ClassDecls into TsTypeRefs.
+    fn into_ts_type(self) -> TsType {
+        match self {
+            Self::TsType(ty) => *ty,
+            Self::ClassDecl(class_decl) => TsType::TsTypeRef(TsTypeRef {
+                span: Default::default(),
+                type_name: TsEntityName::Ident(Ident {
+                    span: Default::default(),
+                    ctxt: Default::default(),
+                    sym: class_decl.ident.sym.clone(),
+                    optional: false,
+                }),
+                type_params: None,
+            }),
+        }
+    }
+
+    fn vec_into_ts_type(vec: Vec<Self>) -> Vec<TsType> {
+        vec.into_iter().map(|def| def.into_ts_type()).collect()
+    }
+
+    /// Converts a [TsTypeOrClassDeclaration] into a Decl, creating a TsTypeAliasDecl for TsTypes and returning ClassDecls as-is.
+    fn create_declaration(self, name: &str) -> Decl {
+        match self {
+            Self::TsType(ty) => Decl::TsTypeAlias(Box::new(TsTypeAliasDecl {
+                span: DUMMY_SP,
+                declare: false,
+                id: ts_ident(name),
+                type_params: None,
+                type_ann: ty,
+            })),
+            Self::ClassDecl(class_decl) => Decl::Class(class_decl),
+        }
+    }
+}
+
+
+impl From<Box<TsType>> for TsTypeOrClassDeclaration {
+    fn from(ty: Box<TsType>) -> Self {
+        Self::TsType(ty)
+    }
+}
+impl From<TsType> for TsTypeOrClassDeclaration {
+    fn from(ty: TsType) -> Self {
+        Self::TsType(Box::new(ty))
+    }
+}
+impl From<ClassDecl> for TsTypeOrClassDeclaration {
+    fn from(class_decl: ClassDecl) -> Self {
+        Self::ClassDecl(class_decl)
+    }
+}
+
 impl TypeFolder for TsTypeFolder {
-    type Output = Box<TsType>;
+    type Output = TsTypeOrClassDeclaration;
     type Error = TsTypeFolderError;
 
     fn begin_named_alias(&mut self, name: &str) -> Result<bool, Self::Error> {
@@ -377,9 +435,9 @@ impl TypeFolder for TsTypeFolder {
     fn end_named_alias(
         &mut self,
         name: &str,
-        definition: Self::Output,
+        declaration: Self::Output,
     ) -> Result<(), Self::Error> {
-        let result = self.complete_alias(name, definition);
+        let result = self.complete_alias(name, declaration);
         self.current_file = self.file_stack.pop().flatten();
         result
     }
@@ -389,7 +447,7 @@ impl TypeFolder for TsTypeFolder {
         name: &str,
     ) -> Result<Self::Output, Self::Error> {
         self.record_export_reference(name)?;
-        Ok(ts_type_reference(name, vec![]))
+        Ok(ts_type_reference(name, vec![]).into())
     }
 
     fn fold_literal(
@@ -398,10 +456,10 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         Ok(match literal {
             LiteralTypeDefinition::Text(text) => {
-                ts_string_literal(text.as_string())
+                ts_string_literal(text.as_string()).into()
             }
             LiteralTypeDefinition::Integer(integer) => {
-                ts_number_literal(integer.as_f64())
+                ts_number_literal(integer.as_f64()).into()
             }
             LiteralTypeDefinition::TypedInteger(integer) => match integer {
                 TypedInteger::I8(_)
@@ -413,24 +471,24 @@ impl TypeFolder for TsTypeFolder {
                 | TypedInteger::U16(_)
                 | TypedInteger::U32(_)
                 | TypedInteger::U64(_)
-                | TypedInteger::U128(_) => ts_number_literal(integer.as_f64()),
-                TypedInteger::IBig(big) => ts_bigint_literal(&big.0),
+                | TypedInteger::U128(_) => ts_number_literal(integer.as_f64()).into(),
+                TypedInteger::IBig(big) => ts_bigint_literal(&big.0).into(),
             },
 
             LiteralTypeDefinition::Decimal(decimal) => {
-                ts_number_literal(decimal.into_f64())
+                ts_number_literal(decimal.into_f64()).into()
             }
             LiteralTypeDefinition::TypedDecimal(decimal) => {
-                ts_number_literal(decimal.as_f64())
+                ts_number_literal(decimal.as_f64()).into()
             }
             LiteralTypeDefinition::Boolean(boolean) => {
-                ts_boolean_literal(boolean)
+                ts_boolean_literal(boolean).into()
             }
             LiteralTypeDefinition::Endpoint(endpoint) => self
                 .external_type_reference(
                     "Endpoint",
                     vec![ts_string_literal(endpoint.to_string())],
-                )?,
+                )?.into(),
         })
     }
 
@@ -439,7 +497,7 @@ impl TypeFolder for TsTypeFolder {
         _source: &ListTypeDefinition,
         elements: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_array(ts_union(elements)))
+        Ok(ts_array(ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(elements))).into())
     }
 
     fn fold_map(
@@ -447,7 +505,7 @@ impl TypeFolder for TsTypeFolder {
         _source: &MapTypeDefinition,
         entries: Vec<(Self::Output, Self::Output)>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_object_type(entries))
+        Ok(ts_object_type(entries.into_iter().map(|(k, v)| (k.into_ts_type(), v.into_ts_type())).collect()).into())
     }
 
     fn fold_nested(
@@ -463,7 +521,7 @@ impl TypeFolder for TsTypeFolder {
         _source: &UnionTypeDefinition,
         members: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_union(members))
+        Ok(ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(members)).into())
     }
 
     fn fold_intersection(
@@ -471,7 +529,7 @@ impl TypeFolder for TsTypeFolder {
         _source: &IntersectionTypeDefinition,
         members: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_intersection(members))
+        Ok(ts_intersection(TsTypeOrClassDeclaration::vec_into_ts_type(members)).into())
     }
 
     fn fold_callable(
@@ -488,20 +546,20 @@ impl TypeFolder for TsTypeFolder {
             .map(|(index, (name, ty))| {
                 ts_function_parameter(
                     name.unwrap_or_else(|| format!("arg{index}")),
-                    ty,
+                    ty.into_ts_type(),
                 )
             })
             .collect::<Vec<_>>();
         if let Some((name, ty)) = rest_parameter {
             parameters.push(ts_rest_parameter(
                 name.unwrap_or_else(|| "rest".to_string()),
-                ty,
+                ty.into_ts_type(),
             ));
         }
         Ok(ts_function_type(
             parameters,
-            return_type.unwrap_or_else(ts_void),
-        ))
+            return_type.unwrap_or_else(|| ts_void().into()).into_ts_type(),
+        ).into())
     }
 
     fn fold_shared_reference(
@@ -513,9 +571,25 @@ impl TypeFolder for TsTypeFolder {
 
     fn fold_entity_reference(
         &mut self,
-        _nominal: &EntityType,
+        entity_type: &EntityType,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_null()) // TODO
+        let definition = entity_type.entity_definition();
+
+        Ok(ts_class_declaration(
+            definition.name(),
+            definition
+                .impls()
+                .iter()
+                .flat_map(|entity_impl| {
+                    entity_impl
+                        .methods()
+                        .iter()
+                        .map(|method| {
+                            ClassMember::Empty(EmptyStmt { span: DUMMY_SP })
+                        })
+                })
+                .collect(),
+        ).into())
     }
 
     fn fold_core_type(
@@ -524,40 +598,40 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         match core_type {
             CoreLibTypeId::Base(base) => match base {
-                CoreLibBaseTypeId::Boolean => Ok(ts_boolean()),
-                CoreLibBaseTypeId::Text => Ok(ts_string()),
-                CoreLibBaseTypeId::Integer => Ok(ts_number()),
-                CoreLibBaseTypeId::Decimal => Ok(ts_number()),
-                CoreLibBaseTypeId::Null => Ok(ts_null()),
+                CoreLibBaseTypeId::Boolean => Ok(ts_boolean().into()),
+                CoreLibBaseTypeId::Text => Ok(ts_string().into()),
+                CoreLibBaseTypeId::Integer => Ok(ts_number().into()),
+                CoreLibBaseTypeId::Decimal => Ok(ts_number().into()),
+                CoreLibBaseTypeId::Null => Ok(ts_null().into()),
                 CoreLibBaseTypeId::Endpoint => {
-                    self.external_type_reference("Endpoint", vec![])
+                    Ok(self.external_type_reference("Endpoint", vec![])?.into())
                 }
-                CoreLibBaseTypeId::Unit => Ok(ts_void()),
-                CoreLibBaseTypeId::Never => Ok(ts_never()),
-                CoreLibBaseTypeId::Any => Ok(ts_unknown()),
-                CoreLibBaseTypeId::List => Ok(ts_array(ts_unknown())),
+                CoreLibBaseTypeId::Unit => Ok(ts_void().into()),
+                CoreLibBaseTypeId::Never => Ok(ts_never().into()),
+                CoreLibBaseTypeId::Any => Ok(ts_unknown().into()),
+                CoreLibBaseTypeId::List => Ok(ts_array(ts_unknown()).into()),
                 CoreLibBaseTypeId::Map => Ok(ts_type_reference(
                     "Map",
                     vec![ts_unknown(), ts_unknown()],
-                )),
+                ).into()),
                 CoreLibBaseTypeId::Callable => Ok(ts_function_type(
                     vec![ts_rest_parameter("args", ts_array(ts_unknown()))],
                     ts_unknown(),
-                )),
-                CoreLibBaseTypeId::Range => self.external_type_reference(
+                ).into()),
+                CoreLibBaseTypeId::Range => Ok(self.external_type_reference(
                     "Range",
                     vec![ts_unknown(), ts_unknown()],
-                ),
+                )?.into()),
                 CoreLibBaseTypeId::Type => {
-                    self.external_type_reference("Type", vec![ts_unknown()])
+                    Ok(self.external_type_reference("Type", vec![ts_unknown()])?.into())
                 }
-                CoreLibBaseTypeId::Box => self.external_type_reference("Box", vec![ts_unknown()]),
-                CoreLibBaseTypeId::Instant => Ok(ts_date()),
-                CoreLibBaseTypeId::EntityTypeDefinition => self.external_type_reference("__EntityTypeDefinition", vec![]),
+                CoreLibBaseTypeId::Box => Ok(self.external_type_reference("Box", vec![ts_unknown()])?.into()),
+                CoreLibBaseTypeId::Instant => Ok(ts_date().into()),
+                CoreLibBaseTypeId::EntityTypeDefinition => Ok(self.external_type_reference("__EntityTypeDefinition", vec![])? .into()),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
-                | CoreLibVariantTypeId::Integer(_) => Ok(ts_number()),
+                | CoreLibVariantTypeId::Integer(_) => Ok(ts_number().into()),
             },
         }
     }
@@ -569,9 +643,9 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         let mut generics = vec![ts_string_literal(source.tag.clone())];
         if let Some(payload) = payload {
-            generics.push(payload);
+            generics.push(payload.into_ts_type());
         }
-        self.external_type_reference("Tagged", generics)
+        Ok(self.external_type_reference("Tagged", generics)?.into())
     }
 
     fn fold_range(
@@ -580,7 +654,7 @@ impl TypeFolder for TsTypeFolder {
         start: Self::Output,
         end: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
-        self.external_type_reference("Range", vec![start, end])
+        Ok(self.external_type_reference("Range", vec![start.into_ts_type(), end.into_ts_type()])?.into())
     }
 
     fn fold_impl_markers(
@@ -595,7 +669,7 @@ impl TypeFolder for TsTypeFolder {
         source: &ListCollectionTypeDefinition,
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_array(item))
+        Ok(ts_array(item.into_ts_type()).into())
     }
 
     fn fold_list_slice_collection(
@@ -604,10 +678,10 @@ impl TypeFolder for TsTypeFolder {
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         let size = source.size;
-        self.external_type_reference(
+        Ok(self.external_type_reference(
             "ListSlice",
-            vec![item, ts_number_literal(size as f64)],
-        )
+            vec![item.into_ts_type(), ts_number_literal(size as f64)],
+        )?.into())
     }
 
     fn fold_map_collection(
@@ -616,7 +690,7 @@ impl TypeFolder for TsTypeFolder {
         key: Self::Output,
         value: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_type_reference("Record", vec![key, value]))
+        Ok(ts_type_reference("Record", vec![key.into_ts_type(), value.into_ts_type()]).into())
     }
 }
 

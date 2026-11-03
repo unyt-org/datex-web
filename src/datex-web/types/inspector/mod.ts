@@ -2,4 +2,6 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export type Inspector = null;
+export declare class Inspector {
+
+}

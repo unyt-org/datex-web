@@ -2,13 +2,7 @@ use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
 
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{
-    BigInt, BindingIdent, Bool, Expr, Ident, Lit, ModuleItem, Number, Pat,
-    RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType,
-    TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
-    TsPropertySignature, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl,
-    TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType,
-};
+use swc_ecma_ast::{BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, Lit, ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType, TsPropertySignature, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType};
 
 use crate::ts::utils::sanitize_ts_identifier;
 
@@ -16,71 +10,90 @@ pub fn ts_ident(name: &str) -> Ident {
     Ident::new_no_ctxt(sanitize_ts_identifier(name).into(), DUMMY_SP)
 }
 
-pub fn ts_type_ann(ty: Box<TsType>) -> Box<TsTypeAnn> {
-    Box::new(TsTypeAnn {
+pub fn ts_type_ann(ty: TsType) -> TsTypeAnn {
+    TsTypeAnn {
         span: DUMMY_SP,
-        type_ann: ty,
-    })
+        type_ann: Box::new(ty),
+    }
 }
 
-pub fn ts_keyword(kind: TsKeywordTypeKind) -> Box<TsType> {
-    Box::new(TsType::TsKeywordType(TsKeywordType {
+pub fn ts_keyword(kind: TsKeywordTypeKind) -> TsType {
+    TsType::TsKeywordType(TsKeywordType {
         span: DUMMY_SP,
         kind,
-    }))
+    })
 }
-pub fn ts_type_alias(name: &str, definition: Box<TsType>) -> ModuleItem {
+pub fn ts_type_alias(name: &str, definition: TsType) -> ModuleItem {
     TsTypeAliasDecl {
         span: DUMMY_SP,
         declare: false,
         id: ts_ident(name),
         type_params: None,
-        type_ann: definition,
+        type_ann: Box::new(definition),
     }
     .into()
 }
 
-pub fn ts_unknown() -> Box<TsType> {
+pub fn ts_class_declaration(name: &str, members: Vec<ClassMember>) -> ClassDecl {
+    ClassDecl {
+        declare: true,
+        ident: ts_ident(name),
+        class: Box::new(swc_ecma_ast::Class {
+            span: DUMMY_SP,
+            super_class: None,
+            is_abstract: false,
+            type_params: None,
+            super_type_params: None,
+            decorators: vec![],
+            body: members,
+            ctxt: Default::default(),
+            implements: vec![],
+        }),
+    }
+}
+
+
+pub fn ts_unknown() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsUnknownKeyword)
 }
 
-pub fn ts_date() -> Box<TsType> {
+pub fn ts_date() -> TsType {
     ts_type_reference("Date", vec![])
 }
 
-pub fn ts_void() -> Box<TsType> {
+pub fn ts_void() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsVoidKeyword)
 }
 
-pub fn ts_number() -> Box<TsType> {
+pub fn ts_number() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsNumberKeyword)
 }
 
-pub fn ts_string() -> Box<TsType> {
+pub fn ts_string() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsStringKeyword)
 }
 
-pub fn ts_boolean() -> Box<TsType> {
+pub fn ts_boolean() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsBooleanKeyword)
 }
 
-pub fn ts_null() -> Box<TsType> {
+pub fn ts_null() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsNullKeyword)
 }
 
-pub fn ts_never() -> Box<TsType> {
+pub fn ts_never() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsNeverKeyword)
 }
 
-pub fn ts_array(element: Box<TsType>) -> Box<TsType> {
-    Box::new(TsType::TsArrayType(TsArrayType {
+pub fn ts_array(element: TsType) -> TsType {
+    TsType::TsArrayType(TsArrayType {
         span: DUMMY_SP,
-        elem_type: element,
-    }))
+        elem_type: Box::new(element),
+    })
 }
 
-pub fn ts_tuple(elements: Vec<Box<TsType>>) -> Box<TsType> {
-    Box::new(TsType::TsTupleType(TsTupleType {
+pub fn ts_tuple(elements: Vec<TsType>) -> TsType {
+    TsType::TsTupleType(TsTupleType {
         span: DUMMY_SP,
 
         elem_types: elements
@@ -88,104 +101,102 @@ pub fn ts_tuple(elements: Vec<Box<TsType>>) -> Box<TsType> {
             .map(|ty| TsTupleElement {
                 span: DUMMY_SP,
                 label: None,
-                ty,
+                ty: Box::new(ty),
             })
             .collect(),
-    }))
+    })
 }
 
-pub fn ts_union(types: Vec<Box<TsType>>) -> Box<TsType> {
+pub fn ts_union(types: Vec<TsType>) -> TsType {
     match types.as_slice() {
         [] => ts_never(),
         [only] => only.clone(),
-        _ => Box::new(
+        _ =>
             TsUnionType {
                 span: DUMMY_SP,
-                types,
+                types: types.into_iter().map(Box::new).collect(),
             }
-            .into(),
-        ),
+            .into()
     }
 }
 
-pub fn ts_intersection(types: Vec<Box<TsType>>) -> Box<TsType> {
+pub fn ts_intersection(types: Vec<TsType>) -> TsType {
     match types.as_slice() {
         [] => ts_unknown(),
         [only] => only.clone(),
-        _ => Box::new(
+        _ =>
             TsIntersectionType {
                 span: DUMMY_SP,
-                types,
+                types: types.into_iter().map(Box::new).collect(),
             }
             .into(),
-        ),
     }
 }
 
 pub fn ts_type_reference(
     name: &str,
-    parameters: Vec<Box<TsType>>,
-) -> Box<TsType> {
+    parameters: Vec<TsType>,
+) -> TsType {
     let type_params = if parameters.is_empty() {
         None
     } else {
         Some(Box::new(TsTypeParamInstantiation {
             span: DUMMY_SP,
-            params: parameters,
+            params: parameters.into_iter().map(Box::new).collect(),
         }))
     };
 
-    Box::new(TsType::TsTypeRef(TsTypeRef {
+    TsType::TsTypeRef(TsTypeRef {
         span: DUMMY_SP,
         type_name: TsEntityName::Ident(ts_ident(name)),
         type_params,
-    }))
+    })
 }
 
-pub fn ts_string_literal(value: impl Into<String>) -> Box<TsType> {
+pub fn ts_string_literal(value: impl Into<String>) -> TsType {
     let value = value.into();
 
-    Box::new(TsType::TsLitType(TsLitType {
+    TsType::TsLitType(TsLitType {
         span: DUMMY_SP,
         lit: TsLit::Str(Str {
             span: DUMMY_SP,
             value: value.into(),
             raw: None,
         }),
-    }))
+    })
 }
 
-pub fn ts_boolean_literal(value: &Boolean) -> Box<TsType> {
-    Box::new(TsType::TsLitType(TsLitType {
+pub fn ts_boolean_literal(value: &Boolean) -> TsType {
+    TsType::TsLitType(TsLitType {
         span: DUMMY_SP,
         lit: TsLit::Bool(Bool {
             span: DUMMY_SP,
             value: value.0,
         }),
-    }))
+    })
 }
 
-pub fn ts_number_literal(value: f64) -> Box<TsType> {
+pub fn ts_number_literal(value: f64) -> TsType {
     let raw = value.to_string();
-    Box::new(TsType::TsLitType(TsLitType {
+    TsType::TsLitType(TsLitType {
         span: DUMMY_SP,
         lit: TsLit::Number(Number {
             span: DUMMY_SP,
             value,
             raw: Some(raw.into()),
         }),
-    }))
+    })
 }
-pub fn ts_bigint_literal(value: &NumBigInt) -> Box<TsType> {
+pub fn ts_bigint_literal(value: &NumBigInt) -> TsType {
     let raw = value.to_string();
-    Box::new(TsType::TsLitType(TsLitType {
+    TsType::TsLitType(TsLitType {
         span: DUMMY_SP,
         lit: TsLit::BigInt(BigInt {
             span: DUMMY_SP,
             value: Box::new(value.clone()),
             raw: Some(raw.into()),
         }),
-    }))
+    })
 }
 
 /// Create a property key from a string. If the string is a valid TypeScript identifier, it will be an identifier,
@@ -198,8 +209,8 @@ pub fn ts_property_key_from_str(key: &str) -> Box<Expr> {
     }
 }
 
-pub fn ts_property_key_from_type(key: Box<TsType>) -> Box<Expr> {
-    match *key {
+pub fn ts_property_key_from_type(key: TsType) -> Box<Expr> {
+    match key {
         TsType::TsLitType(TsLitType {
             lit: TsLit::Str(value),
             ..
@@ -222,7 +233,7 @@ pub fn ts_property_key_from_type(key: Box<TsType>) -> Box<Expr> {
     }
 }
 
-pub fn ts_object_type(entries: Vec<(Box<TsType>, Box<TsType>)>) -> Box<TsType> {
+pub fn ts_object_type(entries: Vec<(TsType, TsType)>) -> Box<TsType> {
     let members = entries
         .into_iter()
         .map(|(key, value)| {
@@ -232,7 +243,7 @@ pub fn ts_object_type(entries: Vec<(Box<TsType>, Box<TsType>)>) -> Box<TsType> {
                 key: ts_property_key_from_type(key),
                 computed: false,
                 optional: false,
-                type_ann: Some(ts_type_ann(value)),
+                type_ann: Some(Box::new(ts_type_ann(value))),
             })
         })
         .collect::<Vec<_>>();
@@ -240,14 +251,14 @@ pub fn ts_object_type(entries: Vec<(Box<TsType>, Box<TsType>)>) -> Box<TsType> {
     ts_type_literal(members)
 }
 
-pub fn ts_string_property(name: &str, ty: Box<TsType>) -> TsTypeElement {
+pub fn ts_string_property(name: &str, ty: TsType) -> TsTypeElement {
     TsTypeElement::TsPropertySignature(TsPropertySignature {
         span: DUMMY_SP,
         readonly: false,
         key: ts_property_key_from_str(name),
         computed: false,
         optional: false,
-        type_ann: Some(ts_type_ann(ty)),
+        type_ann: Some(Box::new(ts_type_ann(ty))),
     })
 }
 
@@ -260,17 +271,17 @@ pub fn ts_type_literal(members: Vec<TsTypeElement>) -> Box<TsType> {
 
 pub fn ts_function_parameter(
     name: impl Into<String>,
-    ty: Box<TsType>,
+    ty: TsType,
 ) -> TsFnParam {
     TsFnParam::Ident(BindingIdent {
         id: ts_ident(&name.into()),
-        type_ann: Some(ts_type_ann(ty)),
+        type_ann: Some(Box::new(ts_type_ann(ty))),
     })
 }
 
 pub fn ts_rest_parameter(
     name: impl Into<String>,
-    ty: Box<TsType>,
+    ty: TsType,
 ) -> TsFnParam {
     TsFnParam::Rest(RestPat {
         span: DUMMY_SP,
@@ -279,21 +290,19 @@ pub fn ts_rest_parameter(
             id: ts_ident(&name.into()),
             type_ann: None,
         })),
-        type_ann: Some(ts_type_ann(ty)),
+        type_ann: Some(Box::new(ts_type_ann(ty))),
     })
 }
 
 pub fn ts_function_type(
     parameters: Vec<TsFnParam>,
-    return_type: Box<TsType>,
-) -> Box<TsType> {
-    Box::new(
-        TsFnType {
-            span: DUMMY_SP,
-            params: parameters,
-            type_params: None,
-            type_ann: ts_type_ann(return_type),
-        }
-        .into(),
-    )
+    return_type: TsType,
+) -> TsType {
+    TsFnType {
+        span: DUMMY_SP,
+        params: parameters,
+        type_params: None,
+        type_ann: Box::new(ts_type_ann(return_type)),
+    }
+    .into()
 }
