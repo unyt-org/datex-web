@@ -22,10 +22,13 @@ use std::{
     ops::DerefMut,
     rc::Rc,
 };
+use datex_core::core_compiler::instruction_input::InstructionInput;
+use datex_core::instruction::regular_instruction::RegularInstruction;
 use datex_core::runtime::Runtime;
 use datex_core::traits::apply::{get_borrowed_apply_argument_values, ApplyArgument};
 use datex_core::types::type_definition::callable::{CallableKind, CallableTypeDefinition};
 use datex_core::values::core_values::callable::NativeCallable;
+use datex_core::values::core_values::endpoint::Endpoint;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -359,5 +362,29 @@ impl JSDIFInterface {
             .dif_interface
             .borrow()
             .has_address_with_ownership(&pointer_address, ownership))
+    }
+
+    pub async fn create_inspector(&self, endpoint: &str, name: &str) -> Result<JsValue, JsError> {
+
+        let endpoint = Endpoint::try_from(endpoint).map_err(js_error)?;
+
+        let instructions = vec![
+            RegularInstruction::apply(1).into(),
+            RegularInstruction::text(name.to_string()).into(),
+            RegularInstruction::get_entry_text("create".to_string()).into(),
+            RegularInstruction::get_entry_text("inspector".to_string()).into(),
+            RegularInstruction::Endpoint(Endpoint::LOCAL).into(),
+        ];
+        let inspector = self.runtime
+            .execute_instructions_remote(vec![endpoint], instructions)
+            .await
+            .map_err(js_error)?
+            .ok_or(js_error("Failed to create inspector"))?;
+
+        Ok(to_js_dif(
+            &inspector,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
     }
 }

@@ -30,6 +30,7 @@ export class JSDIFInterface {
     apply_sync(callee: any, args: any): any;
     call_method_async(callee: any, method_name: string, args: any): Promise<any>;
     call_method_sync(callee: any, method_name: string, args: any): any;
+    create_inspector(endpoint: string, name: string): Promise<any>;
     create_pointer(value: any): string;
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
     observe_pointer(address: string, observe_options: any, callback: Function): number;

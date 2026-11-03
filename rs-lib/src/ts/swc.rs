@@ -65,6 +65,10 @@ pub fn ts_void() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsVoidKeyword)
 }
 
+pub fn is_ts_void(ty: &TsType) -> bool {
+    matches!(ty, TsType::TsKeywordType(TsKeywordType { kind: TsKeywordTypeKind::TsVoidKeyword, .. }))
+}
+
 pub fn ts_number() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsNumberKeyword)
 }

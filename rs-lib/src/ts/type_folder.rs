@@ -35,7 +35,7 @@ use datex_core::types::entities::entity_type_definition::EntityTypeDefinition;
 use datex_core::types::entity_type::EntityType;
 use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{ClassDecl, ClassMember, Decl, EmptyStmt, Ident, TsEntityName, TsKeywordType, TsType, TsTypeAliasDecl, TsTypeRef};
+use swc_ecma_ast::{Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt, Function, Ident, IdentName, PropName, TsEntityName, TsKeywordType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeRef};
 use crate::ts::{
     TsExport,
     ast::{TsAst, TsDeclaration},
@@ -574,22 +574,51 @@ impl TypeFolder for TsTypeFolder {
         entity_type: &EntityType,
     ) -> Result<Self::Output, Self::Error> {
         let definition = entity_type.entity_definition();
+        let mut members = Vec::new();
 
-        Ok(ts_class_declaration(
-            definition.name(),
-            definition
-                .impls()
-                .iter()
-                .flat_map(|entity_impl| {
-                    entity_impl
-                        .methods()
-                        .iter()
-                        .map(|method| {
-                            ClassMember::Empty(EmptyStmt { span: DUMMY_SP })
-                        })
-                })
-                .collect(),
-        ).into())
+        for entity_impl in definition.impls().iter() {
+            for method in entity_impl.methods().iter() {
+                let ts_return_type = match &method.callable.signature.return_type {
+                    Some(ty) => datex_core::types::visitor::fold_type(self, ty)?.into_ts_type(),
+                    None => ts_void(),
+                };
+                
+                // if void, slip
+                let return_type = if is_ts_void(&ts_return_type) {
+                    None
+                } else {
+                    Some(Box::new(TsTypeAnn {
+                        type_ann: Box::new(ts_return_type),
+                        span: Default::default(),
+                    }))
+                };
+
+                members.push(ClassMember::Method(ClassMethod {
+                    span: Default::default(),
+                    // FIXME: assumes method name always exists (should be the case)
+                    key: PropName::Ident(ts_ident(method.name().unwrap()).into()),
+                    function: Box::new(Function {
+                        params: vec![],
+                        decorators: vec![],
+                        span: Default::default(),
+                        ctxt: Default::default(),
+                        body: None,
+                        is_generator: false,
+                        is_async: true,
+                        type_params: None,
+                        return_type
+                    }),
+                    kind: Default::default(),
+                    is_static: false,
+                    accessibility: Some(Accessibility::Public),
+                    is_abstract: false,
+                    is_optional: false,
+                    is_override: false,
+                }));
+            }
+        }
+
+        Ok(ts_class_declaration(definition.name(), members).into())
     }
 
     fn fold_core_type(

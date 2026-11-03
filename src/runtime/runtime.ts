@@ -19,6 +19,7 @@ import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
 import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
+import type {Inspector} from "../datex-web/types/inspector/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -257,6 +258,20 @@ export class Runtime {
             );
         }
         return result;
+    }
+
+    /**
+     * Creates a new Inspector instance on the specified endpoint.
+     * @param endpoint
+     * @param name
+     */
+    public async createInspector(endpoint: Endpoint|string = Endpoint.get("@@local"), name: string = "Default Inspector"): Promise<Inspector> {
+        if (typeof endpoint === "string") {
+            endpoint = Endpoint.get(endpoint);
+        }
+        const inspector_dif = await this.dif._handle.create_inspector(endpoint.toString(), name);
+        const inspector_ref = this.dif.resolveDIFValueContainer(inspector_dif) as ReferencedSharedContainer<Inspector>;
+        return inspector_ref.value;
     }
 
     /**
