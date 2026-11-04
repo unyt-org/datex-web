@@ -8,5 +8,6 @@
  */
 export declare class Inspector {
     public async name(): string;
+    public async logs(): ReadableStream<string>;
     public async try_reboot_endpoint();
 }

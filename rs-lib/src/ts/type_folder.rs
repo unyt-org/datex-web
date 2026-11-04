@@ -33,6 +33,8 @@ use datex_core::{
 };
 use datex_core::types::entities::entity_type_definition::EntityTypeDefinition;
 use datex_core::types::entity_type::EntityType;
+use datex_core::types::type_definition::collection::type_definition::receiver::ReceiverTypeDefinition;
+use datex_core::types::type_definition::collection::type_definition::sender::SenderTypeDefinition;
 use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt, Function, Ident, IdentName, PropName, TsEntityName, TsKeywordType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeRef};
@@ -657,6 +659,8 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Box => Ok(self.external_type_reference("Box", vec![ts_unknown()])?.into()),
                 CoreLibBaseTypeId::Instant => Ok(ts_date().into()),
                 CoreLibBaseTypeId::EntityTypeDefinition => Ok(self.external_type_reference("__EntityTypeDefinition", vec![])? .into()),
+                CoreLibBaseTypeId::Sender => Ok(self.external_type_reference("WritableStream", vec![ts_unknown()])?.into()),
+                CoreLibBaseTypeId::Receiver => Ok(self.external_type_reference("ReadableStream", vec![ts_unknown()])?.into()),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
@@ -720,6 +724,13 @@ impl TypeFolder for TsTypeFolder {
         value: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(ts_type_reference("Record", vec![key.into_ts_type(), value.into_ts_type()]).into())
+    }
+
+    fn fold_sender(&mut self, source: &SenderTypeDefinition, item: Self::Output) -> Result<Self::Output, Self::Error> {
+        Ok(self.external_type_reference("WritableStream", vec![item.into_ts_type()])?.into())
+    }
+    fn fold_receiver(&mut self, source: &ReceiverTypeDefinition, item: Self::Output) -> Result<Self::Output, Self::Error> {
+        Ok(self.external_type_reference("ReadableStream", vec![item.into_ts_type()])?.into())
     }
 }
 

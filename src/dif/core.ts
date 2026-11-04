@@ -39,6 +39,8 @@ export const CoreLibTypeId = {
     Type: 15,
     Container: 16,
     EntityTypeDefinition: 17,
+    Sender: 18,
+    Receiver: 19,
 } as const;
 
 /**

@@ -749,6 +749,12 @@ export class DIFHandler {
             const typeDef = raw_value as DIFCoreValueEntityTypeDefinition;
             return createClassForEntityType(typeDef, this);
         }
+        else if (type_id === CoreLibTypeId.Receiver) {
+            return new ReadableStream()
+        }
+        else if (type_id === CoreLibTypeId.Sender) {
+            return new WritableStream()
+        }
 
         throw new Error(`Unsupported DIF type: ${type_id}`);
     }
@@ -920,7 +926,9 @@ export class DIFHandler {
             // if value class is registered in cache, this is an entity type - don't add type binding
             const isEntityType = value.constructor && this.getPointerAddressForValue(value.constructor) != null;
 
-            typeBinding = !isEntityType && this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId as CoreLibTypeId); // TS Bug
+            // TOOD: only temp solution
+            const isTypeWithoutProxy = value instanceof ReadableStream || value instanceof WritableStream;
+            typeBinding = !isEntityType && !isTypeWithoutProxy && this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
