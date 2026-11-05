@@ -193,6 +193,15 @@ export class DIFHandler {
 
     readonly #type_registry = new TypeRegistry(this);
 
+    // register finalizer to clean up the cache and free the reference in the runtime
+    // when the object is garbage collected
+    readonly #finalizationRegistry = new FinalizationRegistry(
+        (address: PointerAddress) => {
+            console.debug(`${address} was garbage collected`);
+            this.cleanupSharedValue(address);
+        }
+    );
+
     /**
      * Internal property
      * @returns The map of observers for each pointer address.
@@ -365,6 +374,29 @@ export class DIFHandler {
     }
 
     /**
+     * Removes any cache state of a shared value.
+     * This should only be called if the value of the shared container / the BaseSharedContainer was garbage collected on the JS side,
+     * @param address
+     * @private
+     */
+    private cleanupSharedValue(address: PointerAddress) {
+        const { originalValue, observerId } = this.#cache.get(address) ?? {};
+        // remove from proxy mapping if applicable
+        if (originalValue != null) {
+            this.#proxyMapping.delete(originalValue);
+        }
+        this.#cache.delete(address);
+        // remove local observers
+        this.#observers.delete(address);
+        // if observer is active, unregister it
+        if (observerId !== null) {
+            this.unobserveSharedValueBindDirect(address, observerId);
+        }
+        // trigger cache change observers
+        this.#triggerCacheObservers();
+    }
+
+    /**
      * Enables propagation of own updates for a registered observer.
      * @param address - The address of the DIF value being observed.
      * @param observerId - The observer ID returned by the observePointer method.
@@ -513,7 +545,7 @@ export class DIFHandler {
             ),
         );
         if (result === undefined) return result;
-        return this.resolveDIFValueContainer(result);
+        return this.collapseReferenceSharedContainer(this.resolveDIFValueContainer(result));
     }
 
     /**
@@ -532,7 +564,7 @@ export class DIFHandler {
             ),
         );
         if (result === undefined) return result;
-        return this.resolveDIFValueContainer(result);
+        return this.collapseReferenceSharedContainer(this.resolveDIFValueContainer(result));
     }
 
     /**
@@ -922,7 +954,7 @@ export class DIFHandler {
         let metadata: CustomReferenceMetadata | undefined = undefined;
         const originalValue = value;
         // bind js value (if mutable, nominal type)
-        const coreLibId: CoreLibTypeId = getCoreLibTypeIdForJSValue(value)!; // FIXME, support custom types and other types
+        const coreLibId: CoreLibTypeId = this.getCoreLibTypeIdForJSValue(value);
 
         // only bind the value, if we have a shared container or a core lib type
         const bindJSValue = typeof value === "object" && value !== null &&
@@ -932,10 +964,9 @@ export class DIFHandler {
             // if value class is registered in cache, this is an entity type - don't add type binding
             const isEntityType = value.constructor && this.getPointerAddressForValue(value.constructor) != null;
 
-            // TOOD: only temp solution
-            const isTypeWithoutProxy = value instanceof ReadableStream || value instanceof WritableStream;
-            typeBinding = !isEntityType && !isTypeWithoutProxy &&
+            typeBinding = !isEntityType &&
                 this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
+            console.log("bind", coreLibId, value, typeBinding)
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
@@ -1009,6 +1040,17 @@ export class DIFHandler {
 
         // set up observers
         return wrappedValue;
+    }
+
+    private getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId {
+        // check class constraints in type registry
+        if (typeof value === "object" && value !== null && value.constructor) {
+            const typeBinding = this.type_registry.getCoreLibIdForJSClass(value.constructor);
+            if (typeBinding) {
+                return typeBinding;
+            }
+        }
+        return getCoreLibTypeIdForJSValue(value);
     }
 
     /**
@@ -1127,27 +1169,7 @@ export class DIFHandler {
             );
         }
 
-        // register finalizer to clean up the cache and free the reference in the runtime
-        // when the object is garbage collected
-        const finalizationRegistry = new FinalizationRegistry(
-            (address: PointerAddress) => {
-                const originalValue = this.#cache.get(address)?.originalValue;
-                // remove from proxy mapping if applicable
-                if (originalValue) {
-                    this.#proxyMapping.delete(originalValue);
-                }
-                this.#cache.delete(address);
-                // remove local observers
-                this.#observers.delete(address);
-                // if observer is active, unregister it
-                if (observerId !== null) {
-                    this.unobserveSharedValueBindDirect(address, observerId);
-                }
-                // trigger cache change observers
-                this.#triggerCacheObservers();
-            },
-        );
-        finalizationRegistry.register(baseSharedContainer, address);
+        this.#finalizationRegistry.register(baseSharedContainer, address);
 
         // trigger cache change observers
         this.#triggerCacheObservers();
@@ -1181,7 +1203,16 @@ export class DIFHandler {
         const cached = this.#cache.get(address)!;
         const deref = cached.value.deref() as BaseSharedContainer<T, SharedContainerMutability>;
         if (!deref) {
-            throw new Error(`Cached reference for address ${address} is not dereferenceable`);
+            // try to resolve again from rust side, assuming that the shared value might still exist there and was just
+            // garbage collected on the JS side.
+            this.cleanupSharedValue(address);
+            try {
+                return this.resolvePointerAddress(ownership, address);
+            }
+            catch (e) {
+                console.error(`Failed to resolve pointer address ${address} after cache cleanup:`, e);
+                throw e;
+            }
         }
 
         if (
@@ -1273,6 +1304,19 @@ export class DIFHandler {
             return value._base;
         } else {
             return null;
+        }
+    }
+
+    /**
+     * Collapses a value to its underlying value if it is a {@link ReferencedSharedContainer}, otherwise returns the value as is.
+     * @param value
+     */
+    public collapseReferenceSharedContainer(value: unknown): unknown {
+        if (value instanceof ReferencedSharedContainer) {
+            return value.value // equivalent to SharedRef<T>
+        }
+        else {
+            return value;
         }
     }
 

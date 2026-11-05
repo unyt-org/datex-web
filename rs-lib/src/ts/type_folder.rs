@@ -41,6 +41,8 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
+use datex_core::shared_values::{ReferenceMutability, SharedContainerMutability, SharedContainerOwnership};
+use datex_core::types::type_definition_with_metadata::TypeMetadata;
 use swc_common::DUMMY_SP;
 use swc_ecma_ast::{
     Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt,
@@ -332,7 +334,7 @@ impl TsTypeFolder {
     }
 
     /// Produce a reference to an external type, adding an import if necessary.
-    fn external_type_reference(
+    fn register_external_type_reference(
         &mut self,
         name: &str,
         generics: Vec<TsType>,
@@ -350,6 +352,28 @@ impl TsTypeFolder {
 
         Ok(ts_type_reference(name, generics))
     }
+
+    fn shared_container_mutability_to_ts(&mut self, mutability: &SharedContainerMutability) -> Result<TsType, TsTypeFolderError> {
+
+        self
+            .register_external_type_reference("SharedContainerMutability", vec![])?;
+        
+        Ok(match mutability {
+            SharedContainerMutability::Mutable => ts_property_access_type(ts_ident("SharedContainerMutability"), "Mutable"),
+            SharedContainerMutability::Immutable => ts_property_access_type(ts_ident("SharedContainerMutability"), "Immutable"),
+        })
+    }
+
+    fn shared_reference_mutability_to_ts(&mut self, mutability: &ReferenceMutability) -> Result<TsType, TsTypeFolderError> {
+        self
+            .register_external_type_reference("SharedReferenceMutability", vec![])?;
+        
+        Ok(match mutability {
+            ReferenceMutability::Mutable => ts_property_access_type(ts_ident("SharedReferenceMutability"), "Mutable"),
+            ReferenceMutability::Immutable => ts_property_access_type(ts_ident("SharedReferenceMutability"), "Immutable"),
+        })
+    }
+
 }
 
 #[derive(Debug, Clone)]
@@ -411,6 +435,8 @@ impl From<ClassDecl> for TsTypeOrClassDeclaration {
     }
 }
 
+
+
 impl TypeFolder for TsTypeFolder {
     type Output = TsTypeOrClassDeclaration;
     type Error = TsTypeFolderError;
@@ -453,6 +479,40 @@ impl TypeFolder for TsTypeFolder {
         Ok(ts_type_reference(name, vec![]).into())
     }
 
+    fn fold_type_definition_with_metadata(&mut self, metadata: &TypeMetadata, inner: Self::Output) -> Result<Self::Output, Self::Error> {
+        Ok(match metadata {
+            TypeMetadata::Shared {
+                ownership: SharedContainerOwnership::Owned,
+                mutability,
+            } => {                
+                let generics = vec![inner.into_ts_type(), self.shared_container_mutability_to_ts(mutability)?];
+                self
+                    .register_external_type_reference(
+                        "OwnedSharedContainer",
+                        generics,
+                    )?
+                    .into()
+            },
+            TypeMetadata::Shared {
+                ownership: SharedContainerOwnership::Referenced(reference_mutability),
+                mutability,
+            } => {
+                let generics = vec![
+                    inner.into_ts_type(),
+                    self.shared_reference_mutability_to_ts(reference_mutability)?,
+                    self.shared_container_mutability_to_ts(mutability)?
+                ];
+                self
+                    .register_external_type_reference(
+                        "SharedRef",
+                        generics,
+                    )?
+                    .into()
+            }
+            _ => inner
+        })
+    }
+
     fn fold_literal(
         &mut self,
         literal: &LiteralTypeDefinition,
@@ -490,7 +550,7 @@ impl TypeFolder for TsTypeFolder {
                 ts_boolean_literal(boolean).into()
             }
             LiteralTypeDefinition::Endpoint(endpoint) => self
-                .external_type_reference(
+                .register_external_type_reference(
                     "Endpoint",
                     vec![ts_string_literal(endpoint.to_string())],
                 )?
@@ -667,7 +727,7 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Decimal => Ok(ts_number().into()),
                 CoreLibBaseTypeId::Null => Ok(ts_null().into()),
                 CoreLibBaseTypeId::Endpoint => {
-                    Ok(self.external_type_reference("Endpoint", vec![])?.into())
+                    Ok(self.register_external_type_reference("Endpoint", vec![])?.into())
                 }
                 CoreLibBaseTypeId::Unit => Ok(ts_void().into()),
                 CoreLibBaseTypeId::Never => Ok(ts_never().into()),
@@ -684,29 +744,29 @@ impl TypeFolder for TsTypeFolder {
                 )
                 .into()),
                 CoreLibBaseTypeId::Range => Ok(self
-                    .external_type_reference(
+                    .register_external_type_reference(
                         "Range",
                         vec![ts_unknown(), ts_unknown()],
                     )?
                     .into()),
                 CoreLibBaseTypeId::Type => Ok(self
-                    .external_type_reference("Type", vec![ts_unknown()])?
+                    .register_external_type_reference("Type", vec![ts_unknown()])?
                     .into()),
                 CoreLibBaseTypeId::Box => Ok(self
-                    .external_type_reference("Box", vec![ts_unknown()])?
+                    .register_external_type_reference("Box", vec![ts_unknown()])?
                     .into()),
                 CoreLibBaseTypeId::Instant => Ok(ts_date().into()),
                 CoreLibBaseTypeId::EntityTypeDefinition => Ok(self
-                    .external_type_reference("__EntityTypeDefinition", vec![])?
+                    .register_external_type_reference("__EntityTypeDefinition", vec![])?
                     .into()),
                 CoreLibBaseTypeId::Sender => Ok(self
-                    .external_type_reference(
+                    .register_external_type_reference(
                         "WritableStream",
                         vec![ts_unknown()],
                     )?
                     .into()),
                 CoreLibBaseTypeId::Receiver => Ok(self
-                    .external_type_reference(
+                    .register_external_type_reference(
                         "ReadableStream",
                         vec![ts_unknown()],
                     )?
@@ -728,7 +788,7 @@ impl TypeFolder for TsTypeFolder {
         if let Some(payload) = payload {
             generics.push(payload.into_ts_type());
         }
-        Ok(self.external_type_reference("Tagged", generics)?.into())
+        Ok(self.register_external_type_reference("Tagged", generics)?.into())
     }
 
     fn fold_range(
@@ -738,7 +798,7 @@ impl TypeFolder for TsTypeFolder {
         end: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(self
-            .external_type_reference(
+            .register_external_type_reference(
                 "Range",
                 vec![start.into_ts_type(), end.into_ts_type()],
             )?
@@ -767,7 +827,7 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         let size = source.size;
         Ok(self
-            .external_type_reference(
+            .register_external_type_reference(
                 "ListSlice",
                 vec![item.into_ts_type(), ts_number_literal(size as f64)],
             )?
@@ -793,7 +853,7 @@ impl TypeFolder for TsTypeFolder {
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(self
-            .external_type_reference(
+            .register_external_type_reference(
                 "WritableStream",
                 vec![item.into_ts_type()],
             )?
@@ -805,7 +865,7 @@ impl TypeFolder for TsTypeFolder {
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(self
-            .external_type_reference(
+            .register_external_type_reference(
                 "ReadableStream",
                 vec![item.into_ts_type()],
             )?

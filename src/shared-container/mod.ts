@@ -80,8 +80,9 @@ export type SharedRef<
     Mutability extends SharedContainerMutability = SharedContainerMutability,
     ReferenceMutability extends SharedReferenceMutability = SharedReferenceMutability,
 > = Mutability extends SharedContainerMutability.Immutable
-    ? ReferenceMutability extends SharedReferenceMutability.Mutable ? never
-    : SharedReferenceInner<T, Mutability, ReferenceMutability>
+    ? ReferenceMutability extends SharedReferenceMutability.Mutable ?
+        never
+        : SharedReferenceInner<T, Mutability, ReferenceMutability>
     : SharedReferenceInner<T, Mutability, ReferenceMutability>;
 
 export type MaybeSharedRef<T, Mutability extends SharedContainerMutability> = T extends object

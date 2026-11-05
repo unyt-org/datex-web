@@ -61,6 +61,7 @@ export type TypeBindingDefinition<
 > = {
     coreLibTypeId?: CoreLibTypeId;
     pointerAddress?: PointerAddress;
+    jsClass?: new (...args: unknown[]) => T;
     bind(
         this: TypeBindingContext<M>,
         value: T,
@@ -164,10 +165,18 @@ export class TypeRegistry {
      * @param typePointerAddress The pointer address of the type in the Datex runtime.
      * @returns The corresponding TypeBinding or null if no binding is found for the given pointer address.
      */
-    public getTypeBinding(
+    public getTypeBindingForPointerAddress(
         typePointerAddress: string,
     ): TypeBinding | null {
         return this.#typePointerAddressBindings.get(typePointerAddress) || null;
+    }
+
+    public getCoreLibIdForJSClass(jsClass: new (...args: unknown[]) => object): CoreLibTypeId | null {
+        for (const [coreLibId, binding] of this.#coreLibTypeIdBindings.entries()) {
+            if (binding.matchesJSClass(jsClass)) {
+                return coreLibId;
+            }
+        }
     }
 
     /**
@@ -216,6 +225,14 @@ export class TypeBinding<
             value,
             pointerAddress,
         );
+    }
+
+    /**
+     * Checks if the given JS class matches the JS class defined in this type binding.
+     * @param jsClass
+     */
+    public matchesJSClass(jsClass: new (...args: unknown[]) => object): boolean {
+        return this.#definition.jsClass === jsClass;
     }
 
     /**

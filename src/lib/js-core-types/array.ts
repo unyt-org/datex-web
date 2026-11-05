@@ -15,6 +15,7 @@ type ArrayMethods<V> = {
 
 export const arrayTypeBinding: TypeBindingDefinition<Array<unknown>> = {
     coreLibTypeId: CoreLibTypeId.List,
+    jsClass: Array,
     bind(target, pointerAddress) {
         const metadata: CustomReferenceMetadata = {};
         const arrayMethods = getArrayMethods(

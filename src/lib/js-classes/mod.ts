@@ -34,7 +34,7 @@ export function createClassForEntityType(
 
         index++;
         return `
-            ${staticStr}${asyncStr}[${JSON.stringify(methodName)}](...args) {
+            ${staticStr}${asyncStr}${methodName}(...args) {
                 return ${callStr}(
                     dif.convertJSValueToDIFValueContainer(this),
                     ${nativeName},

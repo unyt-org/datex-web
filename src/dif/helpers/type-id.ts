@@ -6,7 +6,7 @@ import { CoreLibTypeId } from "../mod.ts";
  * @param value The JavaScript value to get the core library type id for.
  * @returns The core library type id corresponding to the JavaScript value.
  */
-export function getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId | null {
+export function getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId {
     if (value === null) {
         return CoreLibTypeId.null;
     } else if (typeof value === "string") {
@@ -27,6 +27,8 @@ export function getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId | null
         return CoreLibTypeId.Map;
     } else if (typeof value === "object") {
         return CoreLibTypeId.Map;
+    } else if (typeof value === "function") {
+        return CoreLibTypeId.Callable;
     }
-    return null;
+    throw new Error(`Unsupported JavaScript value type for DIF conversion: ${typeof value}`);
 }

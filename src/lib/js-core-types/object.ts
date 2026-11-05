@@ -9,6 +9,7 @@ export const objectTypeBinding: TypeBindingDefinition<
     Record<string | symbol, unknown>
 > = {
     coreLibTypeId: CoreLibTypeId.Map,
+    jsClass: Object,
     bind(target, pointerAddress) {
         const metadata: CustomReferenceMetadata = {};
 

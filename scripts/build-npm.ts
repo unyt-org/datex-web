@@ -40,6 +40,10 @@ await build({
     scriptModule: false,
     test: false, // TODO: enable, currently fails, see https://github.com/denoland/dnt/issues/249
 
+    compilerOptions: {
+        target: "ES2023",
+    },
+
     package: {
         // package.json properties
         name: "@unyt/datex",

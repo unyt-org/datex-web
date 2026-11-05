@@ -2,19 +2,12 @@ use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
 
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{
-    BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, Lit,
-    ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName,
-    TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind,
-    TsLit, TsLitType, TsPropertySignature, TsTupleElement, TsTupleType, TsType,
-    TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation,
-    TsTypeRef, TsUnionType,
-};
+use swc_ecma_ast::{BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, IdentName, Lit, ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType, TsPropertySignature, TsQualifiedName, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType};
 
 use crate::ts::utils::sanitize_ts_identifier;
 
 pub fn ts_ident(name: &str) -> Ident {
-    Ident::new_no_ctxt(sanitize_ts_identifier(name).into(), DUMMY_SP)
+    Ident::new_no_ctxt(name.to_string().into(), DUMMY_SP)
 }
 
 pub fn ts_type_ann(ty: TsType) -> TsTypeAnn {
@@ -60,6 +53,18 @@ pub fn ts_class_declaration(
             implements: vec![],
         }),
     }
+}
+
+pub fn ts_property_access_type(value: Ident, key: &str) -> TsType {
+    TsType::TsTypeRef(TsTypeRef {
+        span: Default::default(),
+        type_name: TsEntityName::TsQualifiedName(Box::new(TsQualifiedName {
+            span: Default::default(),
+            left: TsEntityName::Ident(value),
+            right: IdentName::new(key.into(), DUMMY_SP),
+        })),
+        type_params: None,
+    })
 }
 
 pub fn ts_unknown() -> TsType {

@@ -19,6 +19,7 @@ export const mapTypeBinding: TypeBindingDefinition<
     MapMetadata
 > = {
     coreLibTypeId: CoreLibTypeId.Map,
+    jsClass: Map,
     bind(value, pointerAddress) {
         const originalSet = value.set.bind(value) as (key: unknown, value: unknown) => SharedRef<Map<unknown, unknown>>;
         const originalDelete = value.delete.bind(value);

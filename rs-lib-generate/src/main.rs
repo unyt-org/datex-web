@@ -21,7 +21,7 @@ fn main() {
     fs::create_dir_all(&output_dir).unwrap();
 
     let mut folder = TsTypeFolder::new()
-        .with_known_types("../../lib/mod.ts", ["Endpoint", "Tagged", "Type"]);
+        .with_known_types("../../lib/mod.ts", ["Endpoint", "Tagged", "Type", "SharedRef", "OwnedSharedContainer", "ReferencedSharedContainer", "SharedContainerMutability", "SharedReferenceMutability"]);
     let memory = &mut SharedReferencesCache::default();
     let resolved = resolve_registry_types(memory, &mut folder);
     if resolved.is_err() {
