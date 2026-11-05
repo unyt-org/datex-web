@@ -79,10 +79,8 @@ impl TsAst {
             return false;
         }
         file.declaration_order.push(name.clone());
-        file.declarations.insert(name, TsDeclaration {
-            declaration,
-            docs,
-        });
+        file.declarations
+            .insert(name, TsDeclaration { declaration, docs });
         true
     }
 }

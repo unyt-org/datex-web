@@ -34,8 +34,7 @@ use datex_core::{
     },
 };
 use serde_wasm_bindgen::from_value;
-use std::{cell::RefCell, fmt::Display, rc::Rc};
-use std::ops::DerefMut;
+use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -319,7 +318,7 @@ impl JSRuntime {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
             self.dif_interface.cache().deref(),
-            self.runtime.shared_references_cache_refcell()
+            self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
 
@@ -394,7 +393,11 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_js_dif::<ValueContainer>(value, &mut self.dif_interface.cache(), self.runtime.shared_references_cache_refcell())
+        from_js_dif::<ValueContainer>(
+            value,
+            &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        )
     }
 
     /// Get a handle to the DIF interface of the runtime

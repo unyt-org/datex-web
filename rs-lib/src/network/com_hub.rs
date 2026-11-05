@@ -21,7 +21,13 @@ use datex_core::{
             socket::ComInterfaceSocketUUID,
         },
     },
-    runtime::{Runtime, cache::shared_values_cache::SharedValuesCache},
+    runtime::{
+        Runtime,
+        cache::{
+            shared_references_cache::SharedReferencesCache,
+            shared_values_cache::SharedValuesCache,
+        },
+    },
     utils::uuid::UUID,
     values::{
         core_values::endpoint::Endpoint, value::Value,
@@ -32,12 +38,14 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::runtime::cache::shared_references_cache::SharedReferencesCache;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
-use crate::js_utils::{from_js_dif, deserializable_from_js_value, to_js_dif_value_container, to_js_dif, from_js_dif_value_container};
+use crate::js_utils::{
+    deserializable_from_js_value, from_js_dif, from_js_dif_value_container,
+    to_js_dif, to_js_dif_value_container,
+};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -266,8 +274,11 @@ impl JSComHub {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
 
-        let properties: ComInterfaceProperties =
-            from_js_dif_value_container(properties, values_cache, references_cache)?;
+        let properties: ComInterfaceProperties = from_js_dif_value_container(
+            properties,
+            values_cache,
+            references_cache,
+        )?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -310,12 +321,13 @@ impl JSComHub {
         }
 
         let properties: SocketPropertiesPartial =
-            from_js_dif_value_container(properties, values_cache, ref_cache).map_err(|e| {
-                serde_wasm_bindgen::Error::new(&format!(
-                    "Error parsing socket properties: {:?}",
-                    e
-                ))
-            })?;
+            from_js_dif_value_container(properties, values_cache, ref_cache)
+                .map_err(|e| {
+                    serde_wasm_bindgen::Error::new(&format!(
+                        "Error parsing socket properties: {:?}",
+                        e
+                    ))
+                })?;
 
         // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
         let properties = SocketProperties::new_with_maybe_direct_endpoint(
@@ -380,11 +392,7 @@ impl JSComHub {
 
         let setup_data = match setup_data {
             ValueContainer::Local(value) => value,
-            _ => {
-                return Err(JsError::new(
-                    "Setup data must be a local value",
-                ))
-            }
+            _ => return Err(JsError::new("Setup data must be a local value")),
         };
 
         let interface = self
@@ -429,7 +437,11 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        to_js_dif_value_container(metadata, &self.dif_interface.borrow_mut().cache, self.runtime.shared_references_cache_refcell())
+        to_js_dif_value_container(
+            metadata,
+            &self.dif_interface.borrow_mut().cache,
+            self.runtime.shared_references_cache_refcell(),
+        )
     }
 
     pub async fn get_trace_string(

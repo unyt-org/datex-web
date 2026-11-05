@@ -5,11 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::ts::{
+    TsExport,
+    ast::{TsAst, TsDeclaration},
+    swc::*,
+    utils::{rebase_known_type_source, relative_module_specifier},
+};
 use datex_core::{
     libs::core::type_id::{
         CoreLibBaseTypeId, CoreLibTypeId, CoreLibVariantTypeId,
     },
     types::{
+        entities::entity_type_definition::EntityTypeDefinition,
+        entity_type::EntityType,
         literal_type_definition::LiteralTypeDefinition,
         shared_container_containing_type::SharedContainerContainingType,
         r#type::Type,
@@ -19,7 +27,9 @@ use datex_core::{
                 list::ListCollectionTypeDefinition,
                 list_slice::ListSliceCollectionTypeDefinition,
                 map::MapCollectionTypeDefinition,
+                receiver::ReceiverTypeDefinition, sender::SenderTypeDefinition,
             },
+            impl_type::ImplMarkers,
             intersection::IntersectionTypeDefinition,
             list::ListTypeDefinition,
             map::MapTypeDefinition,
@@ -31,18 +41,11 @@ use datex_core::{
     },
     values::core_values::integer::typed_integer::TypedInteger,
 };
-use datex_core::types::entities::entity_type_definition::EntityTypeDefinition;
-use datex_core::types::entity_type::EntityType;
-use datex_core::types::type_definition::collection::type_definition::receiver::ReceiverTypeDefinition;
-use datex_core::types::type_definition::collection::type_definition::sender::SenderTypeDefinition;
-use datex_core::types::type_definition::impl_type::ImplMarkers;
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt, Function, Ident, IdentName, PropName, TsEntityName, TsKeywordType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeRef};
-use crate::ts::{
-    TsExport,
-    ast::{TsAst, TsDeclaration},
-    swc::*,
-    utils::{rebase_known_type_source, relative_module_specifier},
+use swc_ecma_ast::{
+    Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt,
+    Function, Ident, IdentName, PropName, TsEntityName, TsKeywordType, TsType,
+    TsTypeAliasDecl, TsTypeAnn, TsTypeRef,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -349,7 +352,6 @@ impl TsTypeFolder {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub enum TsTypeOrClassDeclaration {
     TsType(Box<TsType>),
@@ -392,7 +394,6 @@ impl TsTypeOrClassDeclaration {
         }
     }
 }
-
 
 impl From<Box<TsType>> for TsTypeOrClassDeclaration {
     fn from(ty: Box<TsType>) -> Self {
@@ -473,7 +474,9 @@ impl TypeFolder for TsTypeFolder {
                 | TypedInteger::U16(_)
                 | TypedInteger::U32(_)
                 | TypedInteger::U64(_)
-                | TypedInteger::U128(_) => ts_number_literal(integer.as_f64()).into(),
+                | TypedInteger::U128(_) => {
+                    ts_number_literal(integer.as_f64()).into()
+                }
                 TypedInteger::IBig(big) => ts_bigint_literal(&big.0).into(),
             },
 
@@ -490,7 +493,8 @@ impl TypeFolder for TsTypeFolder {
                 .external_type_reference(
                     "Endpoint",
                     vec![ts_string_literal(endpoint.to_string())],
-                )?.into(),
+                )?
+                .into(),
         })
     }
 
@@ -499,7 +503,12 @@ impl TypeFolder for TsTypeFolder {
         _source: &ListTypeDefinition,
         elements: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_array(ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(elements))).into())
+        Ok(
+            ts_array(ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(
+                elements,
+            )))
+            .into(),
+        )
     }
 
     fn fold_map(
@@ -507,7 +516,13 @@ impl TypeFolder for TsTypeFolder {
         _source: &MapTypeDefinition,
         entries: Vec<(Self::Output, Self::Output)>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_object_type(entries.into_iter().map(|(k, v)| (k.into_ts_type(), v.into_ts_type())).collect()).into())
+        Ok(ts_object_type(
+            entries
+                .into_iter()
+                .map(|(k, v)| (k.into_ts_type(), v.into_ts_type()))
+                .collect(),
+        )
+        .into())
     }
 
     fn fold_nested(
@@ -523,7 +538,10 @@ impl TypeFolder for TsTypeFolder {
         _source: &UnionTypeDefinition,
         members: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(members)).into())
+        Ok(
+            ts_union(TsTypeOrClassDeclaration::vec_into_ts_type(members))
+                .into(),
+        )
     }
 
     fn fold_intersection(
@@ -531,7 +549,12 @@ impl TypeFolder for TsTypeFolder {
         _source: &IntersectionTypeDefinition,
         members: Vec<Self::Output>,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_intersection(TsTypeOrClassDeclaration::vec_into_ts_type(members)).into())
+        Ok(
+            ts_intersection(TsTypeOrClassDeclaration::vec_into_ts_type(
+                members,
+            ))
+            .into(),
+        )
     }
 
     fn fold_callable(
@@ -560,8 +583,11 @@ impl TypeFolder for TsTypeFolder {
         }
         Ok(ts_function_type(
             parameters,
-            return_type.unwrap_or_else(|| ts_void().into()).into_ts_type(),
-        ).into())
+            return_type
+                .unwrap_or_else(|| ts_void().into())
+                .into_ts_type(),
+        )
+        .into())
     }
 
     fn fold_shared_reference(
@@ -580,11 +606,15 @@ impl TypeFolder for TsTypeFolder {
 
         for entity_impl in definition.impls().iter() {
             for method in entity_impl.methods().iter() {
-                let ts_return_type = match &method.callable.signature.return_type {
-                    Some(ty) => datex_core::types::visitor::fold_type(self, ty)?.into_ts_type(),
-                    None => ts_void(),
-                };
-                
+                let ts_return_type =
+                    match &method.callable.signature.return_type {
+                        Some(ty) => {
+                            datex_core::types::visitor::fold_type(self, ty)?
+                                .into_ts_type()
+                        }
+                        None => ts_void(),
+                    };
+
                 // if void, slip
                 let return_type = if is_ts_void(&ts_return_type) {
                     None
@@ -598,7 +628,9 @@ impl TypeFolder for TsTypeFolder {
                 members.push(ClassMember::Method(ClassMethod {
                     span: Default::default(),
                     // FIXME: assumes method name always exists (should be the case)
-                    key: PropName::Ident(ts_ident(method.name().unwrap()).into()),
+                    key: PropName::Ident(
+                        ts_ident(method.name().unwrap()).into(),
+                    ),
                     function: Box::new(Function {
                         params: vec![],
                         decorators: vec![],
@@ -608,7 +640,7 @@ impl TypeFolder for TsTypeFolder {
                         is_generator: false,
                         is_async: true,
                         type_params: None,
-                        return_type
+                        return_type,
                     }),
                     kind: Default::default(),
                     is_static: false,
@@ -644,23 +676,41 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Map => Ok(ts_type_reference(
                     "Map",
                     vec![ts_unknown(), ts_unknown()],
-                ).into()),
+                )
+                .into()),
                 CoreLibBaseTypeId::Callable => Ok(ts_function_type(
                     vec![ts_rest_parameter("args", ts_array(ts_unknown()))],
                     ts_unknown(),
-                ).into()),
-                CoreLibBaseTypeId::Range => Ok(self.external_type_reference(
-                    "Range",
-                    vec![ts_unknown(), ts_unknown()],
-                )?.into()),
-                CoreLibBaseTypeId::Type => {
-                    Ok(self.external_type_reference("Type", vec![ts_unknown()])?.into())
-                }
-                CoreLibBaseTypeId::Box => Ok(self.external_type_reference("Box", vec![ts_unknown()])?.into()),
+                )
+                .into()),
+                CoreLibBaseTypeId::Range => Ok(self
+                    .external_type_reference(
+                        "Range",
+                        vec![ts_unknown(), ts_unknown()],
+                    )?
+                    .into()),
+                CoreLibBaseTypeId::Type => Ok(self
+                    .external_type_reference("Type", vec![ts_unknown()])?
+                    .into()),
+                CoreLibBaseTypeId::Box => Ok(self
+                    .external_type_reference("Box", vec![ts_unknown()])?
+                    .into()),
                 CoreLibBaseTypeId::Instant => Ok(ts_date().into()),
-                CoreLibBaseTypeId::EntityTypeDefinition => Ok(self.external_type_reference("__EntityTypeDefinition", vec![])? .into()),
-                CoreLibBaseTypeId::Sender => Ok(self.external_type_reference("WritableStream", vec![ts_unknown()])?.into()),
-                CoreLibBaseTypeId::Receiver => Ok(self.external_type_reference("ReadableStream", vec![ts_unknown()])?.into()),
+                CoreLibBaseTypeId::EntityTypeDefinition => Ok(self
+                    .external_type_reference("__EntityTypeDefinition", vec![])?
+                    .into()),
+                CoreLibBaseTypeId::Sender => Ok(self
+                    .external_type_reference(
+                        "WritableStream",
+                        vec![ts_unknown()],
+                    )?
+                    .into()),
+                CoreLibBaseTypeId::Receiver => Ok(self
+                    .external_type_reference(
+                        "ReadableStream",
+                        vec![ts_unknown()],
+                    )?
+                    .into()),
             },
             CoreLibTypeId::Variant(variant) => match variant {
                 CoreLibVariantTypeId::Decimal(_)
@@ -687,7 +737,12 @@ impl TypeFolder for TsTypeFolder {
         start: Self::Output,
         end: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(self.external_type_reference("Range", vec![start.into_ts_type(), end.into_ts_type()])?.into())
+        Ok(self
+            .external_type_reference(
+                "Range",
+                vec![start.into_ts_type(), end.into_ts_type()],
+            )?
+            .into())
     }
 
     fn fold_impl_markers(
@@ -711,10 +766,12 @@ impl TypeFolder for TsTypeFolder {
         item: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         let size = source.size;
-        Ok(self.external_type_reference(
-            "ListSlice",
-            vec![item.into_ts_type(), ts_number_literal(size as f64)],
-        )?.into())
+        Ok(self
+            .external_type_reference(
+                "ListSlice",
+                vec![item.into_ts_type(), ts_number_literal(size as f64)],
+            )?
+            .into())
     }
 
     fn fold_map_collection(
@@ -723,14 +780,36 @@ impl TypeFolder for TsTypeFolder {
         key: Self::Output,
         value: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
-        Ok(ts_type_reference("Record", vec![key.into_ts_type(), value.into_ts_type()]).into())
+        Ok(ts_type_reference(
+            "Record",
+            vec![key.into_ts_type(), value.into_ts_type()],
+        )
+        .into())
     }
 
-    fn fold_sender(&mut self, source: &SenderTypeDefinition, item: Self::Output) -> Result<Self::Output, Self::Error> {
-        Ok(self.external_type_reference("WritableStream", vec![item.into_ts_type()])?.into())
+    fn fold_sender(
+        &mut self,
+        source: &SenderTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(self
+            .external_type_reference(
+                "WritableStream",
+                vec![item.into_ts_type()],
+            )?
+            .into())
     }
-    fn fold_receiver(&mut self, source: &ReceiverTypeDefinition, item: Self::Output) -> Result<Self::Output, Self::Error> {
-        Ok(self.external_type_reference("ReadableStream", vec![item.into_ts_type()])?.into())
+    fn fold_receiver(
+        &mut self,
+        source: &ReceiverTypeDefinition,
+        item: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
+        Ok(self
+            .external_type_reference(
+                "ReadableStream",
+                vec![item.into_ts_type()],
+            )?
+            .into())
     }
 }
 
@@ -740,9 +819,8 @@ mod tests {
     use datex_core::{
         macros::Datex,
         runtime::cache::shared_references_cache::SharedReferencesCache,
-        types::r#type::Type,
+        traits::get_datex_type::GetDatexType, types::r#type::Type,
     };
-    use datex_core::traits::get_datex_type::GetDatexType;
     use dedent::dedent;
     use indexmap::IndexMap;
 

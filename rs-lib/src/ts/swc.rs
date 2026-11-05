@@ -2,7 +2,14 @@ use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
 
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, Lit, ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType, TsPropertySignature, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType};
+use swc_ecma_ast::{
+    BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, Lit,
+    ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName,
+    TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind,
+    TsLit, TsLitType, TsPropertySignature, TsTupleElement, TsTupleType, TsType,
+    TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation,
+    TsTypeRef, TsUnionType,
+};
 
 use crate::ts::utils::sanitize_ts_identifier;
 
@@ -34,7 +41,10 @@ pub fn ts_type_alias(name: &str, definition: TsType) -> ModuleItem {
     .into()
 }
 
-pub fn ts_class_declaration(name: &str, members: Vec<ClassMember>) -> ClassDecl {
+pub fn ts_class_declaration(
+    name: &str,
+    members: Vec<ClassMember>,
+) -> ClassDecl {
     ClassDecl {
         declare: true,
         ident: ts_ident(name),
@@ -52,7 +62,6 @@ pub fn ts_class_declaration(name: &str, members: Vec<ClassMember>) -> ClassDecl 
     }
 }
 
-
 pub fn ts_unknown() -> TsType {
     ts_keyword(TsKeywordTypeKind::TsUnknownKeyword)
 }
@@ -66,7 +75,13 @@ pub fn ts_void() -> TsType {
 }
 
 pub fn is_ts_void(ty: &TsType) -> bool {
-    matches!(ty, TsType::TsKeywordType(TsKeywordType { kind: TsKeywordTypeKind::TsVoidKeyword, .. }))
+    matches!(
+        ty,
+        TsType::TsKeywordType(TsKeywordType {
+            kind: TsKeywordTypeKind::TsVoidKeyword,
+            ..
+        })
+    )
 }
 
 pub fn ts_number() -> TsType {
@@ -115,12 +130,11 @@ pub fn ts_union(types: Vec<TsType>) -> TsType {
     match types.as_slice() {
         [] => ts_never(),
         [only] => only.clone(),
-        _ =>
-            TsUnionType {
-                span: DUMMY_SP,
-                types: types.into_iter().map(Box::new).collect(),
-            }
-            .into()
+        _ => TsUnionType {
+            span: DUMMY_SP,
+            types: types.into_iter().map(Box::new).collect(),
+        }
+        .into(),
     }
 }
 
@@ -128,19 +142,15 @@ pub fn ts_intersection(types: Vec<TsType>) -> TsType {
     match types.as_slice() {
         [] => ts_unknown(),
         [only] => only.clone(),
-        _ =>
-            TsIntersectionType {
-                span: DUMMY_SP,
-                types: types.into_iter().map(Box::new).collect(),
-            }
-            .into(),
+        _ => TsIntersectionType {
+            span: DUMMY_SP,
+            types: types.into_iter().map(Box::new).collect(),
+        }
+        .into(),
     }
 }
 
-pub fn ts_type_reference(
-    name: &str,
-    parameters: Vec<TsType>,
-) -> TsType {
+pub fn ts_type_reference(name: &str, parameters: Vec<TsType>) -> TsType {
     let type_params = if parameters.is_empty() {
         None
     } else {
@@ -273,20 +283,14 @@ pub fn ts_type_literal(members: Vec<TsTypeElement>) -> Box<TsType> {
     }))
 }
 
-pub fn ts_function_parameter(
-    name: impl Into<String>,
-    ty: TsType,
-) -> TsFnParam {
+pub fn ts_function_parameter(name: impl Into<String>, ty: TsType) -> TsFnParam {
     TsFnParam::Ident(BindingIdent {
         id: ts_ident(&name.into()),
         type_ann: Some(Box::new(ts_type_ann(ty))),
     })
 }
 
-pub fn ts_rest_parameter(
-    name: impl Into<String>,
-    ty: TsType,
-) -> TsFnParam {
+pub fn ts_rest_parameter(name: impl Into<String>, ty: TsType) -> TsFnParam {
     TsFnParam::Rest(RestPat {
         span: DUMMY_SP,
         dot3_token: DUMMY_SP,

@@ -1,9 +1,9 @@
 /**
  * Helper methods for creating update data dif structures.
  */
-import type {DIFValueContainer} from "./types/mod.ts";
+import type { DIFValueContainer } from "./types/mod.ts";
 import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
-import {CoreLibTypeId} from "./core.ts";
+import { CoreLibTypeId } from "./core.ts";
 
 /**
  * The kinds of properties that can be used in a DIF update.
@@ -110,7 +110,7 @@ export function deleteArrayEntry(
     return deleteEntry([CoreLibTypeId.integer_u32, index], path);
 }
 
-    /**
+/**
  * Creates a DIFUpdateData structure representing a list splice operation.
  * @param start The starting index of the splice operation.
  * @param deleteCount The number of elements to delete.

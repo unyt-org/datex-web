@@ -2,7 +2,7 @@ export type Span = { start: number; end: number };
 export type SpannedInstruction<T> = { instruction: T; span: Span };
 export type Instruction = string | [string, string];
 export type TreeInstruction = SpannedInstruction<Instruction | [string, string, InstructionTree]>;
-export type FlatInstruction = SpannedInstruction<Instruction | [string, string, Instruction[]]>
+export type FlatInstruction = SpannedInstruction<Instruction | [string, string, Instruction[]]>;
 
 export type InstructionTree = { instruction: TreeInstruction; children?: InstructionTree[] };
 

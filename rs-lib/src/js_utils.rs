@@ -156,14 +156,19 @@ pub fn from_js_dif_value_container<
 ) -> Result<T, JsError> {
     // FIXME: (optimization) - for structural types, we should be able to transparently deserialize/serialize directly to T, only for entity types we need to go through ValueContainer.
     // So we can decide based on the classification of T if we want to go through ValueContainer or not
-    let value_container: ValueContainer = from_js_dif(value, value_cache, references_cache)?;
+    let value_container: ValueContainer =
+        from_js_dif(value, value_cache, references_cache)?;
     T::try_convert_from_value_container(value_container).map_err(|e| {
         js_error("Failed to convert ValueContainer to target type")
     })
 }
 
 /// Convert a DIF-serializable Rust value (e.g. [Value], [ValueContainer]) to a JsValue, using the DIF cache for resolving shared containers
-pub fn to_js_dif<T>(value: &T, value_cache: &RefCell<SharedValuesCache>, references_cache: &RefCell<SharedReferencesCache>) -> JsValue
+pub fn to_js_dif<T>(
+    value: &T,
+    value_cache: &RefCell<SharedValuesCache>,
+    references_cache: &RefCell<SharedReferencesCache>,
+) -> JsValue
 where
     T: SerializeWithSerdeContext,
 {

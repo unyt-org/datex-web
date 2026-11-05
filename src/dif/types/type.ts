@@ -153,10 +153,10 @@ export const DIFCallableKind = {
 export type DIFCallableKind = typeof DIFCallableKind[keyof typeof DIFCallableKind];
 
 export type DIFCallableTypeDefinition = {
-    kind: DIFCallableKind,
-    requires_async: boolean,
-    parameters: [string|null, DIFType][],
-    rest_parameter: [string|null, DIFType]|null,
-    return_type: DIFType|null,
-    yeet_type: DIFType|null,
-}
+    kind: DIFCallableKind;
+    requires_async: boolean;
+    parameters: [string | null, DIFType][];
+    rest_parameter: [string | null, DIFType] | null;
+    return_type: DIFType | null;
+    yeet_type: DIFType | null;
+};

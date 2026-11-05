@@ -66,7 +66,7 @@ Deno.test("connect two runtimes", async () => {
     assert(serverInterfaceMetadata !== undefined);
     const serverSocketMetadata = serverInterfaceMetadata.sockets.find((v) => v.endpoint === Endpoint.get("@test_b"));
     assert(serverSocketMetadata !== undefined);
-    console.log("DIR", serverSocketMetadata.direction.tag)
+    console.log("DIR", serverSocketMetadata.direction.tag);
     assertEquals(serverSocketMetadata.direction, tagged("InOut"));
     assertEquals(serverSocketMetadata.properties!.is_direct, true);
     assertEquals(serverSocketMetadata.properties!.distance, 1);

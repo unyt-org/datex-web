@@ -8,14 +8,15 @@ import { SharedContainerMutability } from "../shared-container/mod.ts";
 import { CoreLibTypeId } from "./core.ts";
 import type {
     DIFBaseSharedValueContainer,
-    DIFCoreValue, DIFRawValue,
+    DIFCoreValue,
+    DIFRawValue,
     DIFTypeDefinition,
     DIFTypeDefinitionMap,
     DIFTypeKey,
     DIFValueContainer,
 } from "./types/mod.ts";
 import type { PointerAddress } from "../shared-container/mod.ts";
-import {isSharedValueContainer} from "./helpers/values.ts";
+import { isSharedValueContainer } from "./helpers/values.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
@@ -97,7 +98,7 @@ export function difCoreValueToDisplayString(
                 return `[${difValueContainerToDisplayString(rawValue[0] as DIFValueContainer)}, ${
                     difValueContainerToDisplayString(rawValue[1] as DIFValueContainer)
                 }]`;
-            } else if (rawValue && typeof rawValue === "object" && 'start' in rawValue && 'end' in rawValue) {
+            } else if (rawValue && typeof rawValue === "object" && "start" in rawValue && "end" in rawValue) {
                 return `{ start: ${difValueContainerToDisplayString(rawValue.start)}, end: ${
                     difValueContainerToDisplayString(rawValue.end)
                 } }`;

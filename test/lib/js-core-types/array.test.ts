@@ -13,7 +13,7 @@ import {
     listSplice,
     replace,
     setArrayEntry,
-    setEntry
+    setEntry,
 } from "datex/dif/update.ts";
 
 let runtime: Runtime;

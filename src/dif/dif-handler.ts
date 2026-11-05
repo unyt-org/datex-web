@@ -11,7 +11,8 @@ import {
     DIFCallableTypeDefinition,
     DIFClassification,
     type DIFCoreValue,
-    DIFCoreValueCallable, DIFCoreValueEntityTypeDefinition,
+    DIFCoreValueCallable,
+    DIFCoreValueEntityTypeDefinition,
     type DIFOptionalValueContainer,
     DIFSharedValue,
     DIFTaggedValue,
@@ -44,7 +45,7 @@ import {
 } from "../shared-container/mod.ts";
 import { DIFSharedContainerOwnership } from "./types/type.ts";
 import type { DIFUpdateReturn } from "./types/update.ts";
-import {appendEntry, clear, deleteEntry, listSplice, replace, setArrayEntry, setEntry} from "./update.ts";
+import { appendEntry, clear, deleteEntry, listSplice, replace, setArrayEntry, setEntry } from "./update.ts";
 import { JsLibTypeAddress } from "./js-lib.ts";
 import { registerCoreTypeBindings } from "../lib/mod.ts";
 import { OwnedSharedContainer } from "../shared-container/owned.ts";
@@ -60,7 +61,7 @@ import {
     isSharedValueContainer,
     tryGetClassification,
 } from "./helpers/values.ts";
-import {createClassForEntityType} from "../lib/js-classes/mod.ts";
+import { createClassForEntityType } from "../lib/js-classes/mod.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -137,8 +138,9 @@ export type CacheData = {
 const DATEX_CALLABLE_HASH: unique symbol = Symbol("DATEX_CALLABLE_HASH");
 const DATEX_CALLABLE: unique symbol = Symbol("CALLABLE");
 
-export type Callable = (...args: unknown[]) => unknown & {ctx: {[typeof DATEX_CALLABLE]:  (...args: unknown[]) => unknown}};
-
+export type Callable = (
+    ...args: unknown[]
+) => unknown & { ctx: { [typeof DATEX_CALLABLE]: (...args: unknown[]) => unknown } };
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -726,7 +728,9 @@ export class DIFHandler {
             const callableBuilder = new Function(
                 "ctx",
                 "DATEX_CALLABLE",
-                `return ${requiresAsync ? "async " : ""}function ${name || ""}(...args) {return ctx[DATEX_CALLABLE](args)}`,
+                `return ${requiresAsync ? "async " : ""}function ${
+                    name || ""
+                }(...args) {return ctx[DATEX_CALLABLE](args)}`,
             );
             let callable = callableBuilder(ctx, DATEX_CALLABLE);
             callable[DATEX_CALLABLE_HASH] = hash;
@@ -734,9 +738,9 @@ export class DIFHandler {
             const difCallee = [CoreLibTypeId.Callable, [hash, null]];
 
             Object.defineProperty(ctx, DATEX_CALLABLE, {
-                value: requiresAsync ?
-                    (args) => this.callCallableAsync(difCallee, args) :
-                    (args) => this.callCallableSync(difCallee, args),
+                value: requiresAsync
+                    ? (args) => this.callCallableAsync(difCallee, args)
+                    : (args) => this.callCallableSync(difCallee, args),
                 configurable: false,
                 enumerable: false,
                 writable: true,
@@ -744,16 +748,13 @@ export class DIFHandler {
             Object.seal(ctx);
             callable.ctx = ctx;
             return callable;
-        }
-        else if (type_id === CoreLibTypeId.EntityTypeDefinition) {
+        } else if (type_id === CoreLibTypeId.EntityTypeDefinition) {
             const typeDef = raw_value as DIFCoreValueEntityTypeDefinition;
             return createClassForEntityType(typeDef, this);
-        }
-        else if (type_id === CoreLibTypeId.Receiver) {
-            return new ReadableStream()
-        }
-        else if (type_id === CoreLibTypeId.Sender) {
-            return new WritableStream()
+        } else if (type_id === CoreLibTypeId.Receiver) {
+            return new ReadableStream();
+        } else if (type_id === CoreLibTypeId.Sender) {
+            return new WritableStream();
         }
 
         throw new Error(`Unsupported DIF type: ${type_id}`);
@@ -818,7 +819,10 @@ export class DIFHandler {
             );
 
             // if immutable function value inside, replace inner Callable with call via shared container
-            if (mutability === SharedContainerMutability.Immutable && typeof value === "function" && !this.isClass(value)) {
+            if (
+                mutability === SharedContainerMutability.Immutable && typeof value === "function" &&
+                !this.isClass(value)
+            ) {
                 assert(this.isDatexCallable(value), "Expected a Datex callable function");
                 this.bindSharedContainerCallable(value, address);
             }
@@ -838,7 +842,7 @@ export class DIFHandler {
     }
 
     private isClass(fn: unknown): boolean {
-        return typeof fn === 'function' &&
+        return typeof fn === "function" &&
             /^class\s/.test(Function.prototype.toString.call(fn));
     }
 
@@ -848,10 +852,12 @@ export class DIFHandler {
 
     private bindSharedContainerCallable(callable: Callable, address: PointerAddress) {
         const requiresAsync = callable.constructor.name === "AsyncFunction";
-        const difCallee: DIFSharedValue = { _: combinePointerAddressWithOwnership(address, DIFSharedContainerOwnership.ImmutableRef) };
-        callable.ctx[DATEX_CALLABLE] = requiresAsync ?
-            (args) => this.callCallableAsync(difCallee, args) :
-            (args) => this.callCallableSync(difCallee, args);
+        const difCallee: DIFSharedValue = {
+            _: combinePointerAddressWithOwnership(address, DIFSharedContainerOwnership.ImmutableRef),
+        };
+        callable.ctx[DATEX_CALLABLE] = requiresAsync
+            ? (args) => this.callCallableAsync(difCallee, args)
+            : (args) => this.callCallableSync(difCallee, args);
     }
 
     /**
@@ -928,7 +934,8 @@ export class DIFHandler {
 
             // TOOD: only temp solution
             const isTypeWithoutProxy = value instanceof ReadableStream || value instanceof WritableStream;
-            typeBinding = !isEntityType && !isTypeWithoutProxy && this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
+            typeBinding = !isEntityType && !isTypeWithoutProxy &&
+                this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding

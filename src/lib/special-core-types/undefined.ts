@@ -1,9 +1,9 @@
 import { JsLibTypeAddress } from "../../dif/js-lib.ts";
 import type { DIFValue } from "../../dif/types/mod.ts";
-import {hasImplClassification} from "../../dif/helpers/values.ts";
+import { hasImplClassification } from "../../dif/helpers/values.ts";
 
 export const JS_UNDEFINED: DIFValue = {
-    _: 'c',
+    _: "c",
     c: [null, [JsLibTypeAddress.undefined]],
     v: null,
 };

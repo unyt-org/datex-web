@@ -3,9 +3,9 @@ use std::{collections::BTreeMap, path::PathBuf};
 pub use crate::ts::type_folder::TsTypeFolder;
 use crate::ts::{ast::TsAst, type_folder::TsTypeFolderError};
 pub use datex_core::{
+    datex_registry::all_datex_type_registrations,
     runtime::cache::shared_references_cache::SharedReferencesCache,
     types::r#type::Type,
-    datex_registry::all_datex_type_registrations
 };
 
 mod ast;
@@ -56,10 +56,10 @@ mod tests {
     use datex_core::{
         macros::Datex,
         runtime::cache::shared_references_cache::SharedReferencesCache,
+        traits::get_datex_type::GetDatexType,
         values::core_values::endpoint::Endpoint,
     };
     use std::collections::{BTreeMap, BTreeSet};
-    use datex_core::traits::get_datex_type::GetDatexType;
 
     fn names(values: &[&str]) -> BTreeSet<String> {
         values.iter().map(|value| (*value).to_string()).collect()

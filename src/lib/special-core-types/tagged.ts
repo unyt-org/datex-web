@@ -46,7 +46,6 @@ export function tagged<Tag extends string>(
     return new Tagged(tag, value) as Tagged<Tag, never>;
 }
 
-
 /**
  * enum ExampleEnum {
  *     Variant1(number),
@@ -55,15 +54,14 @@ export function tagged<Tag extends string>(
  * }
  */
 
+type Variant1 = "Variant1" & { [x: symbol]: any };
+type Variant2 = "Variant2" & { [x: symbol]: any };
+type Variant3 = "Variant3" & { [x: symbol]: any };
 
-
-type Variant1 = "Variant1" & {[x: symbol]: any};
-type Variant2 = "Variant2" & {[x: symbol]: any};
-type Variant3 = "Variant3" & {[x: symbol]: any};
-
-class ExampleEnum<T extends Variant1|Variant2|Variant3 = Variant1|Variant2|Variant3> extends Tagged<T, T extends Variant1 ? number : (T extends Variant2 ? [string, string] : typeof EMPTY_TAG)> {
+class ExampleEnum<T extends Variant1 | Variant2 | Variant3 = Variant1 | Variant2 | Variant3>
+    extends Tagged<T, T extends Variant1 ? number : (T extends Variant2 ? [string, string] : typeof EMPTY_TAG)> {
     private constructor(
-        tag: Variant1|Variant2|Variant3,
+        tag: Variant1 | Variant2 | Variant3,
         value: number | [string, string] | typeof EMPTY_TAG,
     ) {
         super(tag as any, value as any);
@@ -95,7 +93,7 @@ class ExampleEnum<T extends Variant1|Variant2|Variant3 = Variant1|Variant2|Varia
 }
 
 const en = ExampleEnum.Variant1(42);
-const en2: ExampleEnum = ExampleEnum.Variant2(["a",".b"]);
+const en2: ExampleEnum = ExampleEnum.Variant2(["a", ".b"]);
 const en3 = ExampleEnum.Variant3();
 
 if (en2.isVariant2()) {

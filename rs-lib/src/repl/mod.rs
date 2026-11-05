@@ -50,7 +50,11 @@ impl Repl {
             .await
             .map_err(js_error)?;
         Ok(result.map(|v| {
-            to_js_dif(&v, &mut self.runtime.dif_interface().cache(), self.runtime.runtime().shared_references_cache_refcell())
+            to_js_dif(
+                &v,
+                &mut self.runtime.dif_interface().cache(),
+                self.runtime.runtime().shared_references_cache_refcell(),
+            )
         }))
     }
 }

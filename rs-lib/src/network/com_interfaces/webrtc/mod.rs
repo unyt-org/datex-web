@@ -40,7 +40,7 @@ impl WebRTCSignaling for JSSignaling {
     fn receive(
         &self,
     ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<WebRTCSignalDX>> + Send>>
-    {
+{
         unreachable!()
     }
     fn send(

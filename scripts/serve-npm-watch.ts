@@ -5,7 +5,7 @@ const watchDirs = [
 
 const ignoreDirs = [
     "/src/datex-web/",
-]
+];
 
 let serverProcess: Deno.ChildProcess | null = null;
 let buildTimer: number | undefined;
