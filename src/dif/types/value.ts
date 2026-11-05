@@ -6,7 +6,7 @@
 import type {
     PointerAddress,
     PointerAddressWithOwnership,
-    SharedContainerMutability
+    SharedContainerMutability,
 } from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 import type { DIFTypeDefinition } from "./type.ts";
@@ -32,26 +32,25 @@ export type DIFSharedValue = { _: PointerAddressWithOwnership };
  */
 export type DIFValue =
     | DIFClassifiedValue
-    | DIFCoreValueWithTag
+    | DIFCoreValueWithTag;
 
-export type DIFClassifiedValue = { _: 'c', c?: DIFClassification, v: DIFCoreValueWithTag }
+export type DIFClassifiedValue = { _: "c"; c?: DIFClassification; v: DIFCoreValueWithTag };
 
 export type DIFCoreValueWithTag =
     | DIFDirectRepresentationValue
     | DIFTaggedValue
-    | DIFCoreValue
+    | DIFCoreValue;
 
-export type DIFTaggedValue = {_: 't', t: DIFValueTag, v: DIFCoreValue}
+export type DIFTaggedValue = { _: "t"; t: DIFValueTag; v: DIFCoreValue };
 
 export type DIFValueTag = [tag: string, is_empty?: true];
 
-export type DIFCoreValue = [CoreLibTypeId, DIFRawValue] // core lib type id, raw value
-
+export type DIFCoreValue = [CoreLibTypeId, DIFRawValue]; // core lib type id, raw value
 
 export type DIFClassification = [
     PointerAddressWithOwnership | null, // entity address
     PointerAddressWithOwnership[] | null, // impls
-]
+];
 
 /**
  * Types of values that can be directly represented in DIF without
@@ -72,7 +71,7 @@ export type DIFCoreValueMap = Array<[DIFValueContainer, DIFValueContainer]>;
 /**
  * Represents a callable definition with hash and optional name
  */
-export type DIFCoreValueCallable = [string, string|null, boolean|null];
+export type DIFCoreValueCallable = [string, string | null, boolean | null];
 
 /**
  * Represents a range of values in DIF, defined by a start and end value container, or as a tuple of two value containers.
@@ -82,15 +81,14 @@ export type DIFCoreValueRange = [DIFValueContainer, DIFValueContainer] | {
     end: DIFValueContainer;
 };
 
-
 export type DIFCoreValueEntityTypeDefinition = [
     string, // name
     DIFTypeDefinition, // type definition
     [
-        [CoreLibTypeId.Callable, DIFCoreValueCallable][], // methods
-        [CoreLibTypeId.Callable, DIFCoreValueCallable][] // static methods
-    ][]
-]
+        [typeof CoreLibTypeId.Callable, DIFCoreValueCallable][], // methods
+        [typeof CoreLibTypeId.Callable, DIFCoreValueCallable][], // static methods
+    ][],
+];
 
 /**
  * Represents a core value in DIF, which can be a primitive value, a structured object, a list, or a map.
@@ -103,7 +101,7 @@ export type DIFRawValue =
     | Record<string, DIFValueContainer> // StructuralMapWithStringKeys
     | DIFTypeDefinition // type
     | DIFDirectRepresentationValue
-    | DIFCoreValueEntityTypeDefinition // entity type definition
+    | DIFCoreValueEntityTypeDefinition; // entity type definition
 
 /**
  * Base struct for the shared value container.
