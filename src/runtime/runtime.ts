@@ -19,7 +19,7 @@ import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
 import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
-import type {Inspector} from "../datex-web/types/inspector/mod.ts";
+import type { Inspector } from "../datex-web/types/inspector/mod.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -265,7 +265,10 @@ export class Runtime {
      * @param endpoint
      * @param name
      */
-    public async createInspector(endpoint: Endpoint|string = Endpoint.get("@@local"), name: string = "Default Inspector"): Promise<Inspector> {
+    public async createInspector(
+        endpoint: Endpoint | string = Endpoint.get("@@local"),
+        name: string = "Default Inspector",
+    ): Promise<Inspector> {
         if (typeof endpoint === "string") {
             endpoint = Endpoint.get(endpoint);
         }
