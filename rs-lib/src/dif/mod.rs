@@ -455,7 +455,7 @@ impl JSDIFInterface {
         ];
         let inspector = self
             .runtime
-            .execute_instructions_remote(vec![endpoint], instructions)
+            .execute_instructions_remote_single_receiver(endpoint, instructions)
             .await
             .map_err(js_error)?
             .ok_or(js_error("Failed to create inspector"))?;
