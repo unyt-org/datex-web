@@ -2,18 +2,23 @@ use core::fmt;
 use std::{
     collections::HashMap,
     fmt::Display,
+    num::NonZero,
     path::{Path, PathBuf},
 };
 
 use crate::ts::{
     TsExport,
-    ast::{TsAst, TsDeclaration},
+    ast::{TsAst, TsDeclaration, TsImportKind},
     swc::*,
-    utils::{rebase_known_type_source, relative_module_specifier},
+    utils::{add_jsdoc, rebase_known_type_source, relative_module_specifier},
 };
 use datex_core::{
     libs::core::type_id::{
         CoreLibBaseTypeId, CoreLibTypeId, CoreLibVariantTypeId,
+    },
+    shared_values::{
+        ReferenceMutability, SharedContainerMutability,
+        SharedContainerOwnership,
     },
     types::{
         entities::entity_type_definition::EntityTypeDefinition,
@@ -37,13 +42,14 @@ use datex_core::{
             tagged_type::TaggedTypeDefinition,
             union::UnionTypeDefinition,
         },
+        type_definition_with_metadata::TypeMetadata,
         visitor::TypeFolder,
     },
-    values::core_values::integer::typed_integer::TypedInteger,
+    values::core_values::{
+        callable::Callable, integer::typed_integer::TypedInteger,
+    },
 };
-use datex_core::shared_values::{ReferenceMutability, SharedContainerMutability, SharedContainerOwnership};
-use datex_core::types::type_definition_with_metadata::TypeMetadata;
-use swc_common::DUMMY_SP;
+use swc_common::{BytePos, DUMMY_SP, Span};
 use swc_ecma_ast::{
     Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt,
     Function, Ident, IdentName, PropName, TsEntityName, TsKeywordType, TsType,
@@ -129,23 +135,57 @@ impl Display for TsTypeFolderError {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
+struct KnownType {
+    pub name: String,
+    pub kind: TsImportKind,
+}
+impl KnownType {
+    pub fn new(name: impl Into<String>, kind: TsImportKind) -> Self {
+        Self {
+            name: name.into(),
+            kind,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct TsTypeFolder {
     /// Exported alias -> owning file and docs.
     exports: HashMap<String, ExportRegistration>,
     /// Every declared named alias and its current state.
     aliases: HashMap<String, AliasState>,
     /// External type name -> module specifier.
-    known_types: HashMap<String, String>,
+    known_types: HashMap<String, KnownType>,
 
     current_file: Option<PathBuf>,
     file_stack: Vec<Option<PathBuf>>,
     ast: TsAst,
+    next_span: NonZero<u32>,
+}
+impl Default for TsTypeFolder {
+    fn default() -> Self {
+        Self {
+            exports: HashMap::default(),
+            aliases: HashMap::default(),
+            known_types: HashMap::default(),
+            current_file: None,
+            file_stack: Vec::default(),
+            ast: TsAst::default(),
+            next_span: NonZero::new(1).unwrap(),
+        }
+    }
 }
 
 impl TsTypeFolder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn next_span(&mut self) -> Span {
+        let lo = BytePos(self.next_span.get());
+        self.next_span = NonZero::new(self.next_span.get() + 1).unwrap();
+        Span::new(lo, BytePos(self.next_span.get()))
     }
 
     /// Register external TypeScript types.
@@ -162,7 +202,29 @@ impl TsTypeFolder {
     {
         let source = source.into();
         for ty in types {
-            self.known_types.insert(ty.into(), source.clone());
+            self.known_types.insert(
+                ty.into(),
+                KnownType::new(source.clone(), TsImportKind::Type),
+            );
+        }
+        self
+    }
+
+    pub fn with_known_imports<I, S>(
+        mut self,
+        source: impl Into<String>,
+        imports: I,
+    ) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let source = source.into();
+        for import in imports {
+            self.known_types.insert(
+                import.into(),
+                KnownType::new(source.clone(), TsImportKind::Value),
+            );
         }
         self
     }
@@ -328,6 +390,7 @@ impl TsTypeFolder {
                 &current_file,
                 relative_module_specifier(&current_file, &target_file),
                 name,
+                TsImportKind::Type,
             );
         }
         Ok(())
@@ -339,41 +402,120 @@ impl TsTypeFolder {
         name: &str,
         generics: Vec<TsType>,
     ) -> Result<TsType, TsTypeFolderError> {
-        if let Some(source) = self.known_types.get(name).cloned() {
+        if let Some(known_type) = self.known_types.get(name) {
             let current_file = self.current_file.clone().ok_or_else(|| {
                 TsTypeFolderError::NoActiveFile {
                     referenced_type: name.to_string(),
                 }
             })?;
 
-            let source = rebase_known_type_source(&current_file, &source);
-            self.ast.add_import(&current_file, source, name);
+            let source =
+                rebase_known_type_source(&current_file, &known_type.name);
+            self.ast
+                .add_import(&current_file, source, name, known_type.kind);
         }
 
         Ok(ts_type_reference(name, generics))
     }
 
-    fn shared_container_mutability_to_ts(&mut self, mutability: &SharedContainerMutability) -> Result<TsType, TsTypeFolderError> {
+    fn shared_container_mutability_to_ts(
+        &mut self,
+        mutability: &SharedContainerMutability,
+    ) -> Result<TsType, TsTypeFolderError> {
+        self.register_external_type_reference(
+            "SharedContainerMutability",
+            vec![],
+        )?;
 
-        self
-            .register_external_type_reference("SharedContainerMutability", vec![])?;
-        
         Ok(match mutability {
-            SharedContainerMutability::Mutable => ts_property_access_type(ts_ident("SharedContainerMutability"), "Mutable"),
-            SharedContainerMutability::Immutable => ts_property_access_type(ts_ident("SharedContainerMutability"), "Immutable"),
+            SharedContainerMutability::Mutable => ts_property_access_type(
+                ts_ident("SharedContainerMutability"),
+                "Mutable",
+            ),
+            SharedContainerMutability::Immutable => ts_property_access_type(
+                ts_ident("SharedContainerMutability"),
+                "Immutable",
+            ),
         })
     }
 
-    fn shared_reference_mutability_to_ts(&mut self, mutability: &ReferenceMutability) -> Result<TsType, TsTypeFolderError> {
-        self
-            .register_external_type_reference("SharedReferenceMutability", vec![])?;
-        
+    fn shared_reference_mutability_to_ts(
+        &mut self,
+        mutability: &ReferenceMutability,
+    ) -> Result<TsType, TsTypeFolderError> {
+        self.register_external_type_reference(
+            "SharedReferenceMutability",
+            vec![],
+        )?;
+
         Ok(match mutability {
-            ReferenceMutability::Mutable => ts_property_access_type(ts_ident("SharedReferenceMutability"), "Mutable"),
-            ReferenceMutability::Immutable => ts_property_access_type(ts_ident("SharedReferenceMutability"), "Immutable"),
+            ReferenceMutability::Mutable => ts_property_access_type(
+                ts_ident("SharedReferenceMutability"),
+                "Mutable",
+            ),
+            ReferenceMutability::Immutable => ts_property_access_type(
+                ts_ident("SharedReferenceMutability"),
+                "Immutable",
+            ),
         })
     }
 
+    fn callable_to_ts_type(
+        &mut self,
+        callable: &Callable,
+        is_static: bool,
+    ) -> Result<ClassMember, TsTypeFolderError> {
+        let is_async = true; // FIXME
+        let ts_return_type = match &callable.signature.return_type {
+            Some(ty) => {
+                datex_core::types::visitor::fold_type(self, ty)?.into_ts_type()
+            }
+            None => ts_void(),
+        };
+        let method_span = self.next_span();
+        if let Some(docs) = callable.docs.as_deref() {
+            let file = self.current_file.as_ref().expect("active output file");
+            let comments =
+                &self.ast.files.get(file).expect("file exists").comments;
+            add_jsdoc(comments, method_span, docs);
+        }
+
+        let return_type = Some(Box::new(TsTypeAnn {
+            // if async, wrap in Promise
+            type_ann: Box::new(if is_async {
+                ts_type_promise(ts_return_type)
+            } else {
+                ts_return_type
+            }),
+            span: Default::default(),
+        }));
+
+        return Ok(ClassMember::Method(ClassMethod {
+            span: method_span,
+            // FIXME: assumes method name always exists (should be the case)
+            key: PropName::Ident(
+                ts_ident(&callable.name.as_ref().expect("method name exists"))
+                    .into(),
+            ),
+            function: Box::new(Function {
+                params: vec![],
+                decorators: vec![],
+                span: method_span,
+                ctxt: Default::default(),
+                body: None,
+                is_generator: false,
+                is_async: false,
+                type_params: None,
+                return_type,
+            }),
+            kind: Default::default(),
+            is_static,
+            accessibility: Some(Accessibility::Public),
+            is_abstract: false,
+            is_optional: false,
+            is_override: false,
+        }));
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -435,8 +577,6 @@ impl From<ClassDecl> for TsTypeOrClassDeclaration {
     }
 }
 
-
-
 impl TypeFolder for TsTypeFolder {
     type Output = TsTypeOrClassDeclaration;
     type Error = TsTypeFolderError;
@@ -479,37 +619,42 @@ impl TypeFolder for TsTypeFolder {
         Ok(ts_type_reference(name, vec![]).into())
     }
 
-    fn fold_type_definition_with_metadata(&mut self, metadata: &TypeMetadata, inner: Self::Output) -> Result<Self::Output, Self::Error> {
+    fn fold_type_definition_with_metadata(
+        &mut self,
+        metadata: &TypeMetadata,
+        inner: Self::Output,
+    ) -> Result<Self::Output, Self::Error> {
         Ok(match metadata {
             TypeMetadata::Shared {
                 ownership: SharedContainerOwnership::Owned,
                 mutability,
-            } => {                
-                let generics = vec![inner.into_ts_type(), self.shared_container_mutability_to_ts(mutability)?];
-                self
-                    .register_external_type_reference(
-                        "OwnedSharedContainer",
-                        generics,
-                    )?
-                    .into()
-            },
+            } => {
+                let generics = vec![
+                    inner.into_ts_type(),
+                    self.shared_container_mutability_to_ts(mutability)?,
+                ];
+                self.register_external_type_reference(
+                    "OwnedSharedContainer",
+                    generics,
+                )?
+                .into()
+            }
             TypeMetadata::Shared {
-                ownership: SharedContainerOwnership::Referenced(reference_mutability),
+                ownership:
+                    SharedContainerOwnership::Referenced(reference_mutability),
                 mutability,
             } => {
                 let generics = vec![
                     inner.into_ts_type(),
-                    self.shared_reference_mutability_to_ts(reference_mutability)?,
-                    self.shared_container_mutability_to_ts(mutability)?
+                    self.shared_container_mutability_to_ts(mutability)?,
+                    self.shared_reference_mutability_to_ts(
+                        reference_mutability,
+                    )?,
                 ];
-                self
-                    .register_external_type_reference(
-                        "SharedRef",
-                        generics,
-                    )?
+                self.register_external_type_reference("SharedRef", generics)?
                     .into()
             }
-            _ => inner
+            _ => inner,
         })
     }
 
@@ -666,49 +811,11 @@ impl TypeFolder for TsTypeFolder {
 
         for entity_impl in definition.impls().iter() {
             for method in entity_impl.methods().iter() {
-                let ts_return_type =
-                    match &method.callable.signature.return_type {
-                        Some(ty) => {
-                            datex_core::types::visitor::fold_type(self, ty)?
-                                .into_ts_type()
-                        }
-                        None => ts_void(),
-                    };
-
-                // if void, slip
-                let return_type = if is_ts_void(&ts_return_type) {
-                    None
-                } else {
-                    Some(Box::new(TsTypeAnn {
-                        type_ann: Box::new(ts_return_type),
-                        span: Default::default(),
-                    }))
-                };
-
-                members.push(ClassMember::Method(ClassMethod {
-                    span: Default::default(),
-                    // FIXME: assumes method name always exists (should be the case)
-                    key: PropName::Ident(
-                        ts_ident(method.name().unwrap()).into(),
-                    ),
-                    function: Box::new(Function {
-                        params: vec![],
-                        decorators: vec![],
-                        span: Default::default(),
-                        ctxt: Default::default(),
-                        body: None,
-                        is_generator: false,
-                        is_async: true,
-                        type_params: None,
-                        return_type,
-                    }),
-                    kind: Default::default(),
-                    is_static: false,
-                    accessibility: Some(Accessibility::Public),
-                    is_abstract: false,
-                    is_optional: false,
-                    is_override: false,
-                }));
+                members
+                    .push(self.callable_to_ts_type(&method.callable, false)?);
+            }
+            for static_method in entity_impl.static_methods().iter() {
+                members.push(self.callable_to_ts_type(&static_method, true)?);
             }
         }
 
@@ -726,9 +833,9 @@ impl TypeFolder for TsTypeFolder {
                 CoreLibBaseTypeId::Integer => Ok(ts_number().into()),
                 CoreLibBaseTypeId::Decimal => Ok(ts_number().into()),
                 CoreLibBaseTypeId::Null => Ok(ts_null().into()),
-                CoreLibBaseTypeId::Endpoint => {
-                    Ok(self.register_external_type_reference("Endpoint", vec![])?.into())
-                }
+                CoreLibBaseTypeId::Endpoint => Ok(self
+                    .register_external_type_reference("Endpoint", vec![])?
+                    .into()),
                 CoreLibBaseTypeId::Unit => Ok(ts_void().into()),
                 CoreLibBaseTypeId::Never => Ok(ts_never().into()),
                 CoreLibBaseTypeId::Any => Ok(ts_unknown().into()),
@@ -750,14 +857,23 @@ impl TypeFolder for TsTypeFolder {
                     )?
                     .into()),
                 CoreLibBaseTypeId::Type => Ok(self
-                    .register_external_type_reference("Type", vec![ts_unknown()])?
+                    .register_external_type_reference(
+                        "Type",
+                        vec![ts_unknown()],
+                    )?
                     .into()),
                 CoreLibBaseTypeId::Box => Ok(self
-                    .register_external_type_reference("Box", vec![ts_unknown()])?
+                    .register_external_type_reference(
+                        "Box",
+                        vec![ts_unknown()],
+                    )?
                     .into()),
                 CoreLibBaseTypeId::Instant => Ok(ts_date().into()),
                 CoreLibBaseTypeId::EntityTypeDefinition => Ok(self
-                    .register_external_type_reference("__EntityTypeDefinition", vec![])?
+                    .register_external_type_reference(
+                        "__EntityTypeDefinition",
+                        vec![],
+                    )?
                     .into()),
                 CoreLibBaseTypeId::Sender => Ok(self
                     .register_external_type_reference(
@@ -788,7 +904,9 @@ impl TypeFolder for TsTypeFolder {
         if let Some(payload) = payload {
             generics.push(payload.into_ts_type());
         }
-        Ok(self.register_external_type_reference("Tagged", generics)?.into())
+        Ok(self
+            .register_external_type_reference("Tagged", generics)?
+            .into())
     }
 
     fn fold_range(

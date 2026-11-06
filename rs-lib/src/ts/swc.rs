@@ -2,7 +2,14 @@ use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
 
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, IdentName, Lit, ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType, TsPropertySignature, TsQualifiedName, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType};
+use swc_ecma_ast::{
+    BigInt, BindingIdent, Bool, ClassDecl, ClassMember, Expr, Ident, IdentName,
+    Lit, ModuleItem, Number, Pat, RestPat, Str, TsArrayType, TsEntityName,
+    TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind,
+    TsLit, TsLitType, TsPropertySignature, TsQualifiedName, TsTupleElement,
+    TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement,
+    TsTypeParamInstantiation, TsTypeRef, TsUnionType,
+};
 
 use crate::ts::utils::sanitize_ts_identifier;
 
@@ -318,4 +325,8 @@ pub fn ts_function_type(
         type_ann: Box::new(ts_type_ann(return_type)),
     }
     .into()
+}
+
+pub fn ts_type_promise(ty: TsType) -> TsType {
+    ts_type_reference("Promise", vec![ty]).into()
 }
