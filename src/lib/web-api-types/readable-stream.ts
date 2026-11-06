@@ -30,7 +30,6 @@ export const readableStreamTypeBinding: TypeBindingDefinition<ReadableStream<unk
         if (controller) {
             controller.enqueue(value);
         } else {
-            console.log("append", target);
             throw new Error("ReadableStream controller is not available.");
         }
     },

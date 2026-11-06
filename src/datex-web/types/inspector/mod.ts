@@ -3,6 +3,7 @@
 // deno-fmt-ignore-file
 
 import { SharedContainerMutability, type SharedRef, SharedReferenceMutability } from "../../../shared-container/mod.ts";
+import type { LogMessage } from "../utils/logger.ts";
 
 /**
  * The Inspector is a built-in debug helper that provides access to the DATEX runtime and its properties.
@@ -13,8 +14,8 @@ export declare class Inspector {
      * Returns the name of the inspector.
      */ public name(): Promise<string>;
     /**
-     * Streams the logs associated with the inspector.
-     */ public logs(): Promise<SharedRef<ReadableStream<string>, SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>>;
+     * Returns a stream of all global log messages of the endpoint.
+     */ public logs(): Promise<SharedRef<ReadableStream<LogMessage>, SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>>;
     /**
      * Attempts to reboot the endpoint associated with the inspector.
      * Currently, this function is not implemented and will panic if called.

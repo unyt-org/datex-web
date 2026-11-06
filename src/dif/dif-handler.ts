@@ -966,7 +966,6 @@ export class DIFHandler {
 
             typeBinding = !isEntityType &&
                 this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
-            console.log("bind", coreLibId, value, typeBinding)
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
