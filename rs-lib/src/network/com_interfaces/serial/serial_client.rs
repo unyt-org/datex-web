@@ -18,7 +18,7 @@ use datex_core::{
         },
     },
 };
-
+use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
@@ -123,7 +123,7 @@ impl SerialClientInterfaceSetupDataJS {
                         JsFuture::from(promise)
                             .await
                             .map_err(|e| SendFailure(Box::new(block)))
-                            .map(|_| ())
+                            .map(|_| SendSuccess::Sent)
                     }
                 }),
             ),

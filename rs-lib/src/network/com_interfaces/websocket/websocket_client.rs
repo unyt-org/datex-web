@@ -33,6 +33,7 @@ use datex_core::{
         },
     },
 };
+use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
@@ -99,7 +100,7 @@ impl WebSocketClientInterfaceSetupDataJS {
                             .unwrap()
                             .send_with_u8_array(&block.to_bytes())
                             .map_err(|_| SendFailure(Box::new(block)))?;
-                        Ok(())
+                        Ok(SendSuccess::Sent)
                     }
                 }),
             ),

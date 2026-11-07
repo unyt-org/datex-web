@@ -248,7 +248,7 @@ impl JSComHub {
                                                     error!("Error calling send callback: {:?}", e);
                                                     SendFailure(Box::new(dxb_block))
                                                 })
-                                                .map(|_| ())
+                                                .map(|_| SendSuccess::Sent)
                                         }
                                     })),
                                     Some(async move || {
