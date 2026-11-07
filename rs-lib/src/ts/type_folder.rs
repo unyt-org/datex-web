@@ -29,10 +29,9 @@ use datex_core::{
         type_definition::{
             callable::CallableTypeDefinition,
             collection::type_definition::{
-                list::ListCollectionTypeDefinition,
-                list_slice::ListSliceCollectionTypeDefinition,
-                map::MapCollectionTypeDefinition,
-                receiver::ReceiverTypeDefinition, sender::SenderTypeDefinition,
+                ListCollectionTypeDefinition,
+                ListSliceCollectionTypeDefinition, MapCollectionTypeDefinition,
+                ReceiverTypeDefinition, SenderTypeDefinition,
             },
             impl_type::ImplMarkers,
             intersection::IntersectionTypeDefinition,
