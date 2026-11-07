@@ -19,7 +19,6 @@ Deno.test("execute sync dif value", () => {
     const script = "1 + 2";
     const result = runtime.dif.executeSyncDIF(script);
     assertEquals(result, integer(3));
-    console.log(result);
 });
 
 Deno.test("execute sync number", () => {

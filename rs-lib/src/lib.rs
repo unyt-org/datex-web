@@ -5,22 +5,23 @@ extern crate core;
 
 use std::sync::Once;
 
+use log::info;
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 
 use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
-    decompiler::decompile_body,
-    disassembler::{disassemble_body},
-    global::protocol_structures::instructions::NestedInstructionResolutionStrategy,
+    decompiler::{DecompileOptions, dxb_to_source_code::dxb_to_source_code},
+    disassembler::{disassemble_body, get_disassembled_with_options},
+    instruction::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
-use datex_core::disassembler::get_disassembled_with_options;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 mod runtime;
 use runtime::JSRuntime;
+use web_sys::console::info;
 mod dif;
 pub mod network;
 
@@ -113,4 +114,9 @@ pub fn disassemble_dxb_to_string(dxb: Vec<u8>, options: JsValue) -> JsValue {
     let options = from_value(options).unwrap_or_default();
     serde_wasm_bindgen::to_value(&get_disassembled_with_options(&dxb, options))
         .unwrap()
+}
+
+#[wasm_bindgen]
+pub fn decompile_dxb_body(dxb: Vec<u8>) -> String {
+    dxb_to_source_code(&dxb, DecompileOptions::pretty()).unwrap()
 }

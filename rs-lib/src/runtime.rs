@@ -1,11 +1,10 @@
 use crate::{
     dif::JSDIFInterface,
-    js_utils::{from_dif_js_value, js_array, js_error, to_dif_js_value},
+    js_utils::{from_js_dif, js_array, js_error},
     network::com_hub::JSComHub,
 };
 use datex_core::{
     self,
-    decompiler::decompile_value,
     values::{
         core_values::endpoint::Endpoint, value::Value,
         value_container::ValueContainer,
@@ -15,20 +14,27 @@ use datex_crypto_facade::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
-use crate::js_utils::to_js_value;
+use crate::js_utils::{
+    from_js_dif_value_container,
+    optional_value_container_to_optional_js_dif_value, to_js_dif,
+};
 use datex_core::{
-    compiler::{CompileOptions, compile_template},
+    compiler::{
+        CompileOptions, compilation_result::CompilationResult, compile_template,
+    },
     crypto::CryptoImpl,
-    datex_proxy::DatexValueContainerProxyInfallibleSerialize,
-    decompiler::DecompileOptions,
-    dif::{dif_interface::DIFInterface},
+    decompiler::{DecompileOptions, ast_to_source_code::value_to_source_code},
+    dif::dif_interface::DIFInterface,
     runtime::{
         Runtime, RuntimeConfig, RuntimeInternal, RuntimeRunner,
+        cache::{
+            shared_references_cache::SharedReferencesCache,
+            shared_values_cache::SharedValuesCache,
+        },
     },
 };
 use serde_wasm_bindgen::from_value;
-use std::{cell::RefCell, fmt::Display, rc::Rc};
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
+use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -50,16 +56,15 @@ impl JSRuntime {
     }
 
     pub(crate) async fn run(config: JsValue) -> JSRuntime {
-        // FIXME remove
-        wasm_logger::init(wasm_logger::Config::new(log::Level::Debug));
-        let config: RuntimeConfig =
-            from_dif_js_value(config, &mut SharedValuesCache::default())
-                .unwrap();
+        let config: RuntimeConfig = from_js_dif_value_container(
+            config,
+            &RefCell::new(SharedValuesCache::default()),
+            &RefCell::new(SharedReferencesCache::default()),
+        )
+        .unwrap();
         info!(
             "Initializing runtime with config: {}",
-            config
-                .clone()
-                .to_datex_string(DecompileOptions::colorized_pretty())
+            value_to_source_code(&config, DecompileOptions::colorized_pretty(),),
         );
         let runtime_runner = RuntimeRunner::new(config);
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
@@ -81,7 +86,10 @@ impl JSRuntime {
     }
 
     fn new(runtime: Runtime) -> JSRuntime {
-        let dif_interface = JSDIFInterface::new(runtime.create_dif_interface());
+        let dif_interface = JSDIFInterface::new(
+            runtime.clone(),
+            runtime.create_dif_interface(),
+        );
         let com_hub =
             JSComHub::new(runtime.clone(), dif_interface.dif_interface_rc());
         JSRuntime {
@@ -258,9 +266,10 @@ impl JSRuntime {
         inserted_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let decompile_options: DecompileOptions = from_dif_js_value(
+        let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            &mut SharedValuesCache::default(),
+            self.dif_interface.cache().deref(),
+            self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
 
@@ -272,7 +281,9 @@ impl JSRuntime {
             .map_err(js_error)?;
         match result {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(&result, decompile_options)),
+            Some(result) => {
+                Ok(value_to_source_code(&result, decompile_options))
+            }
         }
     }
 
@@ -291,7 +302,11 @@ impl JSRuntime {
             )
             .await
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(
+            result,
+            &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
     }
 
     pub fn execute_sync_with_string_result(
@@ -300,9 +315,10 @@ impl JSRuntime {
         dif_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
-        let decompile_options: DecompileOptions = from_dif_js_value(
+        let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            &mut SharedValuesCache::default(),
+            self.dif_interface.cache().deref(),
+            self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
 
@@ -316,7 +332,9 @@ impl JSRuntime {
             .map_err(js_error)?;
         match input {
             None => Ok("".to_string()),
-            Some(result) => Ok(decompile_value(&result, decompile_options)),
+            Some(result) => {
+                Ok(value_to_source_code(&result, decompile_options))
+            }
         }
     }
 
@@ -333,7 +351,11 @@ impl JSRuntime {
                 None,
             )
             .map_err(js_error)?;
-        Ok(self.optional_value_container_to_optional_js_dif_value(result))
+        Ok(optional_value_container_to_optional_js_dif_value(
+            result,
+            &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
     }
 
     pub fn value_to_string(
@@ -342,12 +364,15 @@ impl JSRuntime {
         decompile_options: JsValue,
     ) -> Result<String, JsError> {
         let value_container = self.js_value_to_value_container(dif_value)?;
-        let decompile_options: DecompileOptions = from_dif_js_value(
-            decompile_options,
-            &mut SharedValuesCache::default(),
-        )
-        .unwrap_or_default();
-        Ok(decompile_value(&value_container, decompile_options))
+        let decompile_options =
+            from_js_dif_value_container::<Option<DecompileOptions>>(
+                decompile_options,
+                self.dif_interface.cache().deref(),
+                self.runtime.shared_references_cache_refcell(),
+            )
+            .expect("DecompileOptions are invalid")
+            .unwrap_or_default();
+        Ok(value_to_source_code(&value_container, decompile_options))
     }
 
     /// Converts a list of [JsValue]s to a list of [ValueContainer], using the DIF cache for resolving shared containers if necessary
@@ -368,30 +393,11 @@ impl JSRuntime {
         &self,
         value: JsValue,
     ) -> Result<ValueContainer, JsError> {
-        from_dif_js_value::<ValueContainer>(
+        from_js_dif::<ValueContainer>(
             value,
             &mut self.dif_interface.cache(),
+            self.runtime.shared_references_cache_refcell(),
         )
-    }
-
-    /**
-     * Convert an optional ValueContainer to an optional JsValue in the DIF format:
-     *  * no result (None) is represented as null
-     *  * a result (Some) is represented as [value] (wrapped in an array to differentiate from null)
-     */
-    fn optional_value_container_to_optional_js_dif_value(
-        &self,
-        value: Option<ValueContainer>,
-    ) -> JsValue {
-        match value {
-            Some(value) => {
-                let inner_value =
-                    to_js_value(&value, &mut self.dif_interface.cache());
-                // wrap in array
-                js_array(&[inner_value])
-            }
-            None => JsValue::NULL,
-        }
     }
 
     /// Get a handle to the DIF interface of the runtime
@@ -405,7 +411,10 @@ impl JSRuntime {
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
     ) -> Result<Vec<u8>, JsValue> {
-        let (dxb, _) = compile_template(
+        let CompilationResult {
+            dxb_with_shared_values,
+            ..
+        } = compile_template(
             script,
             self.js_values_to_value_containers(inserted_values)?
                 .into_iter()
@@ -416,7 +425,7 @@ impl JSRuntime {
         )
         .map_err(js_error)?;
         // TODO: handle dxb.values?
-        Ok(dxb.dxb)
+        Ok(dxb_with_shared_values.dxb)
     }
 
     /// Start the LSP server, returning a JS function to send messages to Rust

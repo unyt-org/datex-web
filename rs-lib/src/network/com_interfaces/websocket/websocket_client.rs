@@ -38,6 +38,7 @@ use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::js_sys;
 
 #[derive(Datex)]
+#[datex(structural)]
 pub struct WebSocketClientInterfaceSetupDataJS(
     WebSocketClientInterfaceSetupData,
 );

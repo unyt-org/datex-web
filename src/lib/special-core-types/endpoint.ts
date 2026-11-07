@@ -56,7 +56,7 @@ export class Endpoint {
         return this.#endpoint;
     }
 
-    get [Symbol.toPrimitive](): string {
+    [Symbol.toPrimitive](_hint: string): string {
         return this.#endpoint;
     }
 }

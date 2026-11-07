@@ -8,5 +8,5 @@ import type { InterfaceDirection } from "./com_interfaces/com_interface/properti
 export type SocketPropertiesPartial = {
     direction: InterfaceDirection;
     channel_factor: number;
-    direct_endpoint: null | Endpoint;
+    direct_endpoint: Endpoint | null;
 };

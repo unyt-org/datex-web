@@ -8,7 +8,7 @@ const ORIGINAL_SET = Symbol("ORIGINAL_SET");
 const ORIGINAL_DELETE = Symbol("ORIGINAL_DELETE");
 const ORIGINAL_CLEAR = Symbol("ORIGINAL_CLEAR");
 
-type MapMetadata<K = unknown, V = unknown> = {
+export type MapMetadata<K = unknown, V = unknown> = {
     [ORIGINAL_SET]: Map<K, V>["set"];
     [ORIGINAL_DELETE]: Map<K, V>["delete"];
     [ORIGINAL_CLEAR]: Map<K, V>["clear"];
@@ -19,6 +19,7 @@ export const mapTypeBinding: TypeBindingDefinition<
     MapMetadata
 > = {
     coreLibTypeId: CoreLibTypeId.Map,
+    jsClass: Map,
     bind(value, pointerAddress) {
         const originalSet = value.set.bind(value) as (key: unknown, value: unknown) => SharedRef<Map<unknown, unknown>>;
         const originalDelete = value.delete.bind(value);
@@ -87,31 +88,3 @@ export const mapTypeBinding: TypeBindingDefinition<
         }
     },
 };
-
-const JS_MAP_IMPL_TYPE_DEFINITION: DIFImplTypeDefinition = [
-    CoreLibTypeId.Map,
-    [JsLibTypeAddress.map],
-];
-function isJsMapImplTypeDefinition(impl: unknown): impl is DIFImplTypeDefinition {
-    return (
-        Array.isArray(impl) &&
-        impl.length === 2 &&
-        impl[0] === CoreLibTypeId.Map &&
-        Array.isArray(impl[1]) &&
-        impl[1].length === 1 &&
-        impl[1][0] === JsLibTypeAddress.map
-    );
-}
-
-export const JS_MAP_TYPE_DEFINITION: DIFTypeDefinition = {
-    impl_type: JS_MAP_IMPL_TYPE_DEFINITION,
-};
-
-export function isJsMapTypeDefinition(typeDef: DIFTypeDefinition): boolean {
-    return (
-        typeof typeDef === "object" &&
-        typeDef !== null &&
-        "impl_type" in typeDef &&
-        isJsMapImplTypeDefinition(typeDef.impl_type)
-    );
-}

@@ -58,7 +58,7 @@ async function runCargoBuildCommand(args: {
         const rustupAddWasm = new Deno.Command("rustup", {
             args: ["target", "add", "wasm32-unknown-unknown"],
         });
-        console.log(
+        console.info(
             `Ensuring wasm32-unknown-unknown target installed...`,
         );
         const rustupAddWasmOutput = await rustupAddWasm.output();

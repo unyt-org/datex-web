@@ -11,7 +11,12 @@ import {
     type DIFHandler,
     IS_PROXY_ACCESS,
 } from "./dif-handler.ts";
-import type { PointerAddress, SharedContainerMutability, SharedRef } from "../shared-container/mod.ts";
+import type {
+    BaseSharedContainer,
+    PointerAddress,
+    SharedContainerMutability,
+    SharedRef,
+} from "../shared-container/mod.ts";
 
 type ImplMethod = {
     name: string;
@@ -56,9 +61,10 @@ export type TypeBindingDefinition<
 > = {
     coreLibTypeId?: CoreLibTypeId;
     pointerAddress?: PointerAddress;
+    jsClass?: new (...args: unknown[]) => T;
     bind(
         this: TypeBindingContext<M>,
-        value: SharedRef<T, SharedContainerMutability>,
+        value: T,
         pointerAddress: PointerAddress,
     ): BindResult<T, M>;
     handleSet?(
@@ -159,10 +165,18 @@ export class TypeRegistry {
      * @param typePointerAddress The pointer address of the type in the Datex runtime.
      * @returns The corresponding TypeBinding or null if no binding is found for the given pointer address.
      */
-    public getTypeBinding(
+    public getTypeBindingForPointerAddress(
         typePointerAddress: string,
     ): TypeBinding | null {
         return this.#typePointerAddressBindings.get(typePointerAddress) || null;
+    }
+
+    public getCoreLibIdForJSClass(jsClass: new (...args: unknown[]) => object): CoreLibTypeId | null {
+        for (const [coreLibId, binding] of this.#coreLibTypeIdBindings.entries()) {
+            if (binding.matchesJSClass(jsClass)) {
+                return coreLibId;
+            }
+        }
     }
 
     /**
@@ -206,96 +220,99 @@ export class TypeBinding<
      * @returns
      */
     public bindValue(value: T, pointerAddress: PointerAddress): BindResult<T, M> {
-        const newValue = this.#definition.bind.call(
+        return this.#definition.bind.call(
             this,
-            value as SharedRef<T, SharedContainerMutability>,
+            value,
             pointerAddress,
         );
-        return newValue;
+    }
+
+    /**
+     * Checks if the given JS class matches the JS class defined in this type binding.
+     * @param jsClass
+     */
+    public matchesJSClass(jsClass: new (...args: unknown[]) => object): boolean {
+        return this.#definition.jsClass === jsClass;
     }
 
     /**
      * Sets up observers for the given value and pointer address if there are update handlers defined for this type binding.
      */
     public handleDifUpdate(
-        val: T,
+        base: BaseSharedContainer<T>,
         pointerAddress: string,
         difUpdateData: DIFUpdateData,
     ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
-            const value = val as SharedRef<T, SharedContainerMutability>;
-            console.log(
-                "got update for pointer:",
-                pointerAddress,
-                difUpdateData,
-            );
-            this.allowOriginalValueAccess(value as CachedSharedContainer, () => {
+            const path = difUpdateData[0]; // TODO handle path
+            const kind = difUpdateData[1];
+
+            const value = base.value as SharedRef<T>;
+
+            this.allowOriginalValueAccess(base, () => {
                 // call appropriate handler based on update kind
                 if (
-                    difUpdateData[0] === DIFUpdateKind.SetEntry &&
+                    kind === DIFUpdateKind.SetEntry &&
                     this.#definition.handleSet
                 ) {
                     this.#definition.handleSet.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFProperty(
-                            difUpdateData[1],
-                        ),
                         this.#difHandler.resolveDIFValueContainer(
                             difUpdateData[2],
                         ),
+                        this.#difHandler.resolveDIFValueContainer(
+                            difUpdateData[3],
+                        ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.AppendEntry &&
+                    kind === DIFUpdateKind.AppendEntry &&
                     this.#definition.handleAppend
                 ) {
                     this.#definition.handleAppend.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.Replace &&
+                    kind === DIFUpdateKind.Replace &&
                     this.#definition.handleReplace
                 ) {
                     this.#definition.handleReplace.call(
                         this,
                         value,
                         this.#difHandler.resolveDIFValueContainer(
-                            difUpdateData[1],
+                            difUpdateData[2],
                         ),
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.DeleteEntry &&
+                    kind === DIFUpdateKind.DeleteEntry &&
                     this.#definition.handleDelete
                 ) {
                     this.#definition.handleDelete.call(
                         this,
                         value,
-                        this.#difHandler.resolveDIFProperty(
-                            difUpdateData[1],
-                        ),
+                        difUpdateData[2],
                     );
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.Clear &&
+                    kind === DIFUpdateKind.Clear &&
                     this.#definition.handleClear
                 ) {
                     this.#definition.handleClear.call(this, value);
                 } else if (
-                    difUpdateData[0] === DIFUpdateKind.ListSplice &&
+                    kind === DIFUpdateKind.ListSplice &&
                     this.#definition.handleListSplice
                 ) {
-                    console.log("handling list splice with items:", difUpdateData);
                     this.#definition.handleListSplice.call(
                         this,
                         value,
-                        difUpdateData[1],
                         difUpdateData[2],
-                        difUpdateData[3].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
+                        difUpdateData[3],
+                        difUpdateData[4].map((item) => this.#difHandler.resolveDIFValueContainer(item)),
                     );
                 }
             });

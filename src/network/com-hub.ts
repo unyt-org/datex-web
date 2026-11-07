@@ -108,7 +108,7 @@ export class ComHub {
      */
     public printMetadata(): void {
         const metadata = this.#jsComHub.get_metadata_string();
-        console.log(metadata);
+        console.info(metadata);
     }
 
     public getMetadata(): ComHubMetadata {
@@ -127,7 +127,7 @@ export class ComHub {
             console.warn(`No trace available for endpoint: ${endpoint}`);
             return;
         }
-        console.log(trace);
+        console.info(trace);
     }
 
     public getTrace(endpoint: string): Promise<NetworkTraceResult | undefined> {

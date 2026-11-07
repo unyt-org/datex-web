@@ -12,7 +12,7 @@
  * ```
  */
 
-import { Endpoint } from "./lib/mod.ts";
+import { Endpoint, tagged } from "./lib/mod.ts";
 import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 
 /**
@@ -21,6 +21,7 @@ import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 const defaultConfig: RuntimeConfig = {
     endpoint: Endpoint.get("@unyt"),
     interfaces: [{
+        priority: tagged("None"),
         type: "websocket-client",
         config: { url: "wss://example.unyt.land" },
     }],

@@ -1,29 +1,38 @@
 use crate::js_utils::{
-    from_dif_js_value, from_js_value, js_error, to_js_value,
+    deserializable_from_js_value, from_js_dif, js_error,
+    optional_value_container_to_optional_js_dif_value, to_js_dif,
     unwrap_or_report_js_error_debug,
 };
 use datex_core::{
+    core_compiler::instruction_input::InstructionInput,
     dif::{
-        dif_interface::DIFInterface,
-        error::DIFUpdateError, pointer_address::PointerAddressWithOwnership,
+        dif_interface::DIFInterface, error::DIFUpdateError,
+        pointer_address::PointerAddressWithOwnership,
     },
+    instruction::regular_instruction::RegularInstruction,
+    runtime::{Runtime, cache::shared_values_cache::SharedValuesCache},
     shared_values::{
-        PointerAddress, SharedContainerOwnership,
+        PointerAddress, SharedContainer, SharedContainerOwnership,
         base_shared_value_container::{
             BaseSharedValueContainer,
             observers::{ObserveOptions, ObserverId, TransceiverId},
         },
+        traits::SharedContainerCommon,
     },
+    traits::apply::{ApplyArgument, get_borrowed_apply_argument_values},
+    types::type_definition::callable::{CallableKind, CallableTypeDefinition},
     value_updates::{update_data::Update, update_handler::UpdateHandler},
-    values::value_container::ValueContainer,
+    values::{
+        core_values::{callable::NativeCallable, endpoint::Endpoint},
+        value_container::ValueContainer,
+    },
 };
-use js_sys::Function;
+use js_sys::{Array, Function, Promise};
 use std::{
     cell::{RefCell, RefMut},
     ops::DerefMut,
     rc::Rc,
 };
-use datex_core::runtime::cache::shared_values_cache::SharedValuesCache;
 use wasm_bindgen::{JsError, JsValue, prelude::*};
 
 #[wasm_bindgen]
@@ -31,15 +40,18 @@ use wasm_bindgen::{JsError, JsValue, prelude::*};
 pub struct JSDIFInterface {
     #[wasm_bindgen(skip)]
     dif_interface: Rc<RefCell<DIFInterface>>,
+    #[wasm_bindgen(skip)]
+    runtime: Runtime,
 }
 
 impl JSDIFInterface {
-    pub fn new(dif_interface: DIFInterface) -> Self {
+    pub fn new(runtime: Runtime, dif_interface: DIFInterface) -> Self {
         Self {
             dif_interface: Rc::new(RefCell::new(dif_interface)),
+            runtime,
         }
     }
-    pub fn cache(&'_ self) -> RefMut<'_, SharedValuesCache> {
+    pub fn cache(&'_ self) -> RefMut<'_, RefCell<SharedValuesCache>> {
         RefMut::map(self.dif_interface.borrow_mut(), |interface| {
             &mut interface.cache
         })
@@ -55,19 +67,21 @@ impl JSDIFInterface {
 impl JSDIFInterface {
     pub fn observe_pointer(
         &self,
-        transceiver_id: u32,
         address: &str,
         observe_options: JsValue,
         callback: &Function,
     ) -> Result<u32, JsError> {
-        let transceiver_id = TransceiverId(transceiver_id);
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let cb = callback.clone();
         let observe_options: ObserveOptions =
-            from_js_value(observe_options, self.cache().deref_mut())?;
+            deserializable_from_js_value(observe_options)?;
         let self_clone = self.clone();
         let observer = move |update: &Update| {
-            let value = to_js_value(update, &mut self_clone.cache());
+            let value = to_js_dif(
+                update,
+                &mut self_clone.cache(),
+                self_clone.runtime.shared_references_cache_refcell(),
+            );
             let _ = unwrap_or_report_js_error_debug(
                 cb.call1(&JsValue::NULL, &value),
             );
@@ -99,7 +113,7 @@ impl JSDIFInterface {
     ) -> Result<(), JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let observe_options: ObserveOptions =
-            from_js_value(observe_options, &mut *self.cache())?;
+            deserializable_from_js_value(observe_options)?;
         self.dif_interface
             .borrow_mut()
             .update_observer_options(
@@ -119,53 +133,276 @@ impl JSDIFInterface {
         update: JsValue,
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
-        let update: Update = from_js_value(update, &mut self.cache())?;
-        let update_clone = update.clone();
+        let update: Update = from_js_dif(
+            update,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        )?;
 
-        let result = self
+        let shared_container = self
             .dif_interface
             .borrow()
-            .update(&address, update)
-            .map_err(js_error)?;
-        let observer_callbacks = self
-            .dif_interface
+            .cache
             .borrow()
-            .get_current_observers(&address, update_clone.source_id)
+            .try_get_shared_container_mutable_reference(&address)
             .map_err(js_error)?;
 
-        // Call each observer synchronously
-        for callback in observer_callbacks {
-            callback(&update_clone);
-        }
+        let result = SharedContainer::Referenced(shared_container)
+            .try_handle_update(
+                update,
+                self.runtime.shared_references_cache_refcell(),
+            )
+            .map_err(DIFUpdateError::UpdateError)
+            .map_err(js_error)?;
 
-        Ok(to_js_value(&result, &mut self.cache()))
+        Ok(to_js_dif(
+            &result,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
     }
 
-    pub fn apply(
+    pub fn register_callable(
         &mut self,
-        callee: JsValue,
-        value: JsValue,
-    ) -> Result<Option<JsValue>, JsError> {
-        let callee: ValueContainer =
-            from_dif_js_value(callee, &mut self.cache())?;
-        let value: ValueContainer =
-            from_dif_js_value(value, &mut self.cache())?;
+        callable: &Function,
+        name: Option<String>,
+        signature: JsValue,
+        is_method: bool, // TODO
+    ) -> Result<String, JsError> {
+        let signature: CallableTypeDefinition = from_js_dif(
+            signature,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        )?;
+
+        let callable_clone = callable.clone();
+        let self_clone = self.clone();
+        let native_callable = if signature.requires_async {
+            NativeCallable::new_async(
+                move |args: Vec<ApplyArgument>, runtime| {
+                    let callable_clone = callable_clone.clone();
+                    let self_clone = self_clone.clone();
+                    Box::pin(async move {
+                        let js_args = args
+                            .iter()
+                            .map(|v| {
+                                to_js_dif(
+                                    &v.value,
+                                    &mut self_clone.cache(),
+                                    self_clone
+                                        .runtime
+                                        .shared_references_cache_refcell(),
+                                )
+                            })
+                            .collect::<Array>();
+                        let promise = unwrap_or_report_js_error_debug(
+                            callable_clone.call1(&JsValue::NULL, &js_args),
+                        )
+                        .map(Promise::from);
+                        let res = match promise {
+                            Some(promise) => {
+                                let result = unwrap_or_report_js_error_debug(
+                                    wasm_bindgen_futures::JsFuture::from(
+                                        promise,
+                                    )
+                                    .await,
+                                );
+                                result.map(|res| {
+                                    from_js_dif::<ValueContainer>(
+                                        res,
+                                        &mut self_clone.cache(),
+                                        self_clone
+                                            .runtime
+                                            .shared_references_cache_refcell(),
+                                    )
+                                    .unwrap()
+                                })
+                            }
+                            None => {
+                                panic!(
+                                    "Callable did not return a Promise, but signature requires async"
+                                )
+                            }
+                        };
+
+                        Ok((res, get_borrowed_apply_argument_values(args)))
+                    })
+                },
+            )
+        } else {
+            NativeCallable::new_sync(
+                move |args: Vec<ApplyArgument>, runtime| {
+                    let js_args = args
+                        .iter()
+                        .map(|v| {
+                            to_js_dif(
+                                &v.value,
+                                &mut self_clone.cache(),
+                                self_clone
+                                    .runtime
+                                    .shared_references_cache_refcell(),
+                            )
+                        })
+                        .collect::<Array>();
+                    let result = unwrap_or_report_js_error_debug(
+                        callable_clone.call1(&JsValue::NULL, &js_args),
+                    );
+                    // TODO: handle promise (convert to DATEX task)
+                    if result.is_some()
+                        && result.as_ref().unwrap().is_instance_of::<Promise>()
+                    {
+                        panic!(
+                            "Callable returned a Promise, but signature does not require async"
+                        )
+                    }
+                    let res = result.map(|res| {
+                        from_js_dif::<ValueContainer>(
+                            res,
+                            &mut self_clone.cache(),
+                            self_clone
+                                .runtime
+                                .shared_references_cache_refcell(),
+                        )
+                        .unwrap()
+                    });
+
+                    Ok((res, get_borrowed_apply_argument_values(args)))
+                },
+            )
+        };
+
         Ok(self
             .dif_interface
             .borrow_mut()
-            .apply(callee, value)
-            .map_err(js_error)?
-            .map(|res| to_js_value(&res, &mut self.cache())))
+            .register_callable(native_callable, name, signature)
+            .to_address_string())
+    }
+
+    pub fn apply_sync(
+        &mut self,
+        callee: JsValue,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .apply_sync(&self.runtime, callee, args)
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
+    pub async fn apply_async(
+        &mut self,
+        callee: JsValue,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .apply_async(&self.runtime, callee, args)
+            .await
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
+    pub fn call_method_sync(
+        &mut self,
+        callee: JsValue,
+        method_name: String,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .call_method_sync(&self.runtime, callee, method_name, args)
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
+    pub async fn call_method_async(
+        &mut self,
+        callee: JsValue,
+        method_name: String,
+        args: JsValue,
+    ) -> Result<JsValue, JsError> {
+        let (callee, args) =
+            self.get_callee_and_args_from_js_values(callee, args)?;
+
+        let (res, _) = self
+            .dif_interface
+            .borrow_mut()
+            .call_method_async(&self.runtime, callee, method_name, args)
+            .await
+            .map_err(js_error)?;
+
+        Ok(optional_value_container_to_optional_js_dif_value(
+            res,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
+    fn get_callee_and_args_from_js_values(
+        &mut self,
+        callee: JsValue,
+        args: JsValue,
+    ) -> Result<(ValueContainer, Vec<ApplyArgument>), JsError> {
+        let callee: ValueContainer = from_js_dif(
+            callee,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        )?;
+        let js_array: Array = args.into();
+        let args = js_array
+            .to_vec()
+            .into_iter()
+            .map(|v| {
+                from_js_dif::<ValueContainer>(
+                    v,
+                    &mut self.cache(),
+                    self.runtime.shared_references_cache_refcell(),
+                )
+                .map(|v| ApplyArgument::from(v))
+            })
+            .collect::<Result<Vec<ApplyArgument>, _>>()?;
+        Ok((callee, args))
     }
 
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
-        let value: BaseSharedValueContainer =
-            from_js_value(value, &mut self.cache())?;
+        let value: BaseSharedValueContainer = from_js_dif(
+            value,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        )?;
         Ok(self
             .dif_interface
             .borrow_mut()
             .create_pointer(value)
-            .to_string())
+            .to_address_string())
     }
 
     /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
@@ -179,9 +416,10 @@ impl JSDIFInterface {
             .borrow_mut()
             .resolve_pointer_address(address)
             .map_err(js_error)?;
-        Ok(to_js_value(
+        Ok(to_js_dif(
             &*result.base_shared_container(),
             &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
         ))
     }
 
@@ -199,5 +437,33 @@ impl JSDIFInterface {
             .dif_interface
             .borrow()
             .has_address_with_ownership(&pointer_address, ownership))
+    }
+
+    pub async fn create_inspector(
+        &self,
+        endpoint: &str,
+        name: &str,
+    ) -> Result<JsValue, JsError> {
+        let endpoint = Endpoint::try_from(endpoint).map_err(js_error)?;
+
+        let instructions = vec![
+            RegularInstruction::apply(1).into(),
+            RegularInstruction::text(name.to_string()).into(),
+            RegularInstruction::get_entry_text("create".to_string()).into(),
+            RegularInstruction::get_entry_text("inspector".to_string()).into(),
+            RegularInstruction::Endpoint(Endpoint::LOCAL).into(),
+        ];
+        let inspector = self
+            .runtime
+            .execute_instructions_remote_single_receiver(endpoint, instructions)
+            .await
+            .map_err(js_error)?
+            .ok_or(js_error("Failed to create inspector"))?;
+
+        Ok(to_js_dif(
+            &inspector,
+            &mut self.cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
     }
 }

@@ -1,6 +1,6 @@
 import type { DIFHandler } from "../dif/dif-handler.ts";
-import { DIFSharedContainerOwnership } from "../dif/types/mod.ts";
-import { OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
+import { DIFSharedContainerOwnership, type DIFUpdateData } from "../dif/types/mod.ts";
+import { MaybeSharedRef, OwnedSharedContainer, type PointerAddress, type SharedContainer } from "./mod.ts";
 import { ReferencedSharedContainer } from "./reference.ts";
 
 export enum SharedContainerMutability {
@@ -12,13 +12,18 @@ export enum SharedContainerMutability {
  * The Ref class is a wrapper around a value that is stored in a pointer.
  * Primitive values (string, number, boolean, null) are always wrapped in a Ref when stored in a pointer.
  */
-export class BaseSharedContainer<T, Mutability extends SharedContainerMutability> {
-    #value: T;
+export class BaseSharedContainer<T, Mutability extends SharedContainerMutability = SharedContainerMutability> {
+    #value: MaybeSharedRef<T, Mutability>;
     #pointerAddress: PointerAddress;
     #difHandler: DIFHandler;
     #containerMutability: Mutability;
 
-    constructor(value: T, pointerAddress: PointerAddress, mutability: Mutability, difHandler: DIFHandler) {
+    constructor(
+        value: MaybeSharedRef<T, Mutability>,
+        pointerAddress: PointerAddress,
+        mutability: Mutability,
+        difHandler: DIFHandler,
+    ) {
         this.#value = value;
         this.#pointerAddress = pointerAddress;
         this.#containerMutability = mutability;
@@ -37,14 +42,14 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
      * This should only be used internally.
      * @param newValue - The new value to set.
      */
-    updateValueSilently(newValue: T) {
+    updateValueSilently(newValue: MaybeSharedRef<T, Mutability>) {
         this.#value = newValue;
     }
 
     /**
      * Gets the current value of the reference.
      */
-    public get value(): T {
+    public get value(): MaybeSharedRef<T, Mutability> {
         return this.#value;
     }
 
@@ -53,7 +58,7 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
      * Also notifies all observers of the pointer about the change.
      * @throws If the reference is immutable or the new value is of an incompatible type.
      */
-    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? T : never) {
+    set value(newValue: Mutability extends SharedContainerMutability.Mutable ? MaybeSharedRef<T, Mutability> : never) {
         if (!this.isContainerMutable()) {
             throw new Error("Cannot set value of an immutable reference.");
         }
@@ -73,9 +78,9 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
     public withOwnership<Ownership extends DIFSharedContainerOwnership>(
         ownership: Ownership,
     ): SharedContainer<T, Mutability> {
-        if (ownership === DIFSharedContainerOwnership.Immutable) {
+        if (ownership === DIFSharedContainerOwnership.ImmutableRef) {
             return new ReferencedSharedContainer(this, ownership) as SharedContainer<T, Mutability>;
-        } else if (ownership === DIFSharedContainerOwnership.Mutable) {
+        } else if (ownership === DIFSharedContainerOwnership.MutableRef) {
             if (this.isContainerMutable()) {
                 return new ReferencedSharedContainer(this, ownership) as SharedContainer<T, Mutability>;
             } else {
@@ -86,5 +91,13 @@ export class BaseSharedContainer<T, Mutability extends SharedContainerMutability
         } else {
             throw new Error(`Invalid ownership type: ${ownership}`);
         }
+    }
+
+    /**
+     * Observes changes to the shared container and invokes the provided callback when an update occurs.
+     * @param callback
+     */
+    public observe(callback: (value: DIFUpdateData) => void) {
+        this.#difHandler.observePointer(this.#pointerAddress, callback);
     }
 }

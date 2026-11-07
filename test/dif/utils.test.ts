@@ -1,4 +1,4 @@
-import { interceptAccessors } from "datex/dif/utils.ts";
+import { interceptAccessors } from "datex/dif/reflect-utils.ts";
 import { Option } from "datex/utils/option.ts";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert";
@@ -71,12 +71,10 @@ Deno.test("intercept accessor for class instance", () => {
 
     interceptAccessors(
         example,
-        (key) => {
-            console.log("get", key);
+        (_key) => {
             return Option.None();
         },
-        (key, _value) => {
-            console.log("set", key);
+        (_key, _value) => {
         },
     );
 
