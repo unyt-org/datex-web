@@ -12,17 +12,20 @@ let buildTimer: number | undefined;
 let building = false;
 let pending = false;
 
+const unsecureBuild = Deno.args.includes("--insecure");
+
 async function runBuild(buildRust = true) {
     if (buildRust) {
-        console.info("Running build:debug:no-opt...");
+        const buildCmd = unsecureBuild ? "build:debug:no-opt:insecure" : "build:debug:no-opt";
+        console.info("Running "+buildCmd+"...");
         const cmd = new Deno.Command("deno", {
-            args: ["task", "build:debug:no-opt"],
+            args: ["task", buildCmd],
             stdout: "inherit",
             stderr: "inherit",
         });
         const result = await cmd.output();
         if (!result.success) {
-            throw new Error("build:debug:no-opt failed");
+            throw new Error(buildCmd + " failed");
         }
     }
 
