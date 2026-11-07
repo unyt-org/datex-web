@@ -50,8 +50,8 @@ pub fn resolve_registry_types<'a>(
 #[cfg(test)]
 mod tests {
     use crate::ts::{
-        TsExport, TsTypeFolder, TsTypeFolderError, resolve_registry_types,
-        swc::*,
+        TsExport, TsTypeFolder, TsTypeFolderError, ast::TsImportKind,
+        resolve_registry_types, swc::*,
     };
     use datex_core::{
         macros::Datex,
@@ -60,9 +60,13 @@ mod tests {
         values::core_values::endpoint::Endpoint,
     };
     use std::collections::{BTreeMap, BTreeSet};
+    use swc_ecma_ast::Decl;
 
-    fn names(values: &[&str]) -> BTreeSet<String> {
-        values.iter().map(|value| (*value).to_string()).collect()
+    fn names(values: &[&str]) -> BTreeMap<String, TsImportKind> {
+        values
+            .iter()
+            .map(|value| ((*value).to_string(), TsImportKind::Type))
+            .collect()
     }
     fn folder() -> TsTypeFolder {
         TsTypeFolder::new()
@@ -123,7 +127,7 @@ mod tests {
         assert_eq!(
             root_file.imports,
             BTreeMap::from([(
-                "./dependency".to_string(),
+                "./dependency.ts".to_string(),
                 names(&["Dependency"]),
             )]),
         );
@@ -134,7 +138,7 @@ mod tests {
                 .keys()
                 .cloned()
                 .collect::<BTreeSet<_>>(),
-            names(&["Dependency"]),
+            BTreeSet::from(["Dependency".to_string()]),
         );
 
         assert_eq!(
@@ -143,27 +147,34 @@ mod tests {
                 .keys()
                 .cloned()
                 .collect::<BTreeSet<_>>(),
-            names(&["Root"]),
+            BTreeSet::from(["Root".to_string()]),
         );
 
         let dependency_alias =
             &dependency_file.declarations["Dependency"].declaration;
 
         assert_eq!(
-            dependency_alias.type_ann,
-            ts_type_literal(vec![ts_string_property(
+            match dependency_alias {
+                Decl::TsTypeAlias(alias) => &alias.type_ann,
+                _ => panic!("Expected TsTypeAlias"),
+            },
+            &ts_type_literal(vec![ts_string_property(
                 "endpoint",
                 ts_type_reference("Endpoint", vec![]),
-            ),]),
+            )]),
         );
 
         let root_alias = &root_file.declarations["Root"].declaration;
+
         assert_eq!(
-            root_alias.type_ann,
-            ts_type_literal(vec![ts_string_property(
+            match root_alias {
+                Decl::TsTypeAlias(alias) => &alias.type_ann,
+                _ => panic!("Expected TsTypeAlias"),
+            },
+            &ts_type_literal(vec![ts_string_property(
                 "dependency",
                 ts_type_reference("Dependency", vec![]),
-            ),]),
+            )]),
         );
 
         let declaration_count = ast
@@ -262,7 +273,7 @@ mod tests {
         assert!(file.imports.is_empty());
         assert_eq!(
             file.declarations.keys().cloned().collect::<BTreeSet<_>>(),
-            names(&["Plain"]),
+            BTreeSet::from(["Plain".to_string()]),
         );
     }
 
