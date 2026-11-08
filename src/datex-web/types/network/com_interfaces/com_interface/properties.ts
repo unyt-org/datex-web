@@ -7,11 +7,9 @@ import type { RuntimeConfigInterface } from "../../../runtime/config.ts";
 
 export type InterfaceDirection = Tagged<"In"> | Tagged<"Out"> | Tagged<"InOut">;
 
-export type ReconnectionConfig = Tagged<"NoReconnect"> | Tagged<"InstantReconnect"> | Tagged<"ReconnectWithTimeout", {
-    timeout: number;
-}> | Tagged<"ReconnectWithTimeoutAndAttempts", {
-    timeout: number;
-    attempts: number;
+export type ReconnectionConfig = Tagged<"NoReconnect"> | Tagged<"Reconnect", {
+    attempts: number | null;
+    interval: number | null;
 }>;
 
 /**
