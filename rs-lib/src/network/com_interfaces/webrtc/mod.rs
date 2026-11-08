@@ -52,6 +52,7 @@ impl WebRTCSignaling for JSSignaling {
 }
 
 #[derive(Datex)]
+// FIXME: must implement Clone
 #[datex(structural)]
 pub struct WebRTCInterfaceSetupDataJS(WebRTCInterfaceSetupData);
 

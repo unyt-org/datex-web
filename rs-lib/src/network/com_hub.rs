@@ -411,9 +411,10 @@ impl JSComHub {
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
         com_hub
-            .remove_interface(interface_uuid.clone())
+            .remove_interface(&interface_uuid)
             .await
             .map_err(|_| JsError::new("Failed to remove interface"))
+            .map(|_| ())
     }
 
     pub async fn remove_socket(

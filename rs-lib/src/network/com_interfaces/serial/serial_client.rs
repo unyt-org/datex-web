@@ -27,7 +27,7 @@ use web_sys::{
     js_sys::Uint8Array,
 };
 
-#[derive(Datex)]
+#[derive(Datex, Clone)]
 #[datex(structural)]
 pub struct SerialClientInterfaceSetupDataJS(SerialClientInterfaceSetupData);
 
