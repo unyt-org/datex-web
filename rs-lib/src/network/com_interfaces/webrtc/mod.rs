@@ -23,6 +23,8 @@ use datex_core::{
         },
     },
 };
+use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
+
 mod channels;
 use channels::*;
 mod mappings;

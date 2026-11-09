@@ -34,6 +34,7 @@ use datex_core::{
     },
 };
 use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
+use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::{js_sys, WebSocket};
@@ -333,5 +334,9 @@ impl ComInterfaceAsyncFactory for WebSocketClientInterfaceSetupDataJS {
 
     fn get_default_properties() -> ComInterfaceProperties {
         WebSocketClientInterfaceSetupData::get_default_properties()
+    }
+
+    fn get_reconnection_config() -> ReconnectionConfig {
+        WebSocketClientInterfaceSetupData::get_reconnection_config()
     }
 }

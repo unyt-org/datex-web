@@ -19,6 +19,7 @@ use datex_core::{
     },
 };
 use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
+use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
@@ -138,5 +139,9 @@ impl ComInterfaceAsyncFactory for SerialClientInterfaceSetupDataJS {
 
     fn get_default_properties() -> ComInterfaceProperties {
         SerialClientInterfaceSetupData::get_default_properties()
+    }
+
+    fn get_reconnection_config() -> ReconnectionConfig {
+        SerialClientInterfaceSetupData::get_reconnection_config()
     }
 }
