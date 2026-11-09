@@ -86,7 +86,7 @@ export class Repl {
     free(): void;
     [Symbol.dispose](): void;
     execute(script: string): Promise<any | undefined>;
-    constructor(runtime: JSRuntime, verbose: boolean);
+    constructor(runtime: JSRuntime, endpoint: string | null | undefined, verbose: boolean);
 }
 
 export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;

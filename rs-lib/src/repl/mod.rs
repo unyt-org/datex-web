@@ -2,6 +2,7 @@ use datex_core::runtime::execution::{
     context::{ExecutionContext, ExecutionMode},
     execution_input::ExecutionCallerMetadata,
 };
+use datex_core::values::core_values::endpoint::Endpoint;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{
@@ -18,19 +19,28 @@ pub struct Repl {
 #[wasm_bindgen]
 impl Repl {
     #[wasm_bindgen(constructor)]
-    pub fn new(runtime: &JSRuntime, verbose: bool) -> Self {
-        let execution_context = if verbose {
-            ExecutionContext::local_debug(
-                ExecutionMode::unbounded(),
+    pub fn new(runtime: &JSRuntime, endpoint: Option<String>, verbose: bool) -> Self {
+        let execution_context = if let Some(endpoint) = endpoint {
+            let endpoint = Endpoint::new(&endpoint);
+            ExecutionContext::remote_unbounded(
+                vec![endpoint],
                 runtime.runtime().clone(),
-                ExecutionCallerMetadata::local_default(),
             )
-        } else {
-            ExecutionContext::local(
-                ExecutionMode::unbounded(),
-                runtime.runtime().clone(),
-                ExecutionCallerMetadata::local_default(),
-            )
+        }
+        else {
+            if verbose {
+                ExecutionContext::local_debug(
+                    ExecutionMode::unbounded(),
+                    runtime.runtime().clone(),
+                    ExecutionCallerMetadata::local_default(),
+                )
+            } else {
+                ExecutionContext::local(
+                    ExecutionMode::unbounded(),
+                    runtime.runtime().clone(),
+                    ExecutionCallerMetadata::local_default(),
+                )
+            }
         };
 
         Self {
