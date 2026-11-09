@@ -268,7 +268,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            self.dif_interface.cache().deref(),
+            self.dif_interface.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
@@ -304,7 +304,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         Ok(optional_value_container_to_optional_js_dif_value(
             result,
-            &mut self.dif_interface.cache(),
+            self.dif_interface.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
@@ -317,7 +317,7 @@ impl JSRuntime {
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
-            self.dif_interface.cache().deref(),
+            self.dif_interface.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )
         .unwrap_or_default();
@@ -353,7 +353,7 @@ impl JSRuntime {
             .map_err(js_error)?;
         Ok(optional_value_container_to_optional_js_dif_value(
             result,
-            &mut self.dif_interface.cache(),
+            self.dif_interface.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
@@ -367,7 +367,7 @@ impl JSRuntime {
         let decompile_options =
             from_js_dif_value_container::<Option<DecompileOptions>>(
                 decompile_options,
-                self.dif_interface.cache().deref(),
+                self.dif_interface.shared_values_cache(),
                 self.runtime.shared_references_cache_refcell(),
             )
             .expect("DecompileOptions are invalid")
@@ -395,7 +395,7 @@ impl JSRuntime {
     ) -> Result<ValueContainer, JsError> {
         from_js_dif::<ValueContainer>(
             value,
-            &mut self.dif_interface.cache(),
+            self.dif_interface.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )
     }

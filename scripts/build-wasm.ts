@@ -19,7 +19,10 @@ const profile = flags.profile === "release" ? "release" : "debug";
 
 await runCargoBuildCommand({
     profile,
-    cargoFlags: flags.features ? ["--features", flags.features] : [],
+    cargoFlags: (flags.features ? ["--features", flags.features] : []).concat([
+        "-Zbuild-std=std,panic_abort",
+        "-Zbuild-std-features=debug_refcell",
+    ]),
 });
 
 await runWasmBindgen({

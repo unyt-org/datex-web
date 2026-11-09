@@ -17,7 +17,9 @@ use datex_core::{
                 ComInterfaceConfiguration, SendCallback, SendFailure,
                 SendSuccess, SocketConfiguration, SocketProperties,
             },
-            properties::{ComInterfaceProperties, InterfaceDirection},
+            properties::{
+                ComInterfaceProperties, InterfaceDirection, ReconnectionConfig,
+            },
             socket::ComInterfaceSocketUUID,
         },
     },
@@ -38,7 +40,6 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -54,7 +55,7 @@ pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
     #[wasm_bindgen(skip)]
-    pub dif_interface: Rc<RefCell<DIFInterface>>,
+    pub dif_interface: Rc<DIFInterface>,
 }
 
 // wrapper around AsyncGenerator that implements Drop
@@ -80,10 +81,7 @@ impl Deref for JsReadableStream {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(
-        runtime: Runtime,
-        dif_interface: Rc<RefCell<DIFInterface>>,
-    ) -> JSComHub {
+    pub fn new(runtime: Runtime, dif_interface: Rc<DIFInterface>) -> JSComHub {
         let com_hub = JSComHub {
             runtime,
             dif_interface,
@@ -140,7 +138,7 @@ impl JSComHub {
                             &JsValue::UNDEFINED,
                             &to_js_dif(
                                 &setup_data,
-                                &dif_interface.borrow().cache,
+                                &dif_interface.cache,
                                 runtime.shared_references_cache_refcell(),
                             ),
                         )
@@ -160,7 +158,7 @@ impl JSComHub {
 
                     let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(
                         &interface_configuration,
-                        &mut dif_interface.borrow_mut().cache,
+                        &dif_interface.cache,
                         runtime.shared_references_cache_refcell(),
                     )
                         .map_err(|e| {
@@ -192,13 +190,11 @@ impl JSComHub {
                                     return;
                                 }
 
-                                let mut dif_interface = dif_interface.borrow_mut();
-                                let shared_values_cache = &mut dif_interface.cache;
                                 let shared_references_cache = runtime.shared_references_cache_refcell();
 
                                 let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(
                                     &read_result.get_value(),
-                                    shared_values_cache,
+                                    &dif_interface.cache,
                                     shared_references_cache,
                                 ) {
                                     Ok(result) => result,
@@ -208,7 +204,6 @@ impl JSComHub {
                                     }
                                 };
 
-                                drop(dif_interface);
 
                                 let send_callback = Rc::new(send_callback);
                                 let socket_data_reader = socket_iterator.get_reader()
@@ -388,7 +383,7 @@ impl JSComHub {
     ) -> Result<String, JsError> {
         let setup_data: ValueContainer = from_js_dif(
             setup_data,
-            &self.dif_interface.borrow_mut().cache,
+            &self.dif_interface.cache,
             self.runtime.shared_references_cache_refcell(),
         )
         .map_err(|e| JsError::new(&format!("{e:?}")))?;
@@ -443,7 +438,7 @@ impl JSComHub {
         let metadata = self.com_hub().get_metadata();
         to_js_dif_value_container(
             metadata,
-            &self.dif_interface.borrow_mut().cache,
+            &self.dif_interface.cache,
             self.runtime.shared_references_cache_refcell(),
         )
     }

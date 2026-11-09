@@ -39,7 +39,7 @@ use wasm_bindgen::{JsError, JsValue, prelude::*};
 #[derive(Clone)]
 pub struct JSDIFInterface {
     #[wasm_bindgen(skip)]
-    dif_interface: Rc<RefCell<DIFInterface>>,
+    dif_interface: Rc<DIFInterface>,
     #[wasm_bindgen(skip)]
     runtime: Runtime,
 }
@@ -47,18 +47,16 @@ pub struct JSDIFInterface {
 impl JSDIFInterface {
     pub fn new(runtime: Runtime, dif_interface: DIFInterface) -> Self {
         Self {
-            dif_interface: Rc::new(RefCell::new(dif_interface)),
+            dif_interface: Rc::new(dif_interface),
             runtime,
         }
     }
-    pub fn cache(&'_ self) -> RefMut<'_, RefCell<SharedValuesCache>> {
-        RefMut::map(self.dif_interface.borrow_mut(), |interface| {
-            &mut interface.cache
-        })
+    pub fn shared_values_cache(&self) -> &RefCell<SharedValuesCache> {
+        &self.dif_interface.cache
     }
 
     /// Get a clone of the Rc<RefCell<DIFInterface>> to allow sharing the DIFInterface across multiple JS objects.
-    pub fn dif_interface_rc(&self) -> Rc<RefCell<DIFInterface>> {
+    pub fn dif_interface_rc(&self) -> Rc<DIFInterface> {
         self.dif_interface.clone()
     }
 }
@@ -79,7 +77,7 @@ impl JSDIFInterface {
         let observer = move |update: &Update| {
             let value = to_js_dif(
                 update,
-                &mut self_clone.cache(),
+                &self_clone.dif_interface.cache,
                 self_clone.runtime.shared_references_cache_refcell(),
             );
             let _ = unwrap_or_report_js_error_debug(
@@ -87,7 +85,6 @@ impl JSDIFInterface {
             );
         };
         self.dif_interface
-            .borrow_mut()
             .observe_pointer(address, observe_options, observer)
             .map_err(js_error)
             .map(|id| id.0)
@@ -100,7 +97,6 @@ impl JSDIFInterface {
     ) -> Result<(), JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         self.dif_interface
-            .borrow_mut()
             .unobserve_pointer(address, ObserverId(observer_id))
             .map_err(js_error)
     }
@@ -115,7 +111,6 @@ impl JSDIFInterface {
         let observe_options: ObserveOptions =
             deserializable_from_js_value(observe_options)?;
         self.dif_interface
-            .borrow_mut()
             .update_observer_options(
                 address,
                 ObserverId(observer_id),
@@ -128,20 +123,19 @@ impl JSDIFInterface {
     /// TODO: Can we optimize this, by not returning the update result data back to JS, as it adds unnecessary overhead, as
     /// we can access the values in JS before update.
     pub fn update(
-        &mut self,
+        &self,
         address: &str,
         update: JsValue,
     ) -> Result<JsValue, JsError> {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let update: Update = from_js_dif(
             update,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )?;
 
         let shared_container = self
             .dif_interface
-            .borrow()
             .cache
             .borrow()
             .try_get_shared_container_mutable_reference(&address)
@@ -157,13 +151,13 @@ impl JSDIFInterface {
 
         Ok(to_js_dif(
             &result,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
 
     pub fn register_callable(
-        &mut self,
+        &self,
         callable: &Function,
         name: Option<String>,
         signature: JsValue,
@@ -171,7 +165,7 @@ impl JSDIFInterface {
     ) -> Result<String, JsError> {
         let signature: CallableTypeDefinition = from_js_dif(
             signature,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )?;
 
@@ -188,7 +182,7 @@ impl JSDIFInterface {
                             .map(|v| {
                                 to_js_dif(
                                     &v.value,
-                                    &mut self_clone.cache(),
+                                    &self_clone.dif_interface.cache,
                                     self_clone
                                         .runtime
                                         .shared_references_cache_refcell(),
@@ -210,7 +204,7 @@ impl JSDIFInterface {
                                 result.map(|res| {
                                     from_js_dif::<ValueContainer>(
                                         res,
-                                        &mut self_clone.cache(),
+                                        &self_clone.dif_interface.cache,
                                         self_clone
                                             .runtime
                                             .shared_references_cache_refcell(),
@@ -237,7 +231,7 @@ impl JSDIFInterface {
                         .map(|v| {
                             to_js_dif(
                                 &v.value,
-                                &mut self_clone.cache(),
+                                &self_clone.dif_interface.cache,
                                 self_clone
                                     .runtime
                                     .shared_references_cache_refcell(),
@@ -258,7 +252,7 @@ impl JSDIFInterface {
                     let res = result.map(|res| {
                         from_js_dif::<ValueContainer>(
                             res,
-                            &mut self_clone.cache(),
+                            &self_clone.dif_interface.cache,
                             self_clone
                                 .runtime
                                 .shared_references_cache_refcell(),
@@ -273,13 +267,12 @@ impl JSDIFInterface {
 
         Ok(self
             .dif_interface
-            .borrow_mut()
             .register_callable(native_callable, name, signature)
             .to_address_string())
     }
 
     pub fn apply_sync(
-        &mut self,
+        &self,
         callee: JsValue,
         args: JsValue,
     ) -> Result<JsValue, JsError> {
@@ -288,19 +281,18 @@ impl JSDIFInterface {
 
         let (res, _) = self
             .dif_interface
-            .borrow_mut()
             .apply_sync(&self.runtime, callee, args)
             .map_err(js_error)?;
 
         Ok(optional_value_container_to_optional_js_dif_value(
             res,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
 
     pub async fn apply_async(
-        &mut self,
+        &self,
         callee: JsValue,
         args: JsValue,
     ) -> Result<JsValue, JsError> {
@@ -309,20 +301,20 @@ impl JSDIFInterface {
 
         let (res, _) = self
             .dif_interface
-            .borrow_mut()
+            .clone()
             .apply_async(&self.runtime, callee, args)
             .await
             .map_err(js_error)?;
 
         Ok(optional_value_container_to_optional_js_dif_value(
             res,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
 
     pub fn call_method_sync(
-        &mut self,
+        &self,
         callee: JsValue,
         method_name: String,
         args: JsValue,
@@ -332,19 +324,18 @@ impl JSDIFInterface {
 
         let (res, _) = self
             .dif_interface
-            .borrow_mut()
             .call_method_sync(&self.runtime, callee, method_name, args)
             .map_err(js_error)?;
 
         Ok(optional_value_container_to_optional_js_dif_value(
             res,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
 
     pub async fn call_method_async(
-        &mut self,
+        &self,
         callee: JsValue,
         method_name: String,
         args: JsValue,
@@ -354,26 +345,26 @@ impl JSDIFInterface {
 
         let (res, _) = self
             .dif_interface
-            .borrow_mut()
+            .clone()
             .call_method_async(&self.runtime, callee, method_name, args)
             .await
             .map_err(js_error)?;
 
         Ok(optional_value_container_to_optional_js_dif_value(
             res,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
 
     fn get_callee_and_args_from_js_values(
-        &mut self,
+        &self,
         callee: JsValue,
         args: JsValue,
     ) -> Result<(ValueContainer, Vec<ApplyArgument>), JsError> {
         let callee: ValueContainer = from_js_dif(
             callee,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )?;
         let js_array: Array = args.into();
@@ -383,7 +374,7 @@ impl JSDIFInterface {
             .map(|v| {
                 from_js_dif::<ValueContainer>(
                     v,
-                    &mut self.cache(),
+                    &self.shared_values_cache(),
                     self.runtime.shared_references_cache_refcell(),
                 )
                 .map(|v| ApplyArgument::from(v))
@@ -395,14 +386,10 @@ impl JSDIFInterface {
     pub fn create_pointer(&self, value: JsValue) -> Result<String, JsError> {
         let value: BaseSharedValueContainer = from_js_dif(
             value,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         )?;
-        Ok(self
-            .dif_interface
-            .borrow_mut()
-            .create_pointer(value)
-            .to_address_string())
+        Ok(self.dif_interface.create_pointer(value).to_address_string())
     }
 
     /// Resolve a pointer address synchronously if it's in memory, otherwise return an error
@@ -413,12 +400,11 @@ impl JSDIFInterface {
         let address = PointerAddress::try_from(address).map_err(js_error)?;
         let result = self
             .dif_interface
-            .borrow_mut()
             .resolve_pointer_address(address)
             .map_err(js_error)?;
         Ok(to_js_dif(
             &*result.base_shared_container(),
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
@@ -435,7 +421,6 @@ impl JSDIFInterface {
                 .map_err(|_| js_error("Invalid ownership value"))?;
         Ok(self
             .dif_interface
-            .borrow()
             .has_address_with_ownership(&pointer_address, ownership))
     }
 
@@ -462,7 +447,7 @@ impl JSDIFInterface {
 
         Ok(to_js_dif(
             &inspector,
-            &mut self.cache(),
+            &self.shared_values_cache(),
             self.runtime.shared_references_cache_refcell(),
         ))
     }
