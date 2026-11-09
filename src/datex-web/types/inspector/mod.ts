@@ -3,6 +3,7 @@
 // deno-fmt-ignore-file
 
 import { SharedContainerMutability, type SharedRef, SharedReferenceMutability } from "../../../shared-container/mod.ts";
+import type { ComHubMetadata } from "../network/com_hub/metadata.ts";
 import type { LogMessage } from "../utils/logger.ts";
 
 /**
@@ -16,6 +17,9 @@ export declare class Inspector {
     /**
      * Returns a stream of all global log messages of the endpoint.
      */ public logs(): Promise<SharedRef<ReadableStream<LogMessage>, SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>>;
+    /**
+     * Returns the current metadata information (connected interfaces, sockets) of the endpoint's com hub.
+     */ public com_hub_metadata(): Promise<ComHubMetadata>;
     /**
      * Attempts to reboot the endpoint associated with the inspector.
      * Currently, this function is not implemented and will panic if called.

@@ -23,4 +23,5 @@ export type ComHubMetadataInterface = {
 export type ComHubMetadata = {
     endpoint: Endpoint;
     interfaces: ComHubMetadataInterface[];
+    reconnecting_interfaces: ComHubMetadataInterface[];
 };

@@ -5,27 +5,28 @@ export const EMPTY_TAG = Symbol("EMPTY_TAG");
  * TODO: "enum classes" should extend Tagged class, e.g. class Example extends Tagged<...> but tag->value mapping must be defined somehow in type system
  */
 export class Tagged<Tag extends string, const Value = typeof EMPTY_TAG> {
-    #tag: Tag;
-    #value: Value;
+    // FIXME: #tag would be better, but has problems with (especially vue) reactivity (Proxies)
+    __tag: Tag;
+    __value: Value;
 
     constructor(
         tag: Tag,
         value: Value = EMPTY_TAG as Value,
     ) {
-        this.#tag = tag;
-        this.#value = value;
+        this.__tag = tag;
+        this.__value = value;
     }
 
     public get value(): Value {
-        return this.#value;
+        return this.__value;
     }
 
     public set value(newValue: Value) {
-        this.#value = newValue;
+        this.__value = newValue;
     }
 
     public get tag(): Tag {
-        return this.#tag;
+        return this.__tag;
     }
 }
 
