@@ -7,11 +7,6 @@ import type { RuntimeConfigInterface } from "../../../runtime/config.ts";
 
 export type InterfaceDirection = Tagged<"In"> | Tagged<"Out"> | Tagged<"InOut">;
 
-export type ReconnectionConfig = Tagged<"NoReconnect"> | Tagged<"Reconnect", {
-    attempts: number | null;
-    interval: number | null;
-}>;
-
 /**
  * The properties of a communication interface, which are used to describe the capabilities and characteristics of the interface.
  */
@@ -25,7 +20,11 @@ export type ComInterfaceProperties = {
     continuous_connection: boolean;
     allow_redirects: boolean;
     is_secure_channel: boolean;
-    reconnection_config: ReconnectionConfig;
     auto_identify: boolean;
     connectable_interfaces: RuntimeConfigInterface[] | null;
 };
+
+export type ReconnectionConfig = Tagged<"NoReconnect"> | Tagged<"Reconnect", {
+    attempts: number | null;
+    interval: number | null;
+}>;
