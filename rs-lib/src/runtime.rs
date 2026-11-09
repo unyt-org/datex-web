@@ -35,6 +35,7 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
+use datex_core::runtime::execution::context::ExecutionContext;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -276,7 +277,7 @@ impl JSRuntime {
         let val = &self.js_values_to_value_containers(inserted_values)?;
         let result = self
             .runtime
-            .execute(script, val, None)
+            .execute(script, val, None::<ExecutionContext>)
             .await
             .map_err(js_error)?;
         match result {
@@ -298,7 +299,7 @@ impl JSRuntime {
             .execute(
                 script,
                 &self.js_values_to_value_containers(inserted_values)?,
-                None,
+                None::<ExecutionContext>,
             )
             .await
             .map_err(js_error)?;
@@ -327,7 +328,7 @@ impl JSRuntime {
             .execute_sync(
                 script,
                 &self.js_values_to_value_containers(dif_values)?,
-                None,
+                None::<ExecutionContext>,
             )
             .map_err(js_error)?;
         match input {
@@ -348,7 +349,7 @@ impl JSRuntime {
             .execute_sync(
                 script,
                 &self.js_values_to_value_containers(dif_values)?,
-                None,
+                None::<ExecutionContext>,
             )
             .map_err(js_error)?;
         Ok(optional_value_container_to_optional_js_dif_value(
