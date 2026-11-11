@@ -36,6 +36,7 @@ use datex_core::{
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
 use datex_core::runtime::execution::context::ExecutionContext;
+use indexmap::IndexMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -56,7 +57,7 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub(crate) async fn run(config: JsValue) -> JSRuntime {
+    pub(crate) async fn run(config: JsValue, device_type: String, versions: IndexMap<String, String>) -> JSRuntime {
         let config: RuntimeConfig = from_js_dif_value_container(
             config,
             &RefCell::new(SharedValuesCache::default()),
@@ -67,7 +68,13 @@ impl JSRuntime {
             "Initializing runtime with config: {}",
             value_to_source_code(&config, DecompileOptions::colorized_pretty(),),
         );
-        let runtime_runner = RuntimeRunner::new(config);
+        let runtime_runner = RuntimeRunner::new(
+            config,
+            datex_core::runtime::CustomRuntimeInfo {
+                device_type: Some(device_type),
+                other_versions: versions,
+            },
+        );
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
         let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
 

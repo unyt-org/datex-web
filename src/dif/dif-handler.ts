@@ -601,17 +601,34 @@ export class DIFHandler {
             if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
                 return undefined as T;
             } else {
-                const jsClass = this.resolvePointerAddress(...splitPointerAddressWithOwnership(classification[0]));
-                assert(this.isClass(jsClass.value), "Expected a JS class for the entity type definition");
-                const instance = new jsClass.value();
-                // FIXME: hydration
-                return instance as T;
+                return this.instantiateEntityInstance(classification[0], value.v) as T;
             }
         } else if (value._ === "t") {
             assert("t" in value, "Invalid DIFValue format: expected a tagged value with 't' property");
             return this.resolveDIFTaggedValue(value as DIFTaggedValue) as T;
         }
         unreachable(`Invalid DIFValue format: expected a tagged value, got ${typeof value}`);
+    }
+
+    /**
+     * Creates a new JS class instance for a given entity value.
+     */
+    private instantiateEntityInstance(
+        entityTypeAddress: PointerAddressWithOwnership,
+        value: unknown
+    ): object {
+        console.log("val", value);
+        const jsClass = this.resolvePointerAddress(...splitPointerAddressWithOwnership(entityTypeAddress));
+        assert(this.isClass(jsClass.value), "Expected a JS class for the entity type definition");
+        const instance = new jsClass.value();
+        // FIXME: improve class member instantiation
+        const resolvedValue = this.resolveDIFValue(value);
+        if (typeof resolvedValue === "object" && resolvedValue !== null && !Array.isArray(resolvedValue)) {
+            for (const [key, val] of Object.entries(resolvedValue)) {
+                instance[key] = val;
+            }
+        }
+        return instance as T;
     }
 
     private resolveDIFTaggedValue(

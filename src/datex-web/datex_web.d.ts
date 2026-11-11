@@ -89,7 +89,7 @@ export class Repl {
     constructor(runtime: JSRuntime, endpoint: string | null | undefined, verbose: boolean);
 }
 
-export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
+export function create_runtime(config: any, debug_config: any, device_type: string, datex_web_version: any): Promise<JSRuntime>;
 
 export function decompile_dxb_body(dxb: Uint8Array): string;
 

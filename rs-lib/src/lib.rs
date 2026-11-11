@@ -3,6 +3,7 @@
 
 extern crate core;
 
+use std::collections::HashMap;
 use std::sync::Once;
 
 use log::info;
@@ -16,6 +17,7 @@ use datex_core::{
     instruction::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -73,9 +75,14 @@ impl JSDebugConfig {
 pub async fn create_runtime(
     config: JsValue,
     debug_config: JsValue,
+    device_type: String,
+    datex_web_version: JsValue,
 ) -> JSRuntime {
     let debug_config: Option<JSDebugConfig> =
         from_value(debug_config).unwrap_or_default();
+
+    let versions: Vec<(String, String)> = from_value(datex_web_version).unwrap_or_default();
+
     INIT.call_once(|| {
         console_error_panic_hook::set_once();
         // create a logger that logs to the browser console, with the log level specified in the debug config
@@ -84,7 +91,7 @@ pub async fn create_runtime(
         }
     });
 
-    JSRuntime::run(config).await
+    JSRuntime::run(config, device_type, IndexMap::from_iter(versions.into_iter())).await
 }
 
 #[wasm_bindgen]

@@ -48,6 +48,9 @@ use datex_core::{
         callable::Callable, integer::typed_integer::TypedInteger,
     },
 };
+use datex_core::types::type_definition::TypeDefinition;
+use datex_core::types::type_definition_with_metadata::TypeDefinitionWithMetadata;
+use datex_core::values::core_values::text::Text;
 use swc_common::{BytePos, DUMMY_SP, Span};
 use swc_ecma_ast::{
     Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt,
@@ -807,6 +810,25 @@ impl TypeFolder for TsTypeFolder {
     ) -> Result<Self::Output, Self::Error> {
         let definition = entity_type.entity_definition();
         let mut members = Vec::new();
+
+        // if type is map, push class properties
+        if let TypeDefinition::Map(map_definition) = definition.definition() {
+            for (key, value) in &map_definition.0 {
+                if let Type::Definition(TypeDefinitionWithMetadata{definition: TypeDefinition::Literal(LiteralTypeDefinition::Text(text)), ..}) = key {
+                    members.push(ClassMember::ClassProp(ts_class_property(
+                        text.as_str(),
+                        datex_core::types::visitor::fold_type(self, value)?.into_ts_type(),
+                        Accessibility::Public,
+                    )));
+                }
+                else {
+                    unimplemented!("Map key is not a Text literal, cannot convert to TypeScript class");
+                }
+            }
+        }
+        else {
+            unimplemented!("EntityTypeDefinition is not a Map type, cannot convert to TypeScript class");
+        }
 
         for entity_impl in definition.impls().iter() {
             for method in entity_impl.methods().iter() {
