@@ -980,7 +980,7 @@ impl TypeFolder for TsTypeFolder {
         value: Self::Output,
     ) -> Result<Self::Output, Self::Error> {
         Ok(ts_type_reference(
-            "Record",
+            "Map",
             vec![key.into_ts_type(), value.into_ts_type()],
         )
         .into())

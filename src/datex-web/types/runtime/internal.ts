@@ -7,7 +7,7 @@
  */
 export type RuntimeInfo = {
     device_type: string | null;
-    other_versions: Record<string, string>;
+    other_versions: Map<string, string>;
     datex_version: string;
     running_since: number;
 };
