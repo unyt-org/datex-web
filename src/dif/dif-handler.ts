@@ -617,7 +617,6 @@ export class DIFHandler {
         entityTypeAddress: PointerAddressWithOwnership,
         value: unknown
     ): object {
-        console.log("val", value);
         const jsClass = this.resolvePointerAddress(...splitPointerAddressWithOwnership(entityTypeAddress));
         assert(this.isClass(jsClass.value), "Expected a JS class for the entity type definition");
         const instance = new jsClass.value();
