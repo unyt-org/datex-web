@@ -28,7 +28,12 @@ export const readableStreamTypeBinding: TypeBindingDefinition<ReadableStream<unk
 
         const controller = readableStreamControllers.get(originalTarget);
         if (controller) {
-            controller.enqueue(value);
+            try {
+                controller.enqueue(value);
+            }
+            catch (e) {
+                // TODO: what to do in this case? cleanup?
+            }
         } else {
             throw new Error("ReadableStream controller is not available.");
         }

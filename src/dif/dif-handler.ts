@@ -257,20 +257,49 @@ export class DIFHandler {
      * Executes a Datex script asynchronously and returns a Promise that resolves to a DIFContainer.
      * @param datexScript - The Datex script source code to execute.
      * @param values - An optional array of values to inject into the script.
+     * @param markAsDebug - An optional boolean to mark the (remote) execution as debug (default: false).
      * @returns A Promise that resolves to the execution result as a DIFContainer.
      * @throws If an error occurs during execution.
      */
     public async executeDIF(
         datexScript: string,
         values: unknown[] | null = [],
+        markAsDebug: boolean = false,
     ): Promise<DIFValueContainer | undefined> {
         return collapseDIFOption(
             await this.#runtime.execute(
                 datexScript,
                 this.convertToDIFValues(values),
+                markAsDebug,
             ) as DIFOptionalValueContainer,
         );
     }
+
+    /**
+     * Executes a Datex script asynchronously and returns a Promise that resolves to a DIFContainer.
+     * @param target - The target endpoint for the execution.
+     * @param datexScript - The Datex script source code to execute.
+     * @param values - An optional array of values to inject into the script.
+     * @param markAsDebug - An optional boolean to mark the (remote) execution as debug (default: false).
+     * @returns A Promise that resolves to the execution result as a DIFContainer.
+     * @throws If an error occurs during execution.
+     */
+    public async executeDIFRemote(
+        target: Endpoint,
+        datexScript: string,
+        values: unknown[] | null = [],
+        markAsDebug: boolean = false,
+    ): Promise<DIFValueContainer | undefined> {
+        return collapseDIFOption(
+            await this.#runtime.execute_remote(
+                target.toString(),
+                datexScript,
+                this.convertToDIFValues(values),
+                markAsDebug,
+            ) as DIFOptionalValueContainer,
+        );
+    }
+
 
     /**
      * Executes a Datex script synchronously and returns the result as a DIFContainer.

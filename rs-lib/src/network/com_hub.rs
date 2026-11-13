@@ -470,7 +470,7 @@ impl JSComHub {
         &self,
         callback: js_sys::Function,
         include_debug_blocks: bool,
-    ) {
+    ) -> String {
         self.com_hub().register_block_interceptor(BlockInterceptor::new(
             move |block| {
                 let this = JsValue::NULL;
@@ -490,6 +490,11 @@ impl JSComHub {
                 }
             },
             include_debug_blocks
-        ));
+        )).to_string()
+    }
+    
+    pub fn unregister_block_interceptor(&self, uuid: String) {
+        let uuid = UUID::from_string(uuid);
+        self.com_hub().unregister_block_interceptor(&uuid);
     }
 }

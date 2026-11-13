@@ -14,11 +14,12 @@ export class JSComHub {
     get_metadata_string(): string;
     get_trace(endpoint: string): Promise<any | undefined>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
-    register_block_interceptor(callback: Function, include_debug_blocks: boolean): void;
+    register_block_interceptor(callback: Function, include_debug_blocks: boolean): string;
     register_default_interface_factories(): void;
     register_interface_factory(interface_type: string, factory: Function): void;
     remove_interface(interface_uuid: string): Promise<void>;
     remove_socket(socket_uuid: string): Promise<void>;
+    unregister_block_interceptor(uuid: string): void;
 }
 
 export class JSDIFInterface {
@@ -64,13 +65,17 @@ export class JSRuntime {
     /**
      * Executes a DATEX script with inserted values, returning the result as DIFValue
      */
-    execute(script: string, inserted_values?: any[] | null): Promise<any>;
+    execute(script: string, inserted_values: any[] | null | undefined, mark_as_debug: boolean): Promise<any>;
+    /**
+     * Executes a DATEX script remotely with inserted values, returning the result as DIFValue
+     */
+    execute_remote(target: string, script: string, inserted_values: any[] | null | undefined, mark_as_debug: boolean): Promise<any>;
     execute_sync(script: string, dif_values?: any[] | null): any;
     execute_sync_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): string;
     /**
      * Execute a DATEX script with optional inserted values, returning the result as a string
      */
-    execute_with_string_result(script: string, inserted_values: any[] | null | undefined, decompile_options: any): Promise<string>;
+    execute_with_string_result(script: string, inserted_values: any[] | null | undefined, decompile_options: any, mark_as_debug: boolean): Promise<string>;
     /**
      * Start the LSP server, returning a JS function to send messages to Rust
      */

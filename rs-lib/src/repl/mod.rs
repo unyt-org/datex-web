@@ -61,7 +61,7 @@ impl Repl {
         let result = self
             .runtime
             .runtime()
-            .execute(script, &[], Some(&mut self.execution_context))
+            .execute(script, &[], Some(&mut self.execution_context), false)
             .await
             .map_err(js_error)?;
         Ok(result.map(|v| {

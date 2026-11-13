@@ -114,17 +114,20 @@ export class Runtime {
      * @param datexScript The Datex script to execute.
      * @param values The values to inject into the script.
      * @param decompileOptions Options for decompiling the result.
+     *
      * @returns A promise that resolves to the result of the script execution.
      */
     public executeWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
         decompileOptions: DecompileOptions | null = null,
+        markAsDebug: boolean = false,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
             datexScript,
             this.#difHandler.convertToDIFValues(values),
             decompileOptions,
+            markAsDebug,
         );
     }
 
@@ -160,6 +163,7 @@ export class Runtime {
     public execute<T = unknown>(
         datexScript: string,
         values?: unknown[],
+        markAsDebug: boolean,
     ): Promise<T>;
 
     /**
@@ -174,16 +178,16 @@ export class Runtime {
     public execute<T = unknown>(
         templateStrings: TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T | undefined>;
+    ): Promise<T>;
     public execute<T = unknown>(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T | undefined> {
-        const { datexScript, valuesArray } = this.#normalizeArguments(
+    ): Promise<T> {
+        const { datexScript, valuesArray, markAsDebug } = this.#normalizeArguments(
             datexScriptOrTemplateStrings,
             ...values,
         );
-        return this.#executeWithNormalizedArguments<T>(datexScript, valuesArray);
+        return this.#executeWithNormalizedArguments<T>(datexScript, valuesArray, markAsDebug);
     }
 
     /**
@@ -191,21 +195,52 @@ export class Runtime {
      * The result is converted to a JS value. If the script returns no value, it will return `undefined`.
      * @param datexScript The DATEX script to execute.
      * @param values The values to inject into the script, passed as an array.
+     * @param markAsDebug Optional boolean to mark the execution as debug (default: false).
      * @returns A Promise that resolves to the result of the script execution, converted to type T.
      */
     async #executeWithNormalizedArguments<T = unknown>(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<T | undefined> {
+        markAsDebug: boolean = false,
+    ): Promise<T> {
         const difValueContainer = await this.#difHandler.executeDIF(
             datexScript,
             values,
+            markAsDebug,
         );
         if (difValueContainer === undefined) {
             return undefined as T;
         }
         return this.#difHandler.resolveDIFValueContainer(difValueContainer);
     }
+
+    /**
+     * Execute a DATEX script remotely with injected values and return the result as a Promise of type T.
+     * The result is converted to a JS value. If the script returns no value, it will return `undefined`.
+     * @param target The endpoint to execute the script on.
+     * @param datexScript The DATEX script to execute.
+     * @param values The values to inject into the script, passed as an array.
+     * @param markAsDebug Optional boolean to mark the execution as debug (default: false).
+     * @returns A Promise that resolves to the result of the script execution, converted to type T.
+     */
+    async executeRemote<T = unknown>(
+        target: Endpoint,
+        datexScript: string,
+        values: unknown[] | null = [],
+        markAsDebug: boolean = false,
+    ): Promise<T> {
+        const difValueContainer = await this.#difHandler.executeDIFRemote(
+            target,
+            datexScript,
+            values,
+            markAsDebug,
+        );
+        if (difValueContainer === undefined) {
+            return undefined as T;
+        }
+        return this.#difHandler.resolveDIFValueContainer(difValueContainer);
+    }
+
 
     /**
      * Executes a Datex script synchronously and returns the result as a generic type T.
@@ -335,12 +370,14 @@ export class Runtime {
     #normalizeArguments(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
-    ): { datexScript: string; valuesArray: unknown[] } {
+    ): { datexScript: string; valuesArray: unknown[]; markAsDebug: boolean } {
         let datexScript: string;
         let valuesArray: unknown[];
+        let markAsDebug: boolean = false;
         if (typeof datexScriptOrTemplateStrings === "string") {
             datexScript = datexScriptOrTemplateStrings;
             valuesArray = values[0] as unknown[] ?? [];
+            markAsDebug = values[1] as boolean ?? false;
         } else if (Array.isArray(datexScriptOrTemplateStrings)) {
             // if it's a TemplateStringsArray, join the strings and interpolate the values
             datexScript = datexScriptOrTemplateStrings.join("?");
@@ -348,7 +385,7 @@ export class Runtime {
         } else {
             throw new Error("Invalid argument type for executeSync");
         }
-        return { datexScript, valuesArray };
+        return { datexScript, valuesArray, markAsDebug };
     }
 
     /**

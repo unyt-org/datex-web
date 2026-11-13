@@ -35,7 +35,10 @@ use datex_core::{
 };
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
-use datex_core::runtime::execution::context::ExecutionContext;
+use std::str::FromStr;
+use datex_core::core_compiler::core_compilation_context::DXBWithSharedValues;
+use datex_core::runtime::execution::context::{ExecutionContext, RemoteExecutionTarget};
+use datex_core::runtime::execution::remote_execution_options::RemoteExecutionOptions;
 use indexmap::IndexMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
@@ -273,6 +276,7 @@ impl JSRuntime {
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
         decompile_options: JsValue,
+        mark_as_debug: bool,
     ) -> Result<String, JsError> {
         let decompile_options: DecompileOptions = from_js_dif_value_container(
             decompile_options,
@@ -284,7 +288,7 @@ impl JSRuntime {
         let val = &self.js_values_to_value_containers(inserted_values)?;
         let result = self
             .runtime
-            .execute(script, val, None::<ExecutionContext>)
+            .execute(script, val, None::<ExecutionContext>, mark_as_debug)
             .await
             .map_err(js_error)?;
         match result {
@@ -300,6 +304,7 @@ impl JSRuntime {
         &self,
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
+        mark_as_debug: bool,
     ) -> Result<JsValue, JsError> {
         let result = self
             .runtime
@@ -307,6 +312,7 @@ impl JSRuntime {
                 script,
                 &self.js_values_to_value_containers(inserted_values)?,
                 None::<ExecutionContext>,
+                mark_as_debug,
             )
             .await
             .map_err(js_error)?;
@@ -316,6 +322,40 @@ impl JSRuntime {
             self.runtime.shared_references_cache_refcell(),
         ))
     }
+
+    /// Executes a DATEX script remotely with inserted values, returning the result as DIFValue
+    pub async fn execute_remote(
+        &self,
+        target: String,
+        script: &str,
+        inserted_values: Option<Vec<JsValue>>,
+        mark_as_debug: bool,
+    ) -> Result<JsValue, JsError> {
+        let target_endpoint = Endpoint::from_str(&target).map_err(|e| {
+            JsError::new(&format!("Invalid target endpoint: {}", e))
+        })?;
+
+        let dxb = self.compile_script_with_values(script, inserted_values)?;
+
+        let result = self
+            .runtime
+            .execute_remote_single_receiver(
+                &RemoteExecutionTarget::new(vec![target_endpoint]),
+                dxb,
+                RemoteExecutionOptions {
+                    mark_as_debug,
+                    is_end_of_context: true,
+                }
+            )
+            .await
+            .map_err(js_error)?;
+        Ok(optional_value_container_to_optional_js_dif_value(
+            result,
+            self.dif_interface.shared_values_cache(),
+            self.runtime.shared_references_cache_refcell(),
+        ))
+    }
+
 
     pub fn execute_sync_with_string_result(
         &self,
@@ -418,7 +458,16 @@ impl JSRuntime {
         &self,
         script: &str,
         inserted_values: Option<Vec<JsValue>>,
-    ) -> Result<Vec<u8>, JsValue> {
+    ) -> Result<Vec<u8>, JsError> {
+        // TODO: handle dxb.values?
+        self.compile_script_with_values(script, inserted_values).map(|res| res.dxb)
+    }
+
+    fn compile_script_with_values(
+        &self,
+        script: &str,
+        inserted_values: Option<Vec<JsValue>>,
+    ) -> Result<DXBWithSharedValues, JsError> {
         let CompilationResult {
             dxb_with_shared_values,
             ..
@@ -430,10 +479,9 @@ impl JSRuntime {
                 .collect::<Vec<_>>(),
             CompileOptions::default(),
             self.runtime.clone(),
-        )
-        .map_err(js_error)?;
-        // TODO: handle dxb.values?
-        Ok(dxb_with_shared_values.dxb)
+        ).map_err(js_error)?;
+
+        Ok(dxb_with_shared_values)
     }
 
     /// Start the LSP server, returning a JS function to send messages to Rust

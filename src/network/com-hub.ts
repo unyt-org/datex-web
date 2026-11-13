@@ -139,11 +139,20 @@ export class ComHub {
      * Registers a callback to intercept incoming and outgoing blocks.
      * @param callback The callback to be invoked for each block.
      * @param include_debug_blocks Whether to include debug blocks in the interception. Defaults to false.
+     * @returns A UUID for the registered interceptor, which can be used to unregister it later.
      */
     public registerBlockInterceptor(
         callback: (block: Uint8Array, socket_uuid: string, direction: "Incoming"|"Outgoing") => void,
         include_debug_blocks: boolean = false,
-    ): void {
-        this.#jsComHub.register_block_interceptor(callback, include_debug_blocks);
+    ): string {
+        return this.#jsComHub.register_block_interceptor(callback, include_debug_blocks);
+    }
+
+    /**
+     * Unregisters a previously registered block interceptor.
+     * @param uuid
+     */
+    public unregisterBlockInterceptor(uuid: string): void {
+        this.#jsComHub.unregister_block_interceptor(uuid);
     }
 }
