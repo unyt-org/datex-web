@@ -14,10 +14,9 @@ export class JSComHub {
     get_metadata_string(): string;
     get_trace(endpoint: string): Promise<any | undefined>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
+    register_block_interceptor(callback: Function, include_debug_blocks: boolean): void;
     register_default_interface_factories(): void;
-    register_incoming_block_interceptor(callback: Function): void;
     register_interface_factory(interface_type: string, factory: Function): void;
-    register_outgoing_block_interceptor(callback: Function): void;
     remove_interface(interface_uuid: string): Promise<void>;
     remove_socket(socket_uuid: string): Promise<void>;
 }

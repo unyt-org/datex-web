@@ -4,8 +4,15 @@
 
 import { SharedContainerMutability, type SharedRef, SharedReferenceMutability } from "../../../shared-container/mod.ts";
 import type { ComHubMetadata } from "../network/com_hub/metadata.ts";
+import type { BlockDirection } from "../network/com_hub/mod.ts";
 import type { RuntimeInfo, RuntimeStats } from "../runtime/internal.ts";
 import type { LogMessage } from "../utils/logger.ts";
+
+export type CapturedBlockData = {
+    block: number[];
+    socket_uuid: string;
+    direction: BlockDirection;
+};
 
 /**
  * The Inspector is a built-in debug helper that provides access to the DATEX runtime and its properties.
@@ -17,6 +24,9 @@ export declare class Inspector {
     /**
      * Returns a stream of all global log messages of the endpoint.
      */ public logs(): Promise<SharedRef<ReadableStream<LogMessage>, SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>>;
+    /**
+     * Returns a stream of all incoming and outgoing blocks on the endpoint (excluding debug blocks).
+     */ public blocks(): Promise<SharedRef<ReadableStream<CapturedBlockData>, SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>>;
     /**
      * Returns the current metadata information (connected interfaces, sockets) of the endpoint's com hub.
      */ public com_hub_metadata(): Promise<ComHubMetadata>;

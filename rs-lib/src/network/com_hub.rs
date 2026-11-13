@@ -40,6 +40,7 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::network::com_hub::BlockInterceptor;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -465,50 +466,22 @@ impl JSComHub {
         Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
     }
 
-    pub fn register_outgoing_block_interceptor(
+    pub fn register_block_interceptor(
         &self,
         callback: js_sys::Function,
+        include_debug_blocks: bool,
     ) {
-        self.com_hub().register_outgoing_block_interceptor(
-            move |block, socket, endpoints| {
+        self.com_hub().register_block_interceptor(BlockInterceptor::new(
+            move |block| {
                 let this = JsValue::NULL;
                 let block_bytes =
-                    js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.to_string());
-                let endpoints_array = js_sys::Array::new();
-                for endpoint in endpoints {
-                    endpoints_array
-                        .push(&JsValue::from_str(&endpoint.to_string()));
-                }
+                    js_sys::Uint8Array::from(block.block.to_bytes().as_slice());
+                let socket_uuid = JsValue::from_str(&block.socket_uuid.to_string());
                 if let Err(e) = callback.call3(
                     &this,
                     &JsValue::from(block_bytes),
                     &socket_uuid,
-                    &endpoints_array,
-                ) {
-                    error!(
-                        "Error in outgoing block interceptor callback: {:?}",
-                        e
-                    );
-                }
-            },
-        );
-    }
-
-    pub fn register_incoming_block_interceptor(
-        &self,
-        callback: js_sys::Function,
-    ) {
-        self.com_hub().register_incoming_block_interceptor(
-            move |block, socket| {
-                let this = JsValue::NULL;
-                let block_bytes =
-                    js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.to_string());
-                if let Err(e) = callback.call2(
-                    &this,
-                    &JsValue::from(block_bytes),
-                    &socket_uuid,
+                    &JsValue::from_str(&block.direction.to_string())
                 ) {
                     error!(
                         "Error in incoming block interceptor callback: {:?}",
@@ -516,6 +489,7 @@ impl JSComHub {
                     );
                 }
             },
-        );
+            include_debug_blocks
+        ));
     }
 }
