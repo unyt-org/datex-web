@@ -8,6 +8,12 @@ const VERSION: string = await Deno.readTextFile(
     new URL("../deno.json", import.meta.url),
 ).then(JSON.parse).then((data: { version: string }) => data.version);
 
+// check if --dev flag is passed
+const isDev = Deno.args.includes("--dev");
+if (isDev) {
+    console.info("Note: Building npm package in development mode");
+}
+
 await build({
     entryPoints: [
         {
@@ -34,6 +40,10 @@ await build({
     scriptModule: false,
     test: false, // TODO: enable, currently fails, see https://github.com/denoland/dnt/issues/249
 
+    compilerOptions: {
+        target: "ES2023",
+    },
+
     package: {
         // package.json properties
         name: "@unyt/datex",
@@ -45,6 +55,13 @@ await build({
         },
         bugs: {
             url: "https://github.com/unyt-org/datex-web/issues",
+        },
+        scripts: {
+            "serve": "vite",
+        },
+        devDependencies: {
+            "vite": "^5.0.0",
+            "vite-plugin-mkcert": "^2.1.0",
         },
     },
     // steps to run after building and before running the tests
@@ -117,7 +134,21 @@ await build({
             "npm/esm/datex-web/datex_web.d.ts",
         );
 
+        // copy files from npm-assets
+        Deno.copyFileSync("scripts/npm-assets/vite.config.ts", "npm/vite.config.ts");
+
         // currently required for version tests
         Deno.copyFileSync("deno.json", "npm/esm/deno.json");
+
+        // change version to *-dev if development build
+        if (isDev) {
+            // update npm/esm/runtime/runtime.js
+            const runtimeJs = Deno.readTextFileSync("npm/esm/runtime/runtime.js");
+            const updatedRuntimeJs = runtimeJs.replace(
+                /const VERSION = "([^"]+)"/,
+                `const VERSION = "$1-dev"`,
+            );
+            Deno.writeTextFileSync("npm/esm/runtime/runtime.js", updatedRuntimeJs);
+        }
     },
 });

@@ -95,4 +95,4 @@ await Deno.writeTextFile(ghOutput, `NEW_VERSION=${newVersion}`, {
     append: true,
 });
 
-console.log(`Version updated to ${newVersion}`, ghOutput);
+console.info(`Version updated to ${newVersion}`, ghOutput);

@@ -24,5 +24,4 @@ Deno.test("runtime version", async () => {
     const runtime = await Runtime.create({ endpoint: Endpoint.get("@unyt") });
     assertEquals(runtime.js_version, actual_js_version);
     assertEquals(runtime.version, actual_version);
-    console.log(runtime);
 });

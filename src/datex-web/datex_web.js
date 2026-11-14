@@ -9,4 +9,5 @@ const wasm = (await runtimeInterface.instantiateWebAssembly(
 export * from "./datex_web.internal.js";
 import { __wbg_set_wasm } from "./datex_web.internal.js";
 __wbg_set_wasm(wasm.exports);
+export const memory = wasm.exports.memory;
 wasm.exports.__wbindgen_start();

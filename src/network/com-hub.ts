@@ -108,7 +108,7 @@ export class ComHub {
      */
     public printMetadata(): void {
         const metadata = this.#jsComHub.get_metadata_string();
-        console.log(metadata);
+        console.info(metadata);
     }
 
     public getMetadata(): ComHubMetadata {
@@ -127,7 +127,7 @@ export class ComHub {
             console.warn(`No trace available for endpoint: ${endpoint}`);
             return;
         }
-        console.log(trace);
+        console.info(trace);
     }
 
     public getTrace(endpoint: string): Promise<NetworkTraceResult | undefined> {
@@ -136,26 +136,23 @@ export class ComHub {
     }
 
     /**
-     * Registers a callback to intercept incoming blocks.
-     * @param callback The callback to be invoked for each incoming block.
+     * Registers a callback to intercept incoming and outgoing blocks.
+     * @param callback The callback to be invoked for each block.
+     * @param include_debug_blocks Whether to include debug blocks in the interception. Defaults to false.
+     * @returns A UUID for the registered interceptor, which can be used to unregister it later.
      */
-    public registerIncomingBlockInterceptor(
-        callback: (block: Uint8Array, socket_uuid: string) => void,
-    ): void {
-        this.#jsComHub.register_incoming_block_interceptor(callback);
+    public registerBlockInterceptor(
+        callback: (block: Uint8Array, socket_uuid: string, direction: "Incoming"|"Outgoing") => void,
+        include_debug_blocks: boolean = false,
+    ): string {
+        return this.#jsComHub.register_block_interceptor(callback, include_debug_blocks);
     }
 
     /**
-     * Registers a callback to intercept outgoing blocks.
-     * @param callback The callback to be invoked for each outgoing block.
+     * Unregisters a previously registered block interceptor.
+     * @param uuid
      */
-    public registerOutgoingBlockInterceptor(
-        callback: (
-            block: Uint8Array,
-            socket_uuid: string,
-            endpoints: string[],
-        ) => void,
-    ): void {
-        this.#jsComHub.register_outgoing_block_interceptor(callback);
+    public unregisterBlockInterceptor(uuid: string): void {
+        this.#jsComHub.unregister_block_interceptor(uuid);
     }
 }

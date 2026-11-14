@@ -3,6 +3,6 @@
 // deno-fmt-ignore-file
 
 export type SerialClientInterfaceSetupData = {
-    port_name: null | string;
+    port_name: string | null;
     baud_rate: number;
 };

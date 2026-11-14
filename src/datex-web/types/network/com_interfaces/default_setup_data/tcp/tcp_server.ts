@@ -4,5 +4,5 @@
 
 export type TCPServerInterfaceSetupData = {
     port: number;
-    host: null | string;
+    host: string | null;
 };

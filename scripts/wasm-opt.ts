@@ -76,7 +76,7 @@ async function getWasmOptBinaryPath() {
 }
 
 async function downloadBinaryen(tempPath: Path) {
-    console.log(
+    console.info(
         `${colors.bold(colors.green("Downloading"))} wasm-opt binary...`,
     );
 
@@ -156,7 +156,7 @@ function cacheDir(): string | undefined {
 
 export async function optimizeWasmFile(filePath: string) {
     try {
-        console.log(
+        console.info(
             `${colors.bold(colors.green("Optimizing"))} .wasm file...`,
         );
         await runWasmOpt(new Path(filePath));

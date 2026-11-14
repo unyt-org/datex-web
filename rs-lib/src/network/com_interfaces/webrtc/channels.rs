@@ -23,6 +23,7 @@ use datex_core::{
         },
     },
 };
+use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
 use futures::{FutureExt, pin_mut};
 use futures_channel::oneshot;
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::Closure};
@@ -356,7 +357,7 @@ pub fn make_com_interface_js(
                         .send_with_u8_array(&block.to_bytes())
                         .map_err(|_| SendFailure(Box::new(block)))?;
 
-                    Ok(())
+                    Ok(SendSuccess::Sent)
                 }
             }),
         ),

@@ -28,13 +28,17 @@
             "description": "Build the WASM package with the release profile.",
             "command": "deno run -A scripts/build-wasm.ts --profile release"
         },
-        "build:debug:unsecure": {
+        "build:debug:insecure": {
             "description": "Build debug WASM with unsigned block support enabled.",
             "command": "deno run -A scripts/build-wasm.ts --profile debug --features allow_unsigned_blocks"
         },
         "build:debug:no-opt": {
             "description": "Build debug WASM without optimization.",
             "command": "deno run -A scripts/build-wasm.ts --profile debug --no-opt"
+        },
+        "build:debug:no-opt:insecure": {
+          "description": "Build debug WASM without optimization.",
+          "command": "deno run -A scripts/build-wasm.ts --profile debug --no-opt --features allow_unsigned_blocks"
         },
         "types": {
             "description": "Generate TypeScript declarations from the Rust type registry.",
@@ -71,6 +75,14 @@
             "description": "Build the npm package only, then start the browser demo.",
             "command": "deno task build:npm && cd datex-browser-demo && npm install && npm run dev"
         },
+        "serve-npm-watch": {
+            "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
+            "command": "deno run -A scripts/serve-npm-watch.ts"
+        },
+        "serve-npm-watch:insecure": {
+          "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
+          "command": "deno run -A scripts/serve-npm-watch.ts --insecure"
+        },
         "fmt": {
             "description": "Format Deno and Rust sources.",
             "command": "deno fmt && cargo fmt"
@@ -98,7 +110,7 @@
     "imports": {
         "@david/path": "jsr:@david/path@^0.2.0",
         "@david/temp": "jsr:@david/temp@^0.1.1",
-        "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
+        "@deno/dnt": "jsr:@deno/dnt@^0.44.0",
         "@qnighy/dedent": "jsr:@qnighy/dedent@^0.1.2",
         "@std/assert": "jsr:@std/assert@^1.0.19",
         "@std/cli": "jsr:@std/cli@^1.0.28",

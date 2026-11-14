@@ -9,12 +9,14 @@ import { CoreLibTypeId } from "./core.ts";
 import type {
     DIFBaseSharedValueContainer,
     DIFCoreValue,
+    DIFRawValue,
     DIFTypeDefinition,
     DIFTypeDefinitionMap,
     DIFTypeKey,
     DIFValueContainer,
 } from "./types/mod.ts";
 import type { PointerAddress } from "../shared-container/mod.ts";
+import { isSharedValueContainer } from "./helpers/values.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
@@ -46,20 +48,10 @@ export function difBaseSharedContainerToDisplayString(
 export function difValueContainerToDisplayString(
     container: DIFValueContainer,
 ): string {
-    if (typeof container === "object" && container !== null && "$" in container) {
-        return container.$;
+    if (isSharedValueContainer(container)) {
+        return container._;
     } else if (Array.isArray(container)) {
-        const [typeId, value, typeDef] = container;
-        const typeString = typeDef ? difTypeDefinitionToDisplayString(typeDef) : null;
-        const valueString = difCoreValueToDisplayString(
-            typeId,
-            value,
-        );
-        if (typeString) {
-            return `{ type: ${typeString}, value: ${valueString} }`;
-        } else {
-            return valueString;
-        }
+        return difCoreValueToDisplayString(container);
     } else {
         return JSON.stringify(container);
     }
@@ -69,9 +61,9 @@ export function difValueContainerToDisplayString(
  * Converts a DIF representation value to a display string.
  */
 export function difCoreValueToDisplayString(
-    id: CoreLibTypeId,
     coreValue: DIFCoreValue,
 ): string {
+    const [id, rawValue] = coreValue;
     switch (id) {
         case CoreLibTypeId.boolean:
         case CoreLibTypeId.text:
@@ -93,32 +85,32 @@ export function difCoreValueToDisplayString(
         case CoreLibTypeId.decimal_dbig:
         case CoreLibTypeId.null:
         case CoreLibTypeId.decimal:
-            return JSON.stringify(coreValue);
+            return JSON.stringify(rawValue);
 
         case CoreLibTypeId.Unit:
             return "()";
         case CoreLibTypeId.Never:
             return "never";
-        case CoreLibTypeId.Unknown:
+        case CoreLibTypeId.Any:
             return "unknown";
         case CoreLibTypeId.Range:
-            if (Array.isArray(coreValue)) {
-                return `[${difValueContainerToDisplayString(coreValue[0] as DIFValueContainer)}, ${
-                    difValueContainerToDisplayString(coreValue[1] as DIFValueContainer)
+            if (Array.isArray(rawValue)) {
+                return `[${difValueContainerToDisplayString(rawValue[0] as DIFValueContainer)}, ${
+                    difValueContainerToDisplayString(rawValue[1] as DIFValueContainer)
                 }]`;
-            } else if (coreValue && typeof coreValue === "object") {
-                return `{ start: ${difValueContainerToDisplayString(coreValue.start)}, end: ${
-                    difValueContainerToDisplayString(coreValue.end)
+            } else if (rawValue && typeof rawValue === "object" && "start" in rawValue && "end" in rawValue) {
+                return `{ start: ${difValueContainerToDisplayString(rawValue.start)}, end: ${
+                    difValueContainerToDisplayString(rawValue.end)
                 } }`;
             } else {
-                throw new Error("Invalid range value: " + JSON.stringify(coreValue));
+                throw new Error("Invalid range value: " + JSON.stringify(rawValue));
             }
         case CoreLibTypeId.Type:
-            return difTypeDefinitionToDisplayString(coreValue as DIFTypeDefinition);
+            return difTypeDefinitionToDisplayString(rawValue as DIFTypeDefinition);
         case CoreLibTypeId.Map:
-            if (Array.isArray(coreValue)) {
+            if (Array.isArray(rawValue)) {
                 return `[${
-                    (coreValue as [DIFValueContainer, DIFValueContainer][])
+                    (rawValue as [DIFValueContainer, DIFValueContainer][])
                         .map((value) => {
                             if (Array.isArray(value)) {
                                 return `[${
@@ -134,16 +126,16 @@ export function difCoreValueToDisplayString(
                 }]`;
             }
 
-            if (coreValue && typeof coreValue === "object") {
+            if (rawValue && typeof rawValue === "object") {
                 return `{ ${
-                    Object.entries(coreValue)
+                    Object.entries(rawValue)
                         .map(
                             ([key, value]) => `${key}: ${difValueContainerToDisplayString(value)}`,
                         )
                         .join(", ")
                 } }`;
             }
-            throw new Error("Invalid map value: " + JSON.stringify(coreValue));
+            throw new Error("Invalid map value: " + JSON.stringify(rawValue));
         default:
             throw new Error("Unknown core lib type id: " + id);
     }

@@ -3,24 +3,27 @@
 
 extern crate core;
 
+use std::collections::HashMap;
 use std::sync::Once;
 
+use log::info;
 use serde_wasm_bindgen::from_value;
 // use datex_cli_core::CLI;
 
 use datex_core::{
     compiler::{CompileOptions, compile_script, compile_template},
-    decompiler::decompile_body,
-    disassembler::{disassemble_body},
-    global::protocol_structures::instructions::NestedInstructionResolutionStrategy,
+    decompiler::{DecompileOptions, dxb_to_source_code::dxb_to_source_code},
+    disassembler::{disassemble_body, get_disassembled_with_options},
+    instruction::NestedInstructionResolutionStrategy,
     runtime::execution::{ExecutionInput, ExecutionOptions, execute_dxb_sync},
 };
-use datex_core::disassembler::get_disassembled_with_options;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 mod runtime;
 use runtime::JSRuntime;
+use web_sys::console::info;
 mod dif;
 pub mod network;
 
@@ -72,9 +75,14 @@ impl JSDebugConfig {
 pub async fn create_runtime(
     config: JsValue,
     debug_config: JsValue,
+    device_type: String,
+    datex_web_version: JsValue,
 ) -> JSRuntime {
     let debug_config: Option<JSDebugConfig> =
         from_value(debug_config).unwrap_or_default();
+
+    let versions: Vec<(String, String)> = from_value(datex_web_version).unwrap_or_default();
+
     INIT.call_once(|| {
         console_error_panic_hook::set_once();
         // create a logger that logs to the browser console, with the log level specified in the debug config
@@ -83,7 +91,7 @@ pub async fn create_runtime(
         }
     });
 
-    JSRuntime::run(config).await
+    JSRuntime::run(config, device_type, IndexMap::from_iter(versions.into_iter())).await
 }
 
 #[wasm_bindgen]
@@ -113,4 +121,9 @@ pub fn disassemble_dxb_to_string(dxb: Vec<u8>, options: JsValue) -> JsValue {
     let options = from_value(options).unwrap_or_default();
     serde_wasm_bindgen::to_value(&get_disassembled_with_options(&dxb, options))
         .unwrap()
+}
+
+#[wasm_bindgen]
+pub fn decompile_dxb_body(dxb: Vec<u8>) -> String {
+    dxb_to_source_code(&dxb, DecompileOptions::pretty()).unwrap()
 }

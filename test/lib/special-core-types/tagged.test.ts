@@ -4,8 +4,13 @@ import { assertEquals, assertNotEquals } from "@std/assert";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { DIFValue } from "datex/dif/types/mod.ts";
 import { CoreLibTypeId } from "datex/dif/core.ts";
+import { arrayTypeBinding } from "../../../src/lib/js-core-types/array.ts";
+import { createDIFValueWithTag } from "../../../src/dif/helpers/values.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@test") });
+});
 
 Deno.test("tagged value DIF representation", () => {
     const taggedDifValue = runtime.dif.convertJSValueToDIFValueContainer(
@@ -14,12 +19,7 @@ Deno.test("tagged value DIF representation", () => {
 
     assertEquals(
         taggedDifValue,
-        [CoreLibTypeId.decimal_f64, 123, {
-            tagged_type: [
-                "Example",
-                CoreLibTypeId.decimal_f64,
-            ],
-        }],
+        createDIFValueWithTag([CoreLibTypeId.decimal_f64, 123], "Example"),
     );
 });
 
@@ -30,12 +30,7 @@ Deno.test("tagged empty value DIF representation", () => {
 
     assertEquals(
         taggedDifValue,
-        [CoreLibTypeId.null, null, {
-            tagged_type: [
-                "EmptyTag",
-                CoreLibTypeId.Unit,
-            ],
-        }],
+        createDIFValueWithTag([CoreLibTypeId.Unit, null], "EmptyTag", true),
     );
 });
 
@@ -54,6 +49,7 @@ Deno.test("tagged empty value round-trip", () => {
     const difValue = runtime.dif.convertJSValueToDIFValueContainer(
         originalValue,
     ) as DIFValue;
+    console.log(difValue);
     const jsValue = runtime.dif.resolveDIFValueContainer(difValue);
 
     assertEquals(jsValue, originalValue);

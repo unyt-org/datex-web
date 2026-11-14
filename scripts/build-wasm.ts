@@ -19,7 +19,10 @@ const profile = flags.profile === "release" ? "release" : "debug";
 
 await runCargoBuildCommand({
     profile,
-    cargoFlags: flags.features ? ["--features", flags.features] : [],
+    cargoFlags: (flags.features ? ["--features", flags.features] : []).concat([
+        "-Zbuild-std=std,panic_abort",
+        "-Zbuild-std-features=debug_refcell",
+    ]),
 });
 
 await runWasmBindgen({
@@ -58,7 +61,7 @@ async function runCargoBuildCommand(args: {
         const rustupAddWasm = new Deno.Command("rustup", {
             args: ["target", "add", "wasm32-unknown-unknown"],
         });
-        console.log(
+        console.info(
             `Ensuring wasm32-unknown-unknown target installed...`,
         );
         const rustupAddWasmOutput = await rustupAddWasm.output();
@@ -206,6 +209,7 @@ async function generateJsMainFile(args: {
         export * from "./${args.name}.internal.js";
         import { __wbg_set_wasm } from "./${args.name}.internal.js";
         __wbg_set_wasm(wasm.exports);
+        export const memory = wasm.exports.memory;
         wasm.exports.__wbindgen_start();
     `.trimStart();
 

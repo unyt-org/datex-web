@@ -17,11 +17,19 @@ use datex_core::{
                 ComInterfaceConfiguration, SendCallback, SendFailure,
                 SendSuccess, SocketConfiguration, SocketProperties,
             },
-            properties::{ComInterfaceProperties, InterfaceDirection},
+            properties::{
+                ComInterfaceProperties, InterfaceDirection, ReconnectionConfig,
+            },
             socket::ComInterfaceSocketUUID,
         },
     },
-    runtime::{Runtime, cache::shared_values_cache::SharedValuesCache},
+    runtime::{
+        Runtime,
+        cache::{
+            shared_references_cache::SharedReferencesCache,
+            shared_values_cache::SharedValuesCache,
+        },
+    },
     utils::uuid::UUID,
     values::{
         core_values::endpoint::Endpoint, value::Value,
@@ -32,12 +40,14 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
+use datex_core::network::com_hub::BlockInterceptor;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
 
 use crate::js_utils::{
-    from_dif_js_value, from_js_value, to_dif_js_value, to_js_value,
+    deserializable_from_js_value, from_js_dif, from_js_dif_value_container,
+    to_js_dif, to_js_dif_value_container,
 };
 
 #[wasm_bindgen]
@@ -46,7 +56,7 @@ pub struct JSComHub {
     // ignore for wasm bindgen
     pub(crate) runtime: Runtime,
     #[wasm_bindgen(skip)]
-    pub dif_interface: Rc<RefCell<DIFInterface>>,
+    pub dif_interface: Rc<DIFInterface>,
 }
 
 // wrapper around AsyncGenerator that implements Drop
@@ -72,10 +82,7 @@ impl Deref for JsReadableStream {
  * Internal impl of the JSRuntime, not exposed to JavaScript
  */
 impl JSComHub {
-    pub fn new(
-        runtime: Runtime,
-        dif_interface: Rc<RefCell<DIFInterface>>,
-    ) -> JSComHub {
+    pub fn new(runtime: Runtime, dif_interface: Rc<DIFInterface>) -> JSComHub {
         let com_hub = JSComHub {
             runtime,
             dif_interface,
@@ -124,14 +131,16 @@ impl JSComHub {
             Rc::new(move |setup_data| {
                 let factory = factory.clone();
                 let dif_interface = dif_interface.clone();
+                let runtime = runtime.clone();
 
                 Box::pin(async move {
                     let interface_configuration_promise = factory
                         .call1(
                             &JsValue::UNDEFINED,
-                            &to_js_value(
+                            &to_js_dif(
                                 &setup_data,
-                                &mut dif_interface.borrow_mut().cache,
+                                &dif_interface.cache,
+                                runtime.shared_references_cache_refcell(),
                             ),
                         )
                         .map_err(|e| {
@@ -148,7 +157,11 @@ impl JSComHub {
                         .await
                         .expect("Failed to get value from promise");
 
-                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(&interface_configuration, &mut dif_interface.borrow_mut().cache)
+                    let (properties, has_single_socket, new_sockets_generator) = JSComHub::parse_com_interface_configuration(
+                        &interface_configuration,
+                        &dif_interface.cache,
+                        runtime.shared_references_cache_refcell(),
+                    )
                         .map_err(|e| {
                             error!("Error parse_com_interface_configuration: {:?}", e);
 
@@ -178,10 +191,13 @@ impl JSComHub {
                                     return;
                                 }
 
-                                let mut dif_interface = dif_interface.borrow_mut();
-                                let cache = &mut dif_interface.cache;
+                                let shared_references_cache = runtime.shared_references_cache_refcell();
 
-                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(&read_result.get_value(), cache) {
+                                let (socket_properties, socket_iterator, send_callback) = match JSComHub::parse_socket_configuration(
+                                    &read_result.get_value(),
+                                    &dif_interface.cache,
+                                    shared_references_cache,
+                                ) {
                                     Ok(result) => result,
                                     Err(e) => {
                                         error!("Error parse_socket_configuration: {:?}", e);
@@ -189,7 +205,6 @@ impl JSComHub {
                                     }
                                 };
 
-                                drop(dif_interface);
 
                                 let send_callback = Rc::new(send_callback);
                                 let socket_data_reader = socket_iterator.get_reader()
@@ -230,7 +245,7 @@ impl JSComHub {
                                                     error!("Error calling send callback: {:?}", e);
                                                     SendFailure(Box::new(dxb_block))
                                                 })
-                                                .map(|_| ())
+                                                .map(|_| SendSuccess::Sent)
                                         }
                                     })),
                                     Some(async move || {
@@ -245,18 +260,24 @@ impl JSComHub {
                     ))
                 })
             }),
+            ReconnectionConfig::NoReconnect, // TODO
+            ComInterfaceProperties::default,
         );
     }
 
     fn parse_com_interface_configuration(
         interface_configuration: &JsValue,
-        cache: &mut SharedValuesCache,
+        values_cache: &RefCell<SharedValuesCache>,
+        references_cache: &RefCell<SharedReferencesCache>,
     ) -> Result<(ComInterfaceProperties, bool, JsReadableStream), JsValue> {
         let properties =
             Reflect::get(interface_configuration, &"properties".into())?;
 
-        let properties: ComInterfaceProperties =
-            from_dif_js_value(properties, cache)?;
+        let properties: ComInterfaceProperties = from_js_dif_value_container(
+            properties,
+            values_cache,
+            references_cache,
+        )?;
 
         // get bool has_single_socket from interface_configuration
         let has_single_socket =
@@ -280,7 +301,8 @@ impl JSComHub {
 
     fn parse_socket_configuration(
         socket_configuration: &JsValue,
-        cache: &mut SharedValuesCache,
+        values_cache: &RefCell<SharedValuesCache>,
+        ref_cache: &RefCell<SharedReferencesCache>,
     ) -> Result<
         (SocketProperties, JsReadableStream, Function),
         serde_wasm_bindgen::Error,
@@ -289,7 +311,8 @@ impl JSComHub {
             Reflect::get(socket_configuration, &"properties".into())
                 .and_then(|v| v.dyn_into::<Object>())?;
 
-        #[derive(Debug, Clone, Datex)]
+        #[derive(Datex, Debug, Clone)]
+        #[datex(structural)]
         pub struct SocketPropertiesPartial {
             pub direction: InterfaceDirection,
             pub channel_factor: u32,
@@ -297,12 +320,13 @@ impl JSComHub {
         }
 
         let properties: SocketPropertiesPartial =
-            from_dif_js_value(properties, cache).map_err(|e| {
-                serde_wasm_bindgen::Error::new(&format!(
-                    "Error parsing socket properties: {:?}",
-                    e
-                ))
-            })?;
+            from_js_dif_value_container(properties, values_cache, ref_cache)
+                .map_err(|e| {
+                    serde_wasm_bindgen::Error::new(&format!(
+                        "Error parsing socket properties: {:?}",
+                        e
+                    ))
+                })?;
 
         // add uuid to properties since it is not set by the user but is required for the SocketProperties struct
         let properties = SocketProperties::new_with_maybe_direct_endpoint(
@@ -358,11 +382,18 @@ impl JSComHub {
         setup_data: JsValue,
         priority: Option<u16>,
     ) -> Result<String, JsError> {
-        let setup_data = from_dif_js_value(
+        let setup_data: ValueContainer = from_js_dif(
             setup_data,
-            &mut self.dif_interface.borrow_mut().cache,
+            &self.dif_interface.cache,
+            self.runtime.shared_references_cache_refcell(),
         )
         .map_err(|e| JsError::new(&format!("{e:?}")))?;
+
+        let setup_data = match setup_data {
+            ValueContainer::Local(value) => value,
+            _ => return Err(JsError::new("Setup data must be a local value")),
+        };
+
         let interface = self
             .create_interface_internal(interface_type, setup_data, priority)
             .await
@@ -379,9 +410,10 @@ impl JSComHub {
         let runtime = self.runtime.clone();
         let com_hub = runtime.com_hub();
         com_hub
-            .remove_interface(interface_uuid.clone())
+            .remove_interface(&interface_uuid)
             .await
             .map_err(|_| JsError::new("Failed to remove interface"))
+            .map(|_| ())
     }
 
     pub async fn remove_socket(
@@ -405,7 +437,11 @@ impl JSComHub {
 
     pub fn get_metadata(&self) -> JsValue {
         let metadata = self.com_hub().get_metadata();
-        to_dif_js_value(metadata, &mut self.dif_interface.borrow_mut().cache)
+        to_js_dif_value_container(
+            metadata,
+            &self.dif_interface.cache,
+            self.runtime.shared_references_cache_refcell(),
+        )
     }
 
     pub async fn get_trace_string(
@@ -430,50 +466,22 @@ impl JSComHub {
         Ok(trace.map(|trace| serde_wasm_bindgen::to_value(&trace).unwrap()))
     }
 
-    pub fn register_outgoing_block_interceptor(
+    pub fn register_block_interceptor(
         &self,
         callback: js_sys::Function,
-    ) {
-        self.com_hub().register_outgoing_block_interceptor(
-            move |block, socket, endpoints| {
+        include_debug_blocks: bool,
+    ) -> String {
+        self.com_hub().register_block_interceptor(BlockInterceptor::new(
+            move |block| {
                 let this = JsValue::NULL;
                 let block_bytes =
-                    js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.to_string());
-                let endpoints_array = js_sys::Array::new();
-                for endpoint in endpoints {
-                    endpoints_array
-                        .push(&JsValue::from_str(&endpoint.to_string()));
-                }
+                    js_sys::Uint8Array::from(block.block.to_bytes().as_slice());
+                let socket_uuid = JsValue::from_str(&block.socket_uuid.to_string());
                 if let Err(e) = callback.call3(
                     &this,
                     &JsValue::from(block_bytes),
                     &socket_uuid,
-                    &endpoints_array,
-                ) {
-                    error!(
-                        "Error in outgoing block interceptor callback: {:?}",
-                        e
-                    );
-                }
-            },
-        );
-    }
-
-    pub fn register_incoming_block_interceptor(
-        &self,
-        callback: js_sys::Function,
-    ) {
-        self.com_hub().register_incoming_block_interceptor(
-            move |block, socket| {
-                let this = JsValue::NULL;
-                let block_bytes =
-                    js_sys::Uint8Array::from(block.to_bytes().as_slice());
-                let socket_uuid = JsValue::from_str(&socket.to_string());
-                if let Err(e) = callback.call2(
-                    &this,
-                    &JsValue::from(block_bytes),
-                    &socket_uuid,
+                    &JsValue::from_str(&block.direction.to_string())
                 ) {
                     error!(
                         "Error in incoming block interceptor callback: {:?}",
@@ -481,6 +489,12 @@ impl JSComHub {
                     );
                 }
             },
-        );
+            include_debug_blocks
+        )).to_string()
+    }
+    
+    pub fn unregister_block_interceptor(&self, uuid: String) {
+        let uuid = UUID::from_string(uuid);
+        self.com_hub().unregister_block_interceptor(&uuid);
     }
 }

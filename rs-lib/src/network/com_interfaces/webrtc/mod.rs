@@ -23,11 +23,13 @@ use datex_core::{
         },
     },
 };
+use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
+
 mod channels;
 use channels::*;
-mod mappings;   
-use mappings::*;
+mod mappings;
 use futures::channel::oneshot;
+use mappings::*;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -40,20 +42,20 @@ impl WebRTCSignaling for JSSignaling {
     fn receive(
         &self,
     ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<WebRTCSignalDX>> + Send>>
-    {
+{
         unreachable!()
     }
-    
     fn send(
         &self,
         signal: WebRTCSignalDX,
-    ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<()>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = datex_core::network::com_interfaces::default_setup_data::webrtc::WebRTCSignalResult<()>> + Send>>{
         todo!()
     }
 }
 
-
 #[derive(Datex)]
+// FIXME: must implement Clone
+#[datex(structural)]
 pub struct WebRTCInterfaceSetupDataJS(WebRTCInterfaceSetupData);
 
 impl Deref for WebRTCInterfaceSetupDataJS {

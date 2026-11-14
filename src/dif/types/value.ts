@@ -3,7 +3,11 @@
  * @description
  * This module contains all type definitions related to the representation of values in DIF.
  */
-import type { PointerAddressWithOwnership, SharedContainerMutability } from "../../shared-container/mod.ts";
+import type {
+    PointerAddress,
+    PointerAddressWithOwnership,
+    SharedContainerMutability,
+} from "../../shared-container/mod.ts";
 import type { CoreLibTypeId } from "../core.ts";
 import type { DIFTypeDefinition } from "./type.ts";
 
@@ -15,21 +19,41 @@ export type DIFOptionalValueContainer = null | [DIFValueContainer];
 /**
  * DIF value container, which can be either a pointer address or a value.
  */
-export type DIFValueContainer<T = unknown> = DIFPointerAddress | DIFValue;
+export type DIFValueContainer<T = unknown> = DIFSharedValue | DIFValue;
 
 /**
  * A DATEX pointer address representation in the DIF format.
  */
-export type DIFPointerAddress = { $: PointerAddressWithOwnership };
+export type DIFSharedValue = { _: PointerAddressWithOwnership };
 
 /**
  * A DIF value, which can be directly represented in the DIF format (e.g., primitive types) or a value including
  * additional type information.
  */
 export type DIFValue =
+    | DIFClassifiedValue
+    | DIFCoreValueWithTag;
+
+export type DIFClassifiedValue = { _: "c"; c?: DIFClassification; v: DIFCoreValueWithTag };
+
+export type DIFCoreValueWithTag =
     | DIFDirectRepresentationValue
-    | [CoreLibTypeId, DIFCoreValue]
-    | [CoreLibTypeId, DIFCoreValue, DIFTypeDefinition];
+    | DIFTaggedValue
+    | DIFCoreValue
+    | DIFInMemoryValue;
+
+export type DIFTaggedValue = { _: "t"; t: DIFValueTag; v: DIFCoreValue };
+
+export type DIFValueTag = [tag: string, is_empty?: true];
+
+export type DIFCoreValue = [CoreLibTypeId, DIFRawValue]; // core lib type id, raw value
+
+export type DIFInMemoryValue = [null, CoreLibTypeId, number, number]; // core lib type id, element count, memory address
+
+export type DIFClassification = [
+    PointerAddressWithOwnership | null, // entity address
+    PointerAddressWithOwnership[] | null, // impls
+];
 
 /**
  * Types of values that can be directly represented in DIF without
@@ -48,24 +72,39 @@ export type DIFCoreValueList = Array<DIFValueContainer>;
 export type DIFCoreValueMap = Array<[DIFValueContainer, DIFValueContainer]>;
 
 /**
+ * Represents a callable definition with hash and optional name
+ */
+export type DIFCoreValueCallable = [string, string | null, boolean | null];
+
+/**
  * Represents a range of values in DIF, defined by a start and end value container, or as a tuple of two value containers.
  */
 export type DIFCoreValueRange = [DIFValueContainer, DIFValueContainer] | {
     start: DIFValueContainer;
     end: DIFValueContainer;
 };
+
+export type DIFCoreValueEntityTypeDefinition = [
+    string, // name
+    DIFTypeDefinition, // type definition
+    [
+        [typeof CoreLibTypeId.Callable, DIFCoreValueCallable][], // methods
+        [typeof CoreLibTypeId.Callable, DIFCoreValueCallable][], // static methods
+    ][],
+];
+
 /**
  * Represents a core value in DIF, which can be a primitive value, a structured object, a list, or a map.
  */
-export type DIFCoreValue =
+export type DIFRawValue =
     | DIFCoreValueList // list
     | DIFCoreValueMap // map
     | DIFCoreValueRange // range
+    | DIFCoreValueCallable // callable
     | Record<string, DIFValueContainer> // StructuralMapWithStringKeys
-    | string // text / endpoint
-    | number // integer / decimal
-    | boolean // booleans
-    | null; // null
+    | DIFTypeDefinition // type
+    | DIFDirectRepresentationValue
+    | DIFCoreValueEntityTypeDefinition; // entity type definition
 
 /**
  * Base struct for the shared value container.
