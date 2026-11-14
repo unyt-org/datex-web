@@ -6,9 +6,9 @@
  * General static information about the runtime, e.g. version numbers.
  */
 export type RuntimeInfo = {
-    device_type: string | null;
-    other_versions: Map<string, string>;
     datex_version: string;
+    other_versions: Map<string, string>;
+    device_type: string | null;
     running_since: number;
 };
 
