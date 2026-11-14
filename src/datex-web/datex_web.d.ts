@@ -35,6 +35,7 @@ export class JSDIFInterface {
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
     observe_pointer(address: string, observe_options: any, callback: Function): number;
     register_callable(callable: Function, name: string | null | undefined, signature: any, is_method: boolean): string;
+    remove_stored_vec(address: number): void;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */

@@ -21,11 +21,12 @@ globalThis.devtoolsFormatters = [
                     ],
                 ];
                 if (obj.value !== EMPTY_TAG) {
+                    const value = typeof obj.value === "bigint" ? Number(obj.value) : obj.value;
                     inner.push([
                         "span",
                         {},
                         // TODO: only proof of concept, syntax highlighting does not match JS
-                        JSON.stringify(obj.value, null, 4),
+                        JSON.stringify(value, null, 4),
                     ]);
                 }
                 return [
@@ -35,6 +36,8 @@ globalThis.devtoolsFormatters = [
                 ]
             }
             else if (obj instanceof BaseSharedContainer) {
+                const value = typeof obj.value === "bigint" ? Number(obj.value) : obj.value;
+
                 return [
                     "span",
                     {},
@@ -50,7 +53,7 @@ globalThis.devtoolsFormatters = [
                             "span",
                             {},
                             // TODO: only proof of concept, syntax highlighting does not match JS
-                            JSON.stringify(obj.value, null, 4),
+                            JSON.stringify(value, null, 4),
                         ],
                     ],
                 ];

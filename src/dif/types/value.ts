@@ -39,13 +39,16 @@ export type DIFClassifiedValue = { _: "c"; c?: DIFClassification; v: DIFCoreValu
 export type DIFCoreValueWithTag =
     | DIFDirectRepresentationValue
     | DIFTaggedValue
-    | DIFCoreValue;
+    | DIFCoreValue
+    | DIFInMemoryValue;
 
 export type DIFTaggedValue = { _: "t"; t: DIFValueTag; v: DIFCoreValue };
 
 export type DIFValueTag = [tag: string, is_empty?: true];
 
 export type DIFCoreValue = [CoreLibTypeId, DIFRawValue]; // core lib type id, raw value
+
+export type DIFInMemoryValue = [null, CoreLibTypeId, number, number]; // core lib type id, element count, memory address
 
 export type DIFClassification = [
     PointerAddressWithOwnership | null, // entity address

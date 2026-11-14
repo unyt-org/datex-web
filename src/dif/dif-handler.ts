@@ -12,7 +12,7 @@ import {
     DIFClassification,
     type DIFCoreValue,
     DIFCoreValueCallable,
-    DIFCoreValueEntityTypeDefinition,
+    DIFCoreValueEntityTypeDefinition, DIFInMemoryValue,
     type DIFOptionalValueContainer,
     DIFSharedValue,
     DIFTaggedValue,
@@ -62,6 +62,7 @@ import {
     tryGetClassification,
 } from "./helpers/values.ts";
 import { createClassForEntityType } from "../lib/js-classes/mod.ts";
+import { memory } from "../datex.ts";
 
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
@@ -195,10 +196,17 @@ export class DIFHandler {
 
     // register finalizer to clean up the cache and free the reference in the runtime
     // when the object is garbage collected
-    readonly #finalizationRegistry = new FinalizationRegistry(
+    readonly #pointerFinalizationRegistry = new FinalizationRegistry(
         (address: PointerAddress) => {
             console.debug(`${address} was garbage collected`);
             this.cleanupSharedValue(address);
+        }
+    );
+
+    readonly #bufferFinalizationRegistry = new FinalizationRegistry(
+        (address: number) => {
+            console.debug(`Buffer at address ${address} was garbage collected`);
+            this.#handle.remove_stored_vec(address);
         }
     );
 
@@ -671,9 +679,28 @@ export class DIFHandler {
         }
     }
 
-    private resolveDIFCoreValue(
-        value: DIFCoreValue,
+    private resolveDIFInMemoryValue(
+        value: DIFInMemoryValue,
     ): unknown {
+        const [_, type, count, address] = value;
+        if (type === CoreLibTypeId.integer_u8) {
+            const array = new Uint8Array(memory.buffer, address, count);
+            this.#bufferFinalizationRegistry.register(array, address);
+            return array;
+        }
+        else {
+            unimplemented("resolveDIFInMemoryValue for type " + type);
+        }
+    }
+
+    private resolveDIFCoreValue(
+        value: DIFCoreValue|DIFInMemoryValue,
+    ): unknown {
+        // handle in memory values
+        if (value[0] === null) {
+            return this.resolveDIFInMemoryValue(value as DIFInMemoryValue);
+        }
+
         const [type_id, raw_value] = value;
 
         if (type_id === CoreLibTypeId.null || type_id === CoreLibTypeId.Unit) {
@@ -1213,7 +1240,7 @@ export class DIFHandler {
             );
         }
 
-        this.#finalizationRegistry.register(baseSharedContainer, address);
+        this.#pointerFinalizationRegistry.register(baseSharedContainer, address);
 
         // trigger cache change observers
         this.#triggerCacheObservers();

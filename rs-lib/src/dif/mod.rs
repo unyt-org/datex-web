@@ -451,4 +451,8 @@ impl JSDIFInterface {
             self.runtime.shared_references_cache_refcell(),
         ))
     }
+
+    pub fn remove_stored_vec(&self, address: usize) {
+        self.dif_interface.cache.borrow_mut().remove_stored_vec(address);
+    }
 }

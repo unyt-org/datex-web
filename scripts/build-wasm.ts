@@ -209,6 +209,7 @@ async function generateJsMainFile(args: {
         export * from "./${args.name}.internal.js";
         import { __wbg_set_wasm } from "./${args.name}.internal.js";
         __wbg_set_wasm(wasm.exports);
+        export const memory = wasm.exports.memory;
         wasm.exports.__wbindgen_start();
     `.trimStart();
 
