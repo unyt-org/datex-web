@@ -1464,6 +1464,14 @@ export class DIFHandler {
         if (existingReference) {
             return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
         }
+        else if (ref instanceof BaseSharedContainer) {
+            if (!difHandlerInstance) {
+                throw new Error("Could not resolve shared container in cache for value " + ref.pointerAddress + " - no dif handler instance provided");
+            }
+            else {
+                throw new Error("Could not find shared container in cache for value " + ref.pointerAddress);
+            }
+        }
         // TODO: handle custom types
 
         // core lib prefixed dif core types
@@ -1481,8 +1489,8 @@ export class DIFHandler {
             return [CoreLibTypeId.endpoint, value.toString()] as DIFValue;
         } else if (value instanceof Range) {
             return [CoreLibTypeId.Range, [
-                this.convertJSValueToDIFValueContainer(value.start),
-                this.convertJSValueToDIFValueContainer(value.end),
+                this.convertJSValueToDIFValueContainer(value.start, difHandlerInstance),
+                this.convertJSValueToDIFValueContainer(value.end, difHandlerInstance),
             ]];
         } // special treatment
         else if (value === undefined) {
@@ -1502,20 +1510,20 @@ export class DIFHandler {
                 return createDIFValueWithTag(inner, value.tag);
             }
         } else if (Array.isArray(value)) {
-            return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v))] as DIFValue;
+            return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v, difHandlerInstance))] as DIFValue;
         } else if (value instanceof Map) {
             const map: [DIFValueContainer, DIFValueContainer][] = value
                 .entries().map((
                     [k, v],
                 ) => [
-                    this.convertJSValueToDIFValueContainer(k),
-                    this.convertJSValueToDIFValueContainer(v),
+                    this.convertJSValueToDIFValueContainer(k, difHandlerInstance),
+                    this.convertJSValueToDIFValueContainer(v, difHandlerInstance),
                 ] satisfies [DIFValueContainer, DIFValueContainer]).toArray();
             return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value === "object") {
             const map: Record<string, DIFValueContainer> = {};
             for (const [key, val] of Object.entries(value)) {
-                map[key] = this.convertJSValueToDIFValueContainer(val);
+                map[key] = this.convertJSValueToDIFValueContainer(val, difHandlerInstance);
             }
             return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value == "function") {

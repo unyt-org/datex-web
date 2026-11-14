@@ -33,8 +33,8 @@ export async function getDeviceTypeAndVersions(): Promise<{
     return {
         deviceType: `Web Browser (${browserInfo.name} / ${platformName})`,
         versions: {
-            [browserInfo.name]: browserInfo.version,
-            [platformName]: platformVersion,
+            'browser': `${browserInfo.name} ${browserInfo.version}`,
+            'os': platformVersion,
         },
     };
 }

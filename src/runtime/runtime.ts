@@ -66,7 +66,7 @@ export class Runtime {
         debugConfig?: DebugConfig,
     ): Promise<Runtime> {
         const {deviceType, versions} = await getDeviceTypeAndVersions();
-        versions['datex-web'] = VERSION;
+        versions.datex_web = VERSION;
 
         // workaround: temp dif handler without runtime to convert config to DIF
         const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);

@@ -1,6 +1,7 @@
 import type { Runtime } from "../runtime/runtime.ts";
 import { Repl as ReplInternal } from "../datex.ts";
 import {Endpoint} from "../lib/special-core-types/endpoint.ts";
+import {tagged} from "../lib/special-core-types/tagged.ts";
 
 export class Repl {
     #repl: ReplInternal;
@@ -14,7 +15,17 @@ export class Repl {
             return undefined as T;
         }
         const jsValue = this.runtime.dif.resolveDIFValueContainer(result);
-        return this.runtime.valueToString(jsValue);
+        return this.runtime.valueToString(jsValue, {
+            formatting_options: {
+                mode: tagged("Pretty", {
+                    indent: 4,
+                    indent_type: tagged("Spaces"),
+                }),
+                json_compat: false,
+                colorized: false,
+            },
+            resolve_slots: false,
+        });
     }
 }
 
