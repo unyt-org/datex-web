@@ -66,15 +66,6 @@
             "dependencies": ["build:release"],
             "command": "deno task build:npm && deno task build:bundle"
         },
-        "browser-demo": {
-            "description": "Build debug WASM and npm package, then start the browser demo.",
-            "dependencies": ["build:debug:no-opt"],
-            "command": "deno task build:npm && cd datex-browser-demo && npm install && npm run dev"
-        },
-        "browser-demo:no-build": {
-            "description": "Build the npm package only, then start the browser demo.",
-            "command": "deno task build:npm && cd datex-browser-demo && npm install && npm run dev"
-        },
         "serve-npm-watch": {
             "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
             "command": "deno run -A scripts/serve-npm-watch.ts"
@@ -124,8 +115,7 @@
     },
     "test": {
         "exclude": [
-            "./npm",
-            "./datex-browser-demo"
+            "./npm"
         ]
     },
     "publish": {
