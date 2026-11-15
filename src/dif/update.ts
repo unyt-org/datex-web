@@ -6,27 +6,6 @@ import { type DIFUpdateData, DIFUpdateKind } from "./types/update.ts";
 import { CoreLibTypeId } from "./core.ts";
 
 /**
- * The kinds of properties that can be used in a DIF update.
- * - Index: Represents an index in an array or list.
- * - Text: Represents a string key in an object or map.
- * - ValueContainer: Represents a value container that holds a DIF value.
- */
-export enum DIFValueContainerKind {
-    /**
-     * Represents an index in an array or list.
-     */
-    Index,
-    /**
-     * Represents a string key in an object or map.
-     */
-    Text,
-    /**
-     * Represents a value container that holds a DIF value.
-     */
-    ValueContainer,
-}
-
-/**
  * Creates a DIFUpdateData structure representing a clear operation.
  * @param path The path to the property being updated (optional).
  * @returns A DIFUpdateData structure representing the clear operation.

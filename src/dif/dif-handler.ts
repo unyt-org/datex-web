@@ -51,13 +51,10 @@ import { registerCoreTypeBindings } from "../lib/mod.ts";
 import { OwnedSharedContainer } from "../shared-container/owned.ts";
 import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
 import { ibig } from "./helpers/mod.ts";
-import { isCoreLibTypeDefinition, isSharedContainerTypeDefinition } from "./helpers/type-definition.ts";
 import { getCoreLibTypeIdForJSValue } from "./helpers/type-id.ts";
 import {
     classificationHasImpl,
-    createDIFValueWithImplClassification,
     createDIFValueWithTag,
-    hasImplClassification,
     isSharedValueContainer,
     tryGetClassification,
 } from "./helpers/values.ts";
@@ -360,12 +357,6 @@ export class DIFHandler {
      * @param update_data - The DIFUpdate object containing the update information.
      */
     public updateSharedValue(address: PointerAddress, update_data: DIFUpdateData): DIFUpdateReturn {
-        console.log(
-            "Updating shared value at address:",
-            address,
-            "with update data:",
-            update_data,
-        );
         return this.#handle.update(address, [this.#transceiver_id, ...update_data]);
     }
 
@@ -1324,12 +1315,6 @@ export class DIFHandler {
             mutability,
             allowedType,
         );
-        // get inferred allowed type from pointer if not explicitly set
-        // if (!allowedType) {
-        //     allowedType = (this.#handle.resolve_pointer_address(
-        //         ptrAddress,
-        //     ) as DIFBaseSharedValueContainer)[2];
-        // }
 
         return new OwnedSharedContainer(this.initSharedValue(
             ptrAddress,

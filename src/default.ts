@@ -21,7 +21,7 @@ import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
 const defaultConfig: RuntimeConfig = {
     endpoint: Endpoint.get("@unyt"),
     interfaces: [{
-        priority: tagged("None"),
+        priority: tagged("Priority", 1),
         type: "websocket-client",
         config: { url: "wss://example.unyt.land" },
     }],

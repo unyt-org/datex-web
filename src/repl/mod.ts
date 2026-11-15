@@ -28,5 +28,3 @@ export class Repl {
         });
     }
 }
-
-globalThis.Repl = Repl;

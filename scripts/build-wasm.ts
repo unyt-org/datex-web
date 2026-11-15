@@ -7,7 +7,7 @@ const RUST_FLAGS = ["--cfg=web_sys_unstable_apis", "-Awarnings"];
 Deno.env.set("RUSTFLAGS", RUST_FLAGS.join(" "));
 
 const flags = parseArgs(Deno.args, {
-    boolean: ["opt"],
+    boolean: ["opt", "debug-refcell"],
     string: ["profile", "features"],
     default: { opt: true, profile: "release", features: "" },
     negatable: ["opt"],
@@ -17,12 +17,16 @@ const name = "datex_web";
 const outDir = "./src/datex-web";
 const profile = flags.profile === "release" ? "release" : "debug";
 
-await runCargoBuildCommand({
-    profile,
-    cargoFlags: (flags.features ? ["--features", flags.features] : []).concat([
+const debugRefCellFeatures = flags['debug-refcell']
+    ? [
         "-Zbuild-std=std,panic_abort",
         "-Zbuild-std-features=debug_refcell",
-    ]),
+    ]
+    : [];
+
+await runCargoBuildCommand({
+    profile,
+    cargoFlags: (flags.features ? ["--features", flags.features] : []).concat(debugRefCellFeatures),
 });
 
 await runWasmBindgen({

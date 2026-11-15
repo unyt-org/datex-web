@@ -1,5 +1,8 @@
-/// Returns the browser name and version
-async function getBrowser() {
+/**
+ * Retrieves the browser name and version from the user agent string or navigator.userAgentData.
+ * @returns An object containing the browser name and version
+  */
+async function getBrowser() : Promise<{ name: string; version: string }> {
     if (navigator.userAgentData) {
         const { fullVersionList } =
             await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
@@ -23,9 +26,13 @@ async function getBrowser() {
     return { name: "unknown", version: "unknown" };
 }
 
+/**
+ * Retrieves the device type and versions of the browser and operating system.
+ * @returns An object containing the device type and versions of the browser and operating system.
+ */
 export async function getDeviceTypeAndVersions(): Promise<{
     deviceType: string;
-    versions: { [key: string]: string };
+    versions: { browser: string; os: string };
 }> {
     const browserInfo = await getBrowser();
     const platformName = navigator.platform || "unknown platform";

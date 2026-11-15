@@ -134,7 +134,7 @@ export type DIFTaggedTypeDefinition = [string, DIFType];
 
 export type DIFTypeMarker = "";
 
-export type DIFSharedTypeDefinition = PointerAddressWithOwnership; // TODO
+export type DIFSharedTypeDefinition = PointerAddressWithOwnership;
 
 export type DIFCollectionTypeDefinition =
     | DIFCollectionListTypeDefinition
