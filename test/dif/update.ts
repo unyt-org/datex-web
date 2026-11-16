@@ -1,6 +1,6 @@
 import { Runtime } from "datex/runtime/mod.ts";
 import { Endpoint } from "datex/lib/special-core-types/mod.ts";
-import { appendEntry, clear, deleteEntry, DIFPropertyKind, listSplice, replace, setEntry } from "datex/dif/update.ts";
+import { appendEntry, clear, deleteEntry, listSplice, replace, setEntry } from "datex/dif/update.ts";
 import type { DIFUpdateData } from "datex/dif/types/mod.ts";
 import { assertEquals } from "@std/assert";
 
@@ -52,7 +52,7 @@ Deno.test("append entry", () => {
 Deno.test("set entry", () => {
     const reference = runtime.ref(["1", "2", "3"]);
     const expectedUpdate = setEntry(
-        runtime.dif.createDIFProperty(1, DIFPropertyKind.Index),
+        runtime.dif.convertJSValueToDIFValueContainer(1),
         runtime.dif.convertJSValueToDIFValueContainer("newValue"),
     );
     let observedUpdate: DIFUpdateData | null = null;
@@ -67,7 +67,7 @@ Deno.test("set entry", () => {
 Deno.test("delete entry", () => {
     const reference = runtime.ref(new Map([["key1", "value1"], ["key2", "value2"]]));
     const expectedUpdate = deleteEntry(
-        runtime.dif.createDIFProperty("key2", DIFPropertyKind.ValueContainer),
+        runtime.dif.convertJSValueToDIFValueContainer("key2"),
     );
     let observedUpdate: DIFUpdateData | null = null;
     reference.observe((update) => {

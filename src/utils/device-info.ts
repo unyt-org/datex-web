@@ -2,6 +2,15 @@
  * Retrieves the browser name and version from the user agent string or navigator.userAgentData.
  * @returns An object containing the browser name and version
  */
+
+declare global {
+    interface Navigator {
+        userAgentData?: {
+            getHighEntropyValues(hints: string[]): Promise<{ fullVersionList: { brand: string; version: string }[] }>;
+        };
+    }
+}
+
 async function getBrowser(): Promise<{ name: string; version: string }> {
     if (navigator.userAgentData) {
         const { fullVersionList } = await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
@@ -17,7 +26,7 @@ async function getBrowser(): Promise<{ name: string; version: string }> {
         ["Firefox", /Firefox\/([\d.]+)/],
         ["Chrome", /Chrome\/([\d.]+)/],
         ["Safari", /Version\/([\d.]+).*Safari/],
-    ];
+    ] as [string, RegExp][];
     for (const [name, re] of patterns) {
         const m = ua.match(re);
         if (m) return { name, version: m[1] };
@@ -31,7 +40,7 @@ async function getBrowser(): Promise<{ name: string; version: string }> {
  */
 export async function getDeviceTypeAndVersions(): Promise<{
     deviceType: string;
-    versions: { browser: string; os: string };
+    versions: Record<string, string>;
 }> {
     const browserInfo = await getBrowser();
     const platformName = navigator.platform || "unknown platform";

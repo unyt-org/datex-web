@@ -163,7 +163,7 @@ export class Runtime {
     public execute<T = unknown>(
         datexScript: string,
         values?: unknown[],
-        markAsDebug: boolean,
+        markAsDebug?: boolean,
     ): Promise<T>;
 
     /**

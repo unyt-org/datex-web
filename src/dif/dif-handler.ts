@@ -58,6 +58,7 @@ import {
     tryGetClassification,
 } from "./helpers/values.ts";
 import { createClassForEntityType } from "../lib/js-classes/mod.ts";
+// @ts-ignore memory must be part of d.ts
 import { memory } from "../datex.ts";
 import { isDIFCoreValue } from "./helpers/values.ts";
 import type { PointerAddressWithOwnership } from "../shared-container/mod.ts";
