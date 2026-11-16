@@ -14,26 +14,15 @@ if (isDev) {
     console.info("Note: Building npm package in development mode");
 }
 
+const entryPoints = await Deno.readTextFile(
+    new URL("../deno.json", import.meta.url),
+).then(JSON.parse)
+    .then((data: { exports: Record<string, string> }) =>
+        Object.entries(data.exports).map(([name, path]) => ({ name, path }))
+    );
+
 await build({
-    entryPoints: [
-        {
-            name: ".",
-            path: "./src/mod.ts",
-        },
-        {
-            name: "./default",
-            path: "./src/default.ts",
-        },
-        // interfaces
-        {
-            name: "./interfaces/websocket-server-base",
-            path: "./src/network/interfaces/websocket-server-base.ts",
-        },
-        {
-            name: "./interfaces/websocket-server-deno",
-            path: "./src/network/interfaces/websocket-server-deno.ts",
-        },
-    ],
+    entryPoints,
     outDir: "./npm",
     shims: { deno: false },
     typeCheck: false, // "both",
