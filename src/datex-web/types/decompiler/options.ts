@@ -15,7 +15,6 @@ export type FormattingOptions = {
     mode: FormattingMode;
     json_compat: boolean;
     colorized: boolean;
-    add_variant_suffix: boolean;
 };
 
 export type DecompileOptions = {

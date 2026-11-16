@@ -11,7 +11,7 @@ use datex_core::{
                 factory::{
                     ComInterfaceAsyncFactory, ComInterfaceAsyncFactoryResult,
                     ComInterfaceConfiguration, SendCallback, SendFailure,
-                    SocketConfiguration, SocketProperties,
+                    SendSuccess, SocketConfiguration, SocketProperties,
                 },
                 properties::{ComInterfaceProperties, InterfaceDirection},
             },
@@ -356,7 +356,7 @@ pub fn make_com_interface_js(
                         .send_with_u8_array(&block.to_bytes())
                         .map_err(|_| SendFailure(Box::new(block)))?;
 
-                    Ok(())
+                    Ok(SendSuccess::Sent)
                 }
             }),
         ),

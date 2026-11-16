@@ -1,15 +1,12 @@
 import { Runtime } from "datex/runtime/runtime.ts";
-import { arrayTypeBinding } from "datex/lib/js-core-types/array.ts";
 import { assertEquals, assertNotStrictEquals, assertThrows } from "@std/assert";
 import { Endpoint } from "datex/lib/mod.ts";
-import {
-    SharedContainerMutability,
-    type SharedRef,
-    type SharedReferenceMutability,
-} from "datex/shared-container/mod.ts";
+import { SharedContainerMutability } from "datex/shared-container/mod.ts";
 
-const runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
-runtime.dif.type_registry.registerTypeBinding(arrayTypeBinding);
+let runtime: Runtime;
+Deno.test.beforeEach(async () => {
+    runtime = await Runtime.create({ endpoint: Endpoint.get("@jonas") });
+});
 
 Deno.test("detect illegal use of moved original value", () => {
     const original = [1, 2];
@@ -18,16 +15,16 @@ Deno.test("detect illegal use of moved original value", () => {
         original,
         null,
         SharedContainerMutability.Mutable,
-    ) as SharedRef<number[], SharedContainerMutability.Mutable, SharedReferenceMutability.Mutable>;
-    assertNotStrictEquals(original, reference);
+    );
+    assertNotStrictEquals(original, reference.value);
 
     // should be allowed
-    reference.push(4);
-    reference[0] = 10;
+    reference.value.push(4);
+    reference.value[0] = 10;
 
-    assertEquals(reference.length, 3);
-    assertEquals(reference[2], 4);
-    assertEquals(reference, [10, 2, 4]);
+    assertEquals(reference.value.length, 3);
+    assertEquals(reference.value[2], 4);
+    assertEquals(reference.value, [10, 2, 4]);
 
     // should not be allowed
     assertThrows(

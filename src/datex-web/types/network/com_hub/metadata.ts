@@ -9,8 +9,8 @@ import type { DynamicEndpointProperties } from "./managers/socket_manager.ts";
 export type ComHubMetadataInterfaceSocket = {
     uuid: string;
     direction: InterfaceDirection;
-    endpoint: null | Endpoint;
-    properties: null | DynamicEndpointProperties;
+    endpoint: Endpoint | null;
+    properties: DynamicEndpointProperties | null;
 };
 
 export type ComHubMetadataInterface = {
@@ -23,4 +23,5 @@ export type ComHubMetadataInterface = {
 export type ComHubMetadata = {
     endpoint: Endpoint;
     interfaces: ComHubMetadataInterface[];
+    reconnecting_interfaces: ComHubMetadataInterface[];
 };

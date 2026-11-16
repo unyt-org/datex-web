@@ -14,22 +14,28 @@ export class JSComHub {
     get_metadata_string(): string;
     get_trace(endpoint: string): Promise<any | undefined>;
     get_trace_string(endpoint: string): Promise<string | undefined>;
+    register_block_interceptor(callback: Function, include_debug_blocks: boolean): string;
     register_default_interface_factories(): void;
-    register_incoming_block_interceptor(callback: Function): void;
     register_interface_factory(interface_type: string, factory: Function): void;
-    register_outgoing_block_interceptor(callback: Function): void;
     remove_interface(interface_uuid: string): Promise<void>;
     remove_socket(socket_uuid: string): Promise<void>;
+    unregister_block_interceptor(uuid: string): void;
 }
 
 export class JSDIFInterface {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
-    apply(callee: any, value: any): any | undefined;
+    apply_async(callee: any, args: any): Promise<any>;
+    apply_sync(callee: any, args: any): any;
+    call_method_async(callee: any, method_name: string, args: any): Promise<any>;
+    call_method_sync(callee: any, method_name: string, args: any): any;
+    create_inspector(endpoint: string, name: string): Promise<any>;
     create_pointer(value: any): string;
     has_address_with_ownership(address: string, ownership?: number | null): boolean;
-    observe_pointer(transceiver_id: number, address: string, observe_options: any, callback: Function): number;
+    observe_pointer(address: string, observe_options: any, callback: Function): number;
+    register_callable(callable: Function, name: string | null | undefined, signature: any, is_method: boolean): string;
+    remove_stored_vec(address: number): void;
     /**
      * Resolve a pointer address synchronously if it's in memory, otherwise return an error
      */
@@ -60,13 +66,17 @@ export class JSRuntime {
     /**
      * Executes a DATEX script with inserted values, returning the result as DIFValue
      */
-    execute(script: string, inserted_values?: any[] | null): Promise<any>;
+    execute(script: string, inserted_values: any[] | null | undefined, mark_as_debug: boolean): Promise<any>;
+    /**
+     * Executes a DATEX script remotely with inserted values, returning the result as DIFValue
+     */
+    execute_remote(target: string, script: string, inserted_values: any[] | null | undefined, mark_as_debug: boolean): Promise<any>;
     execute_sync(script: string, dif_values?: any[] | null): any;
     execute_sync_with_string_result(script: string, dif_values: any[] | null | undefined, decompile_options: any): string;
     /**
      * Execute a DATEX script with optional inserted values, returning the result as a string
      */
-    execute_with_string_result(script: string, inserted_values: any[] | null | undefined, decompile_options: any): Promise<string>;
+    execute_with_string_result(script: string, inserted_values: any[] | null | undefined, decompile_options: any, mark_as_debug: boolean): Promise<string>;
     /**
      * Start the LSP server, returning a JS function to send messages to Rust
      */
@@ -81,10 +91,12 @@ export class Repl {
     free(): void;
     [Symbol.dispose](): void;
     execute(script: string): Promise<any | undefined>;
-    constructor(runtime: JSRuntime, verbose: boolean);
+    constructor(runtime: JSRuntime, endpoint: string | null | undefined, verbose: boolean);
 }
 
-export function create_runtime(config: any, debug_config: any): Promise<JSRuntime>;
+export function create_runtime(config: any, debug_config: any, device_type: string, datex_web_version: any): Promise<JSRuntime>;
+
+export function decompile_dxb_body(dxb: Uint8Array): string;
 
 export function disassemble_dxb_flat(dxb: Uint8Array): any;
 

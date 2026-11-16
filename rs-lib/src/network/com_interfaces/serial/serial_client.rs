@@ -10,15 +10,17 @@ use datex_core::{
                 factory::{
                     ComInterfaceAsyncFactory, ComInterfaceAsyncFactoryResult,
                     ComInterfaceConfiguration, SendCallback, SendFailure,
-                    SocketConfiguration, SocketProperties,
+                    SendSuccess, SocketConfiguration, SocketProperties,
                 },
-                properties::{ComInterfaceProperties, InterfaceDirection},
+                properties::{
+                    ComInterfaceProperties, InterfaceDirection,
+                    ReconnectionConfig,
+                },
             },
             default_setup_data::serial::serial_client::SerialClientInterfaceSetupData,
         },
     },
 };
-
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
@@ -27,7 +29,8 @@ use web_sys::{
     js_sys::Uint8Array,
 };
 
-#[derive(Datex)]
+#[derive(Datex, Clone)]
+#[datex(structural)]
 pub struct SerialClientInterfaceSetupDataJS(SerialClientInterfaceSetupData);
 
 impl Deref for SerialClientInterfaceSetupDataJS {
@@ -122,7 +125,7 @@ impl SerialClientInterfaceSetupDataJS {
                         JsFuture::from(promise)
                             .await
                             .map_err(|e| SendFailure(Box::new(block)))
-                            .map(|_| ())
+                            .map(|_| SendSuccess::Sent)
                     }
                 }),
             ),
@@ -137,5 +140,9 @@ impl ComInterfaceAsyncFactory for SerialClientInterfaceSetupDataJS {
 
     fn get_default_properties() -> ComInterfaceProperties {
         SerialClientInterfaceSetupData::get_default_properties()
+    }
+
+    fn get_reconnection_config() -> ReconnectionConfig {
+        SerialClientInterfaceSetupData::get_reconnection_config()
     }
 }

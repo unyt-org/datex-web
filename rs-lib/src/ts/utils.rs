@@ -1,5 +1,10 @@
 use std::path::{Component, Path, PathBuf};
 
+use swc_common::{
+    DUMMY_SP, Span,
+    comments::{Comment, CommentKind, Comments, SingleThreadedComments},
+};
+
 /// Sanitize a string to be a valid TypeScript identifier by replacing invalid characters with underscores.
 pub fn sanitize_ts_identifier(name: &str) -> String {
     let mut output = String::new();
@@ -148,4 +153,21 @@ pub fn normal_components(path: &Path) -> Vec<String> {
             }
         })
         .collect()
+}
+
+pub fn add_jsdoc(comments: &SingleThreadedComments, span: Span, docs: &str) {
+    let body = docs
+        .lines()
+        .map(|line| format!("     * {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    comments.add_leading(
+        span.lo,
+        Comment {
+            kind: CommentKind::Block,
+            text: format!("*\n{body}\n     ").into(),
+            span: DUMMY_SP,
+        },
+    );
 }

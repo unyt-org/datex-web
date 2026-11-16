@@ -26,13 +26,11 @@ export const createMockupServer = (port = 9999) => {
             mainSocket = socket;
             socket.onopen = () => resolve(result);
             socket.onmessage = (event) => {
-                console.log("Received:", event.data);
                 nextmessageResolve?.();
                 receiveQueue.push(event.data);
             };
             socket.onclose = () => {
                 mainSocket = undefined;
-                console.log("WebSocket connection closed");
             };
             socket.onerror = (err) => {
                 mainSocket = undefined;

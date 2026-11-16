@@ -2,7 +2,6 @@
 
 > Check out our specification at [datex.unyt.org](https://datex.unyt.org).
 
-[![](https://img.shields.io/crates/v/datex-web.svg)](https://crates.io/crates/datex-web)
 [![Twitter badge][]][Twitter link] [![Discord badge][]][Discord link]
 
 <img align="right" src="assets/datex-logo-light.svg" width="150px" alt="The DATEX logo">

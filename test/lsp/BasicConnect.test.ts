@@ -20,7 +20,6 @@ Deno.test("basic lsp", async () => {
     const queue = [];
     const send = runtime.startLSP(
         (data: string) => {
-            console.log("recv:", data);
             queue.push(data);
         },
     );
