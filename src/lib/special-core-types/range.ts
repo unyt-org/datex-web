@@ -31,7 +31,7 @@ export class Range {
     get [Symbol.toStringTag](): string {
         return this.toString();
     }
-    get [Symbol.toPrimitive](): string {
+    [Symbol.toPrimitive](_hint: string): string {
         return this.toString();
     }
 }

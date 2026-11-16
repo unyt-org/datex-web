@@ -33,11 +33,14 @@ use datex_core::{
         },
     },
 };
+use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
+use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 use url::Url;
 use wasm_bindgen::{JsCast, prelude::Closure};
-use web_sys::js_sys;
+use web_sys::{js_sys, WebSocket};
 
-#[derive(Datex)]
+#[derive(Datex, Clone)]
+#[datex(structural)]
 pub struct WebSocketClientInterfaceSetupDataJS(
     WebSocketClientInterfaceSetupData,
 );
@@ -91,15 +94,17 @@ impl WebSocketClientInterfaceSetupDataJS {
                         }
                     }
                 },
-                SendCallback::new_async(move |block: DXBBlock| {
-                    let ws = ws_rc.clone();
-                    async move {
-                        ws.lock()
-                            .unwrap()
-                            .send_with_u8_array(&block.to_bytes())
-                            .map_err(|_| SendFailure(Box::new(block)))?;
-                        Ok(())
+                SendCallback::new_sync(move |block: DXBBlock| {
+                    let ws = ws_rc
+                        .try_lock()
+                        .unwrap();
+                    if ws.ready_state() != WebSocket::OPEN {
+                        return Err(SendFailure(Box::new(block)))
                     }
+                    ws
+                        .send_with_u8_array(&block.to_bytes())
+                        .map_err(|_| SendFailure(Box::new(block)))?;
+                    Ok(SendSuccess::Sent)
                 }),
             ),
         ))
@@ -329,5 +334,9 @@ impl ComInterfaceAsyncFactory for WebSocketClientInterfaceSetupDataJS {
 
     fn get_default_properties() -> ComInterfaceProperties {
         WebSocketClientInterfaceSetupData::get_default_properties()
+    }
+
+    fn get_reconnection_config() -> ReconnectionConfig {
+        WebSocketClientInterfaceSetupData::get_reconnection_config()
     }
 }

@@ -1,5 +1,6 @@
 import {
     create_runtime,
+    decompile_dxb_body,
     disassemble_dxb_flat,
     disassemble_dxb_to_string,
     disassemble_dxb_tree,
@@ -7,12 +8,19 @@ import {
 } from "../datex.ts";
 import { ComHub } from "../network/com-hub.ts";
 import { DIFHandler } from "../dif/dif-handler.ts";
-import { type AsSharedMaybeOwned, SharedContainerMutability } from "../shared-container/mod.ts";
-import type { FlatInstruction, InstructionTree } from "./types.d.ts";
+import {
+    OwnedSharedContainer,
+    type ReferencedSharedContainer,
+    SharedContainerMutability,
+} from "../shared-container/mod.ts";
+import type { FlatResult, TreeResult } from "./types.d.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
+import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
+import type { Inspector } from "../datex-web/types/inspector/mod.ts";
+import {getDeviceTypeAndVersions} from "../utils/device-info.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -27,7 +35,7 @@ interface DebugConfig {
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint: Endpoint;
-    interfaces?: { type: string; config: unknown }[];
+    interfaces?: { type: string; config: unknown; priority: InterfacePriority }[];
     env?: Record<string, string>;
 };
 
@@ -57,9 +65,12 @@ export class Runtime {
         config: RuntimeConfig,
         debugConfig?: DebugConfig,
     ): Promise<Runtime> {
+        const {deviceType, versions} = await getDeviceTypeAndVersions();
+        versions.datex_web = VERSION;
+
         // workaround: temp dif handler without runtime to convert config to DIF
         const configDIF = DIFHandler.convertJSValueToDIFValueContainer(config);
-        const jsRuntime = await create_runtime(configDIF, debugConfig);
+        const jsRuntime = await create_runtime(configDIF, debugConfig, deviceType, Object.entries(versions));
         return new Runtime(jsRuntime);
     }
 
@@ -103,17 +114,20 @@ export class Runtime {
      * @param datexScript The Datex script to execute.
      * @param values The values to inject into the script.
      * @param decompileOptions Options for decompiling the result.
+     *
      * @returns A promise that resolves to the result of the script execution.
      */
     public executeWithStringResult(
         datexScript: string,
         values: unknown[] | null = [],
         decompileOptions: DecompileOptions | null = null,
+        markAsDebug: boolean = false,
     ): Promise<string> {
         return this.#runtime.execute_with_string_result(
             datexScript,
             this.#difHandler.convertToDIFValues(values),
             decompileOptions,
+            markAsDebug,
         );
     }
 
@@ -149,6 +163,7 @@ export class Runtime {
     public execute<T = unknown>(
         datexScript: string,
         values?: unknown[],
+        markAsDebug: boolean,
     ): Promise<T>;
 
     /**
@@ -163,16 +178,16 @@ export class Runtime {
     public execute<T = unknown>(
         templateStrings: TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T | undefined>;
+    ): Promise<T>;
     public execute<T = unknown>(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
-    ): Promise<T | undefined> {
-        const { datexScript, valuesArray } = this.#normalizeArguments(
+    ): Promise<T> {
+        const { datexScript, valuesArray, markAsDebug } = this.#normalizeArguments(
             datexScriptOrTemplateStrings,
             ...values,
         );
-        return this.#executeWithNormalizedArguments<T>(datexScript, valuesArray);
+        return this.#executeWithNormalizedArguments<T>(datexScript, valuesArray, markAsDebug);
     }
 
     /**
@@ -180,21 +195,52 @@ export class Runtime {
      * The result is converted to a JS value. If the script returns no value, it will return `undefined`.
      * @param datexScript The DATEX script to execute.
      * @param values The values to inject into the script, passed as an array.
+     * @param markAsDebug Optional boolean to mark the execution as debug (default: false).
      * @returns A Promise that resolves to the result of the script execution, converted to type T.
      */
     async #executeWithNormalizedArguments<T = unknown>(
         datexScript: string,
         values: unknown[] | null = [],
-    ): Promise<T | undefined> {
+        markAsDebug: boolean = false,
+    ): Promise<T> {
         const difValueContainer = await this.#difHandler.executeDIF(
             datexScript,
             values,
+            markAsDebug,
         );
         if (difValueContainer === undefined) {
             return undefined as T;
         }
         return this.#difHandler.resolveDIFValueContainer(difValueContainer);
     }
+
+    /**
+     * Execute a DATEX script remotely with injected values and return the result as a Promise of type T.
+     * The result is converted to a JS value. If the script returns no value, it will return `undefined`.
+     * @param target The endpoint to execute the script on.
+     * @param datexScript The DATEX script to execute.
+     * @param values The values to inject into the script, passed as an array.
+     * @param markAsDebug Optional boolean to mark the execution as debug (default: false).
+     * @returns A Promise that resolves to the result of the script execution, converted to type T.
+     */
+    async executeRemote<T = unknown>(
+        target: Endpoint,
+        datexScript: string,
+        values: unknown[] | null = [],
+        markAsDebug: boolean = false,
+    ): Promise<T> {
+        const difValueContainer = await this.#difHandler.executeDIFRemote(
+            target,
+            datexScript,
+            values,
+            markAsDebug,
+        );
+        if (difValueContainer === undefined) {
+            return undefined as T;
+        }
+        return this.#difHandler.resolveDIFValueContainer(difValueContainer);
+    }
+
 
     /**
      * Executes a Datex script synchronously and returns the result as a generic type T.
@@ -254,6 +300,23 @@ export class Runtime {
     }
 
     /**
+     * Creates a new Inspector instance on the specified endpoint.
+     * @param endpoint
+     * @param name
+     */
+    public async createInspector(
+        endpoint: Endpoint | string = Endpoint.get("@@local"),
+        name: string = "Default Inspector",
+    ): Promise<Inspector> {
+        if (typeof endpoint === "string") {
+            endpoint = Endpoint.get(endpoint);
+        }
+        const inspector_dif = await this.dif._handle.create_inspector(endpoint.toString(), name);
+        const inspector_ref = this.dif.resolveDIFValueContainer(inspector_dif) as ReferencedSharedContainer<Inspector>;
+        return inspector_ref.value;
+    }
+
+    /**
      * Compiles a DATEX source code and optional injected values to a DXB body
      */
     public compile(
@@ -307,12 +370,14 @@ export class Runtime {
     #normalizeArguments(
         datexScriptOrTemplateStrings: string | TemplateStringsArray,
         ...values: unknown[]
-    ): { datexScript: string; valuesArray: unknown[] } {
+    ): { datexScript: string; valuesArray: unknown[]; markAsDebug: boolean } {
         let datexScript: string;
         let valuesArray: unknown[];
+        let markAsDebug: boolean = false;
         if (typeof datexScriptOrTemplateStrings === "string") {
             datexScript = datexScriptOrTemplateStrings;
             valuesArray = values[0] as unknown[] ?? [];
+            markAsDebug = values[1] as boolean ?? false;
         } else if (Array.isArray(datexScriptOrTemplateStrings)) {
             // if it's a TemplateStringsArray, join the strings and interpolate the values
             datexScript = datexScriptOrTemplateStrings.join("?");
@@ -320,18 +385,16 @@ export class Runtime {
         } else {
             throw new Error("Invalid argument type for executeSync");
         }
-        return { datexScript, valuesArray };
+        return { datexScript, valuesArray, markAsDebug };
     }
 
     /**
      * Creates a new reference containing the given JS value.
-     * For primitive values, a Ref wrapper is returned.
-     * For other values (objects, arrays, maps), the returned value is a proxy object that behaves like the original object.
      *
      * @param value The JS value to store in the pointer.
      * @param allowedType Optional DIF type container to restrict the type of the pointer.
      * @param mutability Optional mutability of the reference (default is Mutable).
-     * @returns A proxy object representing the pointer in JS.
+     * @returns A owned shared container wrapper containing the value. Independent of the structure in JS.
      */
     public createSharedValueFromJSValue<
         V,
@@ -340,7 +403,7 @@ export class Runtime {
         value: V,
         allowedType: DIFTypeDefinition | null = null,
         mutability: M = SharedContainerMutability.Mutable as M,
-    ): AsSharedMaybeOwned<V, M> {
+    ): OwnedSharedContainer<V, M> {
         return this.#difHandler.createSharedValueFromJSValue(
             value,
             allowedType,
@@ -368,7 +431,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBFlat(dxb: Uint8Array): [FlatInstruction[], string | null] {
+    public disassembleDXBFlat(dxb: Uint8Array): FlatResult {
         return disassemble_dxb_flat(dxb);
     }
 
@@ -377,7 +440,7 @@ export class Runtime {
      * @param dxb DATEX binary body
      * @returns a tuple of the instruction tree and an optional error message if the disassembly (partially) failed
      */
-    public disassembleDXBTree(dxb: Uint8Array): [InstructionTree, string | null] {
+    public disassembleDXBTree(dxb: Uint8Array): TreeResult {
         return disassemble_dxb_tree(dxb);
     }
 
@@ -388,5 +451,42 @@ export class Runtime {
      */
     public disassembleDXBToString(dxb: Uint8Array, options?: DisassemblerOptions | null): string {
         return disassemble_dxb_to_string(dxb, options);
+    }
+
+    /**
+     * Decompiles a DXB body to a DATEX script string.
+     * @param dxbBody
+     */
+    public decompileDXBBody(dxbBody: Uint8Array): string {
+        return decompile_dxb_body(dxbBody);
+    }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public ref<T>(value: T): ReferencedSharedContainer<T> {
+        const shared = this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        );
+        if (shared instanceof OwnedSharedContainer) {
+            return shared.deriveImmutableReference();
+        } else {
+            return shared as unknown as ReferencedSharedContainer<T>; // FIXME make sure this is a ReferencedSharedContainer
+        }
+    }
+
+    /**
+     * Creates a new shared value Ref
+     * @param value
+     */
+    public shared<T>(value: T): OwnedSharedContainer<T> {
+        return this.createSharedValueFromJSValue(
+            value,
+            undefined,
+            SharedContainerMutability.Mutable,
+        ) as OwnedSharedContainer<T>; // FIXME make sure this is an OwnedSharedContainer
     }
 }

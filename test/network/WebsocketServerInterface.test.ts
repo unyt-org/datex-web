@@ -38,7 +38,7 @@ Deno.test("connect two runtimes", async () => {
         return;
     }
 
-    const PORT = 8082;
+    const PORT = 8124;
     const runtimeA = await Runtime.create({ endpoint: Endpoint.get("@test_a") }, { log_level: "debug" });
     const runtimeB = await Runtime.create({ endpoint: Endpoint.get("@test_b") }, { log_level: "debug" });
 
@@ -60,7 +60,6 @@ Deno.test("connect two runtimes", async () => {
 
     runtimeA.comHub.printMetadata();
     runtimeB.comHub.printMetadata();
-    console.log("META", runtimeA.comHub.getMetadata());
 
     const serverInterfaceMetadata = runtimeA.comHub.getMetadata().interfaces
         .find((v) => v.uuid === serverInterfaceUUID);
@@ -116,4 +115,6 @@ Deno.test("send data between two runtimes", async () => {
 
     await runtimeA.comHub.removeInterface(serverInterfaceUUID);
     await runtimeB.comHub.removeInterface(clientInterfaceUUID);
+
+    await sleep(200);
 });

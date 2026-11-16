@@ -1,4 +1,6 @@
-use datex_web::ts::{SharedReferencesCache, TsTypeFolder, resolve_registry_types};
+use datex_web::ts::{
+    SharedReferencesCache, TsTypeFolder, resolve_registry_types,
+};
 use std::{env, fs, path::PathBuf};
 
 const GENERATED_FILE_HEADER: &str = "\
@@ -19,7 +21,19 @@ fn main() {
     fs::create_dir_all(&output_dir).unwrap();
 
     let mut folder = TsTypeFolder::new()
-        .with_known_types("../../lib/mod.ts", ["Endpoint", "Tagged", "Type"]);
+        .with_known_types("../../lib/mod.ts", ["Endpoint", "Tagged", "Type"])
+        .with_known_imports(
+            "../../shared-container/mod.ts",
+            ["SharedContainerMutability", "SharedReferenceMutability"],
+        )
+        .with_known_types(
+            "../../shared-container/mod.ts",
+            [
+                "SharedRef",
+                "OwnedSharedContainer",
+                "ReferencedSharedContainer",
+            ],
+        );
     let memory = &mut SharedReferencesCache::default();
     let resolved = resolve_registry_types(memory, &mut folder);
     if resolved.is_err() {

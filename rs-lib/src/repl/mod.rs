@@ -1,11 +1,14 @@
-use datex_core::runtime::execution::{
-    context::{ExecutionContext, ExecutionMode},
-    execution_input::ExecutionCallerMetadata,
+use datex_core::{
+    runtime::execution::{
+        context::{ExecutionContext, ExecutionMode},
+        execution_input::ExecutionCallerMetadata,
+    },
+    values::core_values::endpoint::Endpoint,
 };
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};
 
 use crate::{
-    js_utils::{js_error, to_dif_js_value, to_js_value},
+    js_utils::{js_error, to_js_dif},
     runtime::JSRuntime,
 };
 
@@ -18,19 +21,31 @@ pub struct Repl {
 #[wasm_bindgen]
 impl Repl {
     #[wasm_bindgen(constructor)]
-    pub fn new(runtime: &JSRuntime, verbose: bool) -> Self {
-        let execution_context = if verbose {
-            ExecutionContext::local_debug(
-                ExecutionMode::unbounded(),
+    pub fn new(
+        runtime: &JSRuntime,
+        endpoint: Option<String>,
+        verbose: bool,
+    ) -> Self {
+        let execution_context = if let Some(endpoint) = endpoint {
+            let endpoint = Endpoint::new(&endpoint);
+            ExecutionContext::remote_unbounded(
+                vec![endpoint],
                 runtime.runtime().clone(),
-                ExecutionCallerMetadata::local_default(),
             )
         } else {
-            ExecutionContext::local(
-                ExecutionMode::unbounded(),
-                runtime.runtime().clone(),
-                ExecutionCallerMetadata::local_default(),
-            )
+            if verbose {
+                ExecutionContext::local_debug(
+                    ExecutionMode::unbounded(),
+                    runtime.runtime().clone(),
+                    ExecutionCallerMetadata::local_default(),
+                )
+            } else {
+                ExecutionContext::local(
+                    ExecutionMode::unbounded(),
+                    runtime.runtime().clone(),
+                    ExecutionCallerMetadata::local_default(),
+                )
+            }
         };
 
         Self {
@@ -46,11 +61,15 @@ impl Repl {
         let result = self
             .runtime
             .runtime()
-            .execute(script, &[], Some(&mut self.execution_context))
+            .execute(script, &[], Some(&mut self.execution_context), false)
             .await
             .map_err(js_error)?;
         Ok(result.map(|v| {
-            to_js_value(&v, &mut self.runtime.dif_interface().cache())
+            to_js_dif(
+                &v,
+                &mut self.runtime.dif_interface().shared_values_cache(),
+                self.runtime.runtime().shared_references_cache_refcell(),
+            )
         }))
     }
 }

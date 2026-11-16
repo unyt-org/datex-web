@@ -50,6 +50,23 @@ You can test the library in the browser by running `deno task browser-demo`. Thi
 `http://localhost:5173/` in your browser. A new runtime instance is automatically created and can be accessed in the
 developer console via the global `Datex` variable.
 
+## Testing with DATEX Workbench
+
+For more advanced testing, you can use the [DATEX Workbench](https://workbench.uynt.org) to test the current build of
+the library. To do this, run the following command:
+
+```bash
+deno task serve-npm-watch
+```
+
+This will start a local web server at `http://localhost:3489/` and serve the library as an npm package. You can then
+visit the DATEX Workbench link shown in the console to test the library in the Workbench environment.
+
+The npm library will be automatically rebuilt and served whenever you make changes to the source code.
+
+You can also do this with a local instance of the DATEX Workbench by cloning the repo
+(https://github.com/unyt-org/datex-workbench) locally.
+
 ## Creating a new release
 
 **Important steps before creating a release**:
