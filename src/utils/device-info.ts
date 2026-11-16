@@ -3,17 +3,13 @@
  * @returns An object containing the browser name and version
  */
 
-declare global {
-    interface Navigator {
-        userAgentData?: {
-            getHighEntropyValues(hints: string[]): Promise<{ fullVersionList: { brand: string; version: string }[] }>;
-        };
-    }
-}
-
 async function getBrowser(): Promise<{ name: string; version: string }> {
+    // @ts-ignore navigator.userAgentData may not be defined
     if (navigator.userAgentData) {
-        const { fullVersionList } = await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
+        // @ts-ignore navigator.userAgentData may not be defined
+        const { fullVersionList } = await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]) as {
+            fullVersionList: { brand: string; version: string }[];
+        };
         const brand = fullVersionList.find((b) => !/Not.?A.?Brand|Chromium/i.test(b.brand)) ??
             fullVersionList.find((b) => b.brand === "Chromium");
         if (brand) return { name: brand.brand, version: brand.version };
