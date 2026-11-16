@@ -3,8 +3,7 @@
 
 extern crate core;
 
-use std::collections::HashMap;
-use std::sync::Once;
+use std::{collections::HashMap, sync::Once};
 
 use log::info;
 use serde_wasm_bindgen::from_value;
@@ -81,7 +80,8 @@ pub async fn create_runtime(
     let debug_config: Option<JSDebugConfig> =
         from_value(debug_config).unwrap_or_default();
 
-    let versions: Vec<(String, String)> = from_value(datex_web_version).unwrap_or_default();
+    let versions: Vec<(String, String)> =
+        from_value(datex_web_version).unwrap_or_default();
 
     INIT.call_once(|| {
         console_error_panic_hook::set_once();
@@ -91,7 +91,12 @@ pub async fn create_runtime(
         }
     });
 
-    JSRuntime::run(config, device_type, IndexMap::from_iter(versions.into_iter())).await
+    JSRuntime::run(
+        config,
+        device_type,
+        IndexMap::from_iter(versions.into_iter()),
+    )
+    .await
 }
 
 #[wasm_bindgen]

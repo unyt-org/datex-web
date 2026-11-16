@@ -20,7 +20,7 @@ import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/opt
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
 import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
 import type { Inspector } from "../datex-web/types/inspector/mod.ts";
-import {getDeviceTypeAndVersions} from "../utils/device-info.ts";
+import { getDeviceTypeAndVersions } from "../utils/device-info.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
@@ -65,7 +65,7 @@ export class Runtime {
         config: RuntimeConfig,
         debugConfig?: DebugConfig,
     ): Promise<Runtime> {
-        const {deviceType, versions} = await getDeviceTypeAndVersions();
+        const { deviceType, versions } = await getDeviceTypeAndVersions();
         versions.datex_web = VERSION;
 
         // workaround: temp dif handler without runtime to convert config to DIF
@@ -240,7 +240,6 @@ export class Runtime {
         }
         return this.#difHandler.resolveDIFValueContainer(difValueContainer);
     }
-
 
     /**
      * Executes a Datex script synchronously and returns the result as a generic type T.

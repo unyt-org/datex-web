@@ -1,22 +1,20 @@
 import { CoreLibTypeId } from "../../dif/core.ts";
-import { type CustomReferenceMetadata } from "../../dif/dif-handler.ts";
+import type { CustomReferenceMetadata } from "../../dif/dif-handler.ts";
 import type { TypeBindingDefinition } from "../../dif/type-registry.ts";
 
 const readableStreamControllers = new WeakMap<ReadableStream<unknown>, ReadableStreamDefaultController<unknown>>();
 
 export const readableStreamTypeBinding: TypeBindingDefinition<ReadableStream<unknown>> = {
     coreLibTypeId: CoreLibTypeId.Receiver,
-    jsClass: ReadableStream,
+    jsClass: ReadableStream as unknown as new (...args: unknown[]) => ReadableStream<unknown>,
     bind(target) {
         const metadata: CustomReferenceMetadata = {};
 
         const readableStream = new ReadableStream({
             start(controller) {
                 readableStreamControllers.set(target, controller);
-            }
+            },
         });
-        readableStream.new = true;
-        target.new = false;
 
         return {
             value: readableStream,
@@ -30,8 +28,7 @@ export const readableStreamTypeBinding: TypeBindingDefinition<ReadableStream<unk
         if (controller) {
             try {
                 controller.enqueue(value);
-            }
-            catch (e) {
+            } catch (_e) {
                 // TODO: what to do in this case? cleanup?
             }
         } else {

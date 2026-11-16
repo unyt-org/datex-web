@@ -11,7 +11,7 @@ use datex_core::{
                 factory::{
                     ComInterfaceAsyncFactory, ComInterfaceAsyncFactoryResult,
                     ComInterfaceConfiguration, SendCallback, SendFailure,
-                    SocketConfiguration, SocketProperties,
+                    SendSuccess, SocketConfiguration, SocketProperties,
                 },
                 properties::{ComInterfaceProperties, InterfaceDirection},
             },
@@ -23,7 +23,6 @@ use datex_core::{
         },
     },
 };
-use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
 use futures::{FutureExt, pin_mut};
 use futures_channel::oneshot;
 use wasm_bindgen::{JsCast, JsError, JsValue, prelude::Closure};

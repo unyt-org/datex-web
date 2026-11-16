@@ -142,7 +142,7 @@ export class ComHub {
      * @returns A UUID for the registered interceptor, which can be used to unregister it later.
      */
     public registerBlockInterceptor(
-        callback: (block: Uint8Array, socket_uuid: string, direction: "Incoming"|"Outgoing") => void,
+        callback: (block: Uint8Array, socket_uuid: string, direction: "Incoming" | "Outgoing") => void,
         include_debug_blocks: boolean = false,
     ): string {
         return this.#jsComHub.register_block_interceptor(callback, include_debug_blocks);

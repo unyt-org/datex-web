@@ -8,14 +8,15 @@ import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import {
     DIFCallableKind,
-    DIFCallableTypeDefinition,
-    DIFClassification,
+    type DIFCallableTypeDefinition,
+    type DIFClassification,
     type DIFCoreValue,
-    DIFCoreValueCallable,
-    DIFCoreValueEntityTypeDefinition, DIFInMemoryValue,
+    type DIFCoreValueCallable,
+    type DIFCoreValueEntityTypeDefinition,
+    type DIFInMemoryValue,
     type DIFOptionalValueContainer,
-    DIFSharedValue,
-    DIFTaggedValue,
+    type DIFSharedValue,
+    type DIFTaggedValue,
     type DIFTypeDefinition,
     type DIFUpdate,
     type DIFUpdateData,
@@ -27,17 +28,15 @@ import {
 import { CoreLibTypeId } from "./core.ts";
 import { type TypeBinding, TypeRegistry } from "./type-registry.ts";
 import { assert, panic, unimplemented, unreachable } from "../utils/exceptions.ts";
-import { isJsUndefined, JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
+import { JS_UNDEFINED } from "../lib/special-core-types/undefined.ts";
 import type { DIFBaseSharedValueContainer } from "./types/value.ts";
 import { SharedContainerMutability } from "../shared-container/base-shared-container.ts";
 import {
-    addressWithoutOwnership,
     type AsShared,
     BaseSharedContainer,
     combinePointerAddressWithOwnership,
     type MaybeSharedRef,
     type PointerAddress,
-    PointerAddressWithOwnership,
     ReferencedSharedContainer,
     type SharedContainer,
     type SharedRef,
@@ -60,7 +59,8 @@ import {
 } from "./helpers/values.ts";
 import { createClassForEntityType } from "../lib/js-classes/mod.ts";
 import { memory } from "../datex.ts";
-
+import { isDIFCoreValue } from "./helpers/values.ts";
+import type { PointerAddressWithOwnership } from "../shared-container/mod.ts";
 /**
  * Some DIF methods may return an optional ValueContainer, so does the execute_sync, when no result is returned.
  * DIF must differentiate between null and no result, so we wrap DIFOptionalValueContainer.
@@ -136,9 +136,11 @@ export type CacheData = {
 const DATEX_CALLABLE_HASH: unique symbol = Symbol("DATEX_CALLABLE_HASH");
 const DATEX_CALLABLE: unique symbol = Symbol("CALLABLE");
 
-export type Callable = (
-    ...args: unknown[]
-) => unknown & { ctx: { [typeof DATEX_CALLABLE]: (...args: unknown[]) => unknown } };
+export type Callable =
+    & ((
+        ...args: unknown[]
+    ) => unknown)
+    & { ctx: { [DATEX_CALLABLE]: (args: unknown[]) => unknown } };
 
 /**
  * The DIFHandler class provides methods to interact with the DATEX Core DIF runtime,
@@ -197,14 +199,14 @@ export class DIFHandler {
         (address: PointerAddress) => {
             console.debug(`${address} was garbage collected`);
             this.cleanupSharedValue(address);
-        }
+        },
     );
 
     readonly #bufferFinalizationRegistry = new FinalizationRegistry(
         (address: number) => {
             console.debug(`Buffer at address ${address} was garbage collected`);
             this.#handle.remove_stored_vec(address);
-        }
+        },
     );
 
     /**
@@ -304,7 +306,6 @@ export class DIFHandler {
             ) as DIFOptionalValueContainer,
         );
     }
-
 
     /**
      * Executes a Datex script synchronously and returns the result as a DIFContainer.
@@ -417,7 +418,7 @@ export class DIFHandler {
         // remove local observers
         this.#observers.delete(address);
         // if observer is active, unregister it
-        if (observerId !== null) {
+        if (observerId != null) {
             this.unobserveSharedValueBindDirect(address, observerId);
         }
         // trigger cache change observers
@@ -628,8 +629,10 @@ export class DIFHandler {
             // special JS undefined value
             if (classificationHasImpl(classification, JsLibTypeAddress.undefined)) {
                 return undefined as T;
-            } else {
+            } else if (classification[0]) {
                 return this.instantiateEntityInstance(classification[0], value.v) as T;
+            } else {
+                unimplemented("Handle this case");
             }
         } else if (value._ === "t") {
             assert("t" in value, "Invalid DIFValue format: expected a tagged value with 't' property");
@@ -641,21 +644,21 @@ export class DIFHandler {
     /**
      * Creates a new JS class instance for a given entity value.
      */
-    private instantiateEntityInstance(
+    private instantiateEntityInstance<T>(
         entityTypeAddress: PointerAddressWithOwnership,
-        value: unknown
-    ): object {
+        value: DIFValue,
+    ): T {
         const jsClass = this.resolvePointerAddress(...splitPointerAddressWithOwnership(entityTypeAddress));
         assert(this.isClass(jsClass.value), "Expected a JS class for the entity type definition");
-        const instance = new jsClass.value();
+        const instance = new jsClass.value() as T;
         // FIXME: improve class member instantiation
         const resolvedValue = this.resolveDIFValue(value);
         if (typeof resolvedValue === "object" && resolvedValue !== null && !Array.isArray(resolvedValue)) {
             for (const [key, val] of Object.entries(resolvedValue)) {
-                instance[key] = val;
+                (instance as Record<string, unknown>)[key] = val;
             }
         }
-        return instance as T;
+        return instance;
     }
 
     private resolveDIFTaggedValue(
@@ -678,14 +681,13 @@ export class DIFHandler {
             const array = new Uint8Array(memory.buffer, address, count);
             this.#bufferFinalizationRegistry.register(array, address);
             return array;
-        }
-        else {
+        } else {
             unimplemented("resolveDIFInMemoryValue for type " + type);
         }
     }
 
     private resolveDIFCoreValue(
-        value: DIFCoreValue|DIFInMemoryValue,
+        value: DIFCoreValue | DIFInMemoryValue,
     ): unknown {
         // handle in memory values
         if (value[0] === null) {
@@ -827,15 +829,15 @@ export class DIFHandler {
                     name || ""
                 }(...args) {return ctx[DATEX_CALLABLE](args)}`,
             );
-            let callable = callableBuilder(ctx, DATEX_CALLABLE);
+            const callable = callableBuilder(ctx, DATEX_CALLABLE);
             callable[DATEX_CALLABLE_HASH] = hash;
 
-            const difCallee = [CoreLibTypeId.Callable, [hash, null]];
+            const difCallee: DIFValue = [CoreLibTypeId.Callable, [hash, null]] as const;
 
             Object.defineProperty(ctx, DATEX_CALLABLE, {
                 value: requiresAsync
-                    ? (args) => this.callCallableAsync(difCallee, args)
-                    : (args) => this.callCallableSync(difCallee, args),
+                    ? (args: unknown[]) => this.callCallableAsync(difCallee, args)
+                    : (args: unknown[]) => this.callCallableSync(difCallee, args),
                 configurable: false,
                 enumerable: false,
                 writable: true,
@@ -936,13 +938,14 @@ export class DIFHandler {
         }
     }
 
-    private isClass(fn: unknown): boolean {
+    private isClass(fn: unknown): fn is new (...args: unknown[]) => unknown {
         return typeof fn === "function" &&
             /^class\s/.test(Function.prototype.toString.call(fn));
     }
 
     public isDatexCallable(value: unknown): value is Callable {
-        return typeof value === "function" && value.hasOwnProperty("ctx") && value.ctx.hasOwnProperty(DATEX_CALLABLE);
+        return typeof value === "function" && "ctx" in value &&
+            Object.hasOwn(value.ctx as Record<symbol, unknown>, DATEX_CALLABLE);
     }
 
     private bindSharedContainerCallable(callable: Callable, address: PointerAddress) {
@@ -951,8 +954,8 @@ export class DIFHandler {
             _: combinePointerAddressWithOwnership(address, DIFSharedContainerOwnership.ImmutableRef),
         };
         callable.ctx[DATEX_CALLABLE] = requiresAsync
-            ? (args) => this.callCallableAsync(difCallee, args)
-            : (args) => this.callCallableSync(difCallee, args);
+            ? (args: unknown[]) => this.callCallableAsync(difCallee, args)
+            : (args: unknown[]) => this.callCallableSync(difCallee, args);
     }
 
     /**
@@ -1025,10 +1028,11 @@ export class DIFHandler {
 
         if (bindJSValue) {
             // if value class is registered in cache, this is an entity type - don't add type binding
-            const isEntityType = value.constructor && this.getPointerAddressForValue(value.constructor) != null;
+            const isEntityType = typeof value === "object" && value !== null && "constructor" in value &&
+                value.constructor &&
+                this.getPointerAddressForValue(value.constructor as unknown as SharedRef<object>) != null;
 
-            typeBinding = !isEntityType &&
-                this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
+            typeBinding = isEntityType ? null : this.type_registry.getTypeBindingByCoreLibTypeId(coreLibId);
 
             if (typeBinding) {
                 const { value: proxifiedValue, metadata: newMetadata } = typeBinding
@@ -1107,7 +1111,9 @@ export class DIFHandler {
     private getCoreLibTypeIdForJSValue(value: unknown): CoreLibTypeId {
         // check class constraints in type registry
         if (typeof value === "object" && value !== null && value.constructor) {
-            const typeBinding = this.type_registry.getCoreLibIdForJSClass(value.constructor);
+            const typeBinding = this.type_registry.getCoreLibIdForJSClass(
+                value.constructor as unknown as new (...args: unknown[]) => object,
+            );
             if (typeBinding) {
                 return typeBinding;
             }
@@ -1155,7 +1161,7 @@ export class DIFHandler {
         if (!deref) return false;
 
         if (!typeBinding?.getUpdateHandlerTypes().has(DIFUpdateKind.Replace) && update[1] === DIFUpdateKind.Replace) {
-            const path = update[0]; // TODO handle path
+            // const path = update[0]; // TODO handle path
             deref.updateValueSilently(this.resolveDIFValueContainer(
                 update[2],
             ));
@@ -1270,8 +1276,7 @@ export class DIFHandler {
             this.cleanupSharedValue(address);
             try {
                 return this.resolvePointerAddress(ownership, address);
-            }
-            catch (e) {
+            } catch (e) {
                 console.error(`Failed to resolve pointer address ${address} after cache cleanup:`, e);
                 throw e;
             }
@@ -1369,9 +1374,8 @@ export class DIFHandler {
      */
     public collapseReferenceSharedContainer(value: unknown): unknown {
         if (value instanceof ReferencedSharedContainer) {
-            return value.value // equivalent to SharedRef<T>
-        }
-        else {
+            return value.value; // equivalent to SharedRef<T>
+        } else {
             return value;
         }
     }
@@ -1475,12 +1479,13 @@ export class DIFHandler {
             );
         if (existingReference) {
             return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
-        }
-        else if (ref instanceof BaseSharedContainer) {
+        } else if (ref instanceof BaseSharedContainer) {
             if (!difHandlerInstance) {
-                throw new Error("Could not resolve shared container in cache for value " + ref.pointerAddress + " - no dif handler instance provided");
-            }
-            else {
+                throw new Error(
+                    "Could not resolve shared container in cache for value " + ref.pointerAddress +
+                        " - no dif handler instance provided",
+                );
+            } else {
                 throw new Error("Could not find shared container in cache for value " + ref.pointerAddress);
             }
         }
@@ -1517,12 +1522,16 @@ export class DIFHandler {
                 unimplemented(
                     "Support nested shared reference value in tagged value",
                 );
-            } else {
-                assert(Array.isArray(inner), "inner tagged value must be a DIFCoreValue");
+            } else if (isDIFCoreValue(inner)) {
                 return createDIFValueWithTag(inner, value.tag);
+            } else {
+                unreachable("Unsupported inner value type in tagged value");
             }
         } else if (Array.isArray(value)) {
-            return [CoreLibTypeId.List, value.map((v) => this.convertJSValueToDIFValueContainer(v, difHandlerInstance))] as DIFValue;
+            return [
+                CoreLibTypeId.List,
+                value.map((v) => this.convertJSValueToDIFValueContainer(v, difHandlerInstance)),
+            ] as DIFValue;
         } else if (value instanceof Map) {
             const map: [DIFValueContainer, DIFValueContainer][] = value
                 .entries().map((
@@ -1540,7 +1549,7 @@ export class DIFHandler {
             return [CoreLibTypeId.Map, map] as DIFValue;
         } else if (typeof value == "function") {
             // function originating from JS side, register it as shared value with pointer address
-            if (!(DATEX_CALLABLE_HASH in (value as any))) {
+            if (!(DATEX_CALLABLE_HASH in (value as Record<symbol, unknown>))) {
                 if (!difHandlerInstance) {
                     throw new Error(
                         "Cannot register callable function without a DIFHandler instance",
@@ -1558,7 +1567,7 @@ export class DIFHandler {
                 return difHandlerInstance.generateDIFValueContainerForCachedPointer(existingReference.address);
             } // local DATEX function with hash
             else {
-                const hash = (value as any)[DATEX_CALLABLE_HASH] as string;
+                const hash = (value as Record<symbol, unknown>)[DATEX_CALLABLE_HASH] as string;
                 return [CoreLibTypeId.Callable, [hash, null]];
             }
         }
@@ -1593,7 +1602,7 @@ export class DIFHandler {
             typeDefinition,
             isMethod,
         ) as PointerAddress;
-        const shared = this.initSharedValue(
+        this.initSharedValue(
             address,
             callable,
             SharedContainerMutability.Immutable,
@@ -1680,7 +1689,7 @@ export class DIFHandler {
         this.updateSharedValue(
             pointerAddress,
             setArrayEntry(
-                this.convertJSValueToDIFValueContainer(Number(index)),
+                Number(index),
                 difValue,
             ),
         );

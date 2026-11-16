@@ -1,13 +1,12 @@
 /**
  * Retrieves the browser name and version from the user agent string or navigator.userAgentData.
  * @returns An object containing the browser name and version
-  */
-async function getBrowser() : Promise<{ name: string; version: string }> {
+ */
+async function getBrowser(): Promise<{ name: string; version: string }> {
     if (navigator.userAgentData) {
-        const { fullVersionList } =
-            await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
-        const brand = fullVersionList.find(b => !/Not.?A.?Brand|Chromium/i.test(b.brand))
-            ?? fullVersionList.find(b => b.brand === "Chromium");
+        const { fullVersionList } = await navigator.userAgentData.getHighEntropyValues(["fullVersionList"]);
+        const brand = fullVersionList.find((b) => !/Not.?A.?Brand|Chromium/i.test(b.brand)) ??
+            fullVersionList.find((b) => b.brand === "Chromium");
         if (brand) return { name: brand.brand, version: brand.version };
     }
 
@@ -36,12 +35,13 @@ export async function getDeviceTypeAndVersions(): Promise<{
 }> {
     const browserInfo = await getBrowser();
     const platformName = navigator.platform || "unknown platform";
-    const platformVersion = navigator.userAgent.match(/(Windows NT|Mac OS X|Linux|Android|iOS)[^;)]*/)?.[0] || "unknown";
+    const platformVersion = navigator.userAgent.match(/(Windows NT|Mac OS X|Linux|Android|iOS)[^;)]*/)?.[0] ||
+        "unknown";
     return {
         deviceType: `Web Browser (${browserInfo.name} / ${platformName})`,
         versions: {
-            'browser': `${browserInfo.name} ${browserInfo.version}`,
-            'os': platformVersion,
+            "browser": `${browserInfo.name} ${browserInfo.version}`,
+            "os": platformVersion,
         },
     };
 }

@@ -1,7 +1,7 @@
 import { Endpoint } from "../lib/special-core-types/endpoint.ts";
 import { Range } from "../lib/special-core-types/range.ts";
 import { BaseSharedContainer } from "../shared-container/mod.ts";
-import {EMPTY_TAG, Tagged} from "../lib/special-core-types/tagged.ts";
+import { EMPTY_TAG, Tagged } from "../lib/special-core-types/tagged.ts";
 
 // @ts-ignore devtoolsFormatters
 globalThis.devtoolsFormatters = [
@@ -9,8 +9,7 @@ globalThis.devtoolsFormatters = [
         header(obj: unknown) {
             if (obj instanceof Endpoint) {
                 return ["span", { style: "color: #58d452" }, obj.toString()];
-            }
-            else if (obj instanceof Tagged) {
+            } else if (obj instanceof Tagged) {
                 const inner = [
                     "span",
                     {},
@@ -32,10 +31,9 @@ globalThis.devtoolsFormatters = [
                 return [
                     "span",
                     {},
-                    inner
-                ]
-            }
-            else if (obj instanceof BaseSharedContainer) {
+                    inner,
+                ];
+            } else if (obj instanceof BaseSharedContainer) {
                 const value = typeof obj.value === "bigint" ? Number(obj.value) : obj.value;
 
                 return [

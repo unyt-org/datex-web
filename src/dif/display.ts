@@ -9,14 +9,13 @@ import { CoreLibTypeId } from "./core.ts";
 import type {
     DIFBaseSharedValueContainer,
     DIFCoreValue,
-    DIFRawValue,
     DIFTypeDefinition,
     DIFTypeDefinitionMap,
     DIFTypeKey,
     DIFValueContainer,
 } from "./types/mod.ts";
 import type { PointerAddress } from "../shared-container/mod.ts";
-import { isSharedValueContainer } from "./helpers/values.ts";
+import { isDIFCoreValue, isSharedValueContainer } from "./helpers/values.ts";
 
 /**
  * Converts a DIF reference mutability to a display string.
@@ -50,7 +49,7 @@ export function difValueContainerToDisplayString(
 ): string {
     if (isSharedValueContainer(container)) {
         return container._;
-    } else if (Array.isArray(container)) {
+    } else if (isDIFCoreValue(container)) {
         return difCoreValueToDisplayString(container);
     } else {
         return JSON.stringify(container);

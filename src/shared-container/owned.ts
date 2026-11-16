@@ -1,6 +1,6 @@
 import { ReferencedSharedContainer, SharedReferenceMutability } from "./reference.ts";
 import type { BaseSharedContainer, SharedContainerMutability } from "./base-shared-container.ts";
-import type { MaybeSharedRef, PointerAddress, SharedRef } from "datex/shared-container/mod.ts";
+import type { MaybeSharedRef, PointerAddress } from "datex/shared-container/mod.ts";
 import type { DIFUpdateData } from "../dif/types/update.ts";
 
 export class OwnedSharedContainer<T, Mutability extends SharedContainerMutability = SharedContainerMutability> {

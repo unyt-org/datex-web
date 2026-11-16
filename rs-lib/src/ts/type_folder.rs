@@ -27,6 +27,7 @@ use datex_core::{
         shared_container_containing_type::SharedContainerContainingType,
         r#type::Type,
         type_definition::{
+            TypeDefinition,
             callable::CallableTypeDefinition,
             collection::type_definition::{
                 ListCollectionTypeDefinition,
@@ -41,16 +42,15 @@ use datex_core::{
             tagged_type::TaggedTypeDefinition,
             union::UnionTypeDefinition,
         },
-        type_definition_with_metadata::TypeMetadata,
+        type_definition_with_metadata::{
+            TypeDefinitionWithMetadata, TypeMetadata,
+        },
         visitor::TypeFolder,
     },
     values::core_values::{
-        callable::Callable, integer::typed_integer::TypedInteger,
+        callable::Callable, integer::typed_integer::TypedInteger, text::Text,
     },
 };
-use datex_core::types::type_definition::TypeDefinition;
-use datex_core::types::type_definition_with_metadata::TypeDefinitionWithMetadata;
-use datex_core::values::core_values::text::Text;
 use swc_common::{BytePos, DUMMY_SP, Span};
 use swc_ecma_ast::{
     Accessibility, ClassDecl, ClassMember, ClassMethod, Decl, EmptyStmt,
@@ -814,20 +814,28 @@ impl TypeFolder for TsTypeFolder {
         // if type is map, push class properties
         if let TypeDefinition::Map(map_definition) = definition.definition() {
             for (key, value) in &map_definition.0 {
-                if let Type::Definition(TypeDefinitionWithMetadata{definition: TypeDefinition::Literal(LiteralTypeDefinition::Text(text)), ..}) = key {
+                if let Type::Definition(TypeDefinitionWithMetadata {
+                    definition:
+                        TypeDefinition::Literal(LiteralTypeDefinition::Text(text)),
+                    ..
+                }) = key
+                {
                     members.push(ClassMember::ClassProp(ts_class_property(
                         text.as_str(),
-                        datex_core::types::visitor::fold_type(self, value)?.into_ts_type(),
+                        datex_core::types::visitor::fold_type(self, value)?
+                            .into_ts_type(),
                         Accessibility::Public,
                     )));
-                }
-                else {
-                    unimplemented!("Map key is not a Text literal, cannot convert to TypeScript class");
+                } else {
+                    unimplemented!(
+                        "Map key is not a Text literal, cannot convert to TypeScript class"
+                    );
                 }
             }
-        }
-        else {
-            unimplemented!("EntityTypeDefinition is not a Map type, cannot convert to TypeScript class");
+        } else {
+            unimplemented!(
+                "EntityTypeDefinition is not a Map type, cannot convert to TypeScript class"
+            );
         }
 
         for entity_impl in definition.impls().iter() {

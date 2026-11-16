@@ -22,6 +22,7 @@ use datex_core::{
     compiler::{
         CompileOptions, compilation_result::CompilationResult, compile_template,
     },
+    core_compiler::core_compilation_context::DXBWithSharedValues,
     crypto::CryptoImpl,
     decompiler::{DecompileOptions, ast_to_source_code::value_to_source_code},
     dif::dif_interface::DIFInterface,
@@ -31,15 +32,15 @@ use datex_core::{
             shared_references_cache::SharedReferencesCache,
             shared_values_cache::SharedValuesCache,
         },
+        execution::{
+            context::{ExecutionContext, RemoteExecutionTarget},
+            remote_execution_options::RemoteExecutionOptions,
+        },
     },
 };
-use serde_wasm_bindgen::from_value;
-use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc};
-use std::str::FromStr;
-use datex_core::core_compiler::core_compilation_context::DXBWithSharedValues;
-use datex_core::runtime::execution::context::{ExecutionContext, RemoteExecutionTarget};
-use datex_core::runtime::execution::remote_execution_options::RemoteExecutionOptions;
 use indexmap::IndexMap;
+use serde_wasm_bindgen::from_value;
+use std::{cell::RefCell, fmt::Display, ops::DerefMut, rc::Rc, str::FromStr};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{future_to_promise, spawn_local};
 use web_sys::js_sys::Promise;
@@ -60,7 +61,11 @@ impl JSRuntime {
         &self.runtime
     }
 
-    pub(crate) async fn run(config: JsValue, device_type: String, versions: IndexMap<String, String>) -> JSRuntime {
+    pub(crate) async fn run(
+        config: JsValue,
+        device_type: String,
+        versions: IndexMap<String, String>,
+    ) -> JSRuntime {
         let config: RuntimeConfig = from_js_dif_value_container(
             config,
             &RefCell::new(SharedValuesCache::default()),
@@ -345,7 +350,7 @@ impl JSRuntime {
                 RemoteExecutionOptions {
                     mark_as_debug,
                     is_end_of_context: true,
-                }
+                },
             )
             .await
             .map_err(js_error)?;
@@ -355,7 +360,6 @@ impl JSRuntime {
             self.runtime.shared_references_cache_refcell(),
         ))
     }
-
 
     pub fn execute_sync_with_string_result(
         &self,
@@ -460,7 +464,8 @@ impl JSRuntime {
         inserted_values: Option<Vec<JsValue>>,
     ) -> Result<Vec<u8>, JsError> {
         // TODO: handle dxb.values?
-        self.compile_script_with_values(script, inserted_values).map(|res| res.dxb)
+        self.compile_script_with_values(script, inserted_values)
+            .map(|res| res.dxb)
     }
 
     fn compile_script_with_values(
@@ -479,7 +484,8 @@ impl JSRuntime {
                 .collect::<Vec<_>>(),
             CompileOptions::default(),
             self.runtime.clone(),
-        ).map_err(js_error)?;
+        )
+        .map_err(js_error)?;
 
         Ok(dxb_with_shared_values)
     }

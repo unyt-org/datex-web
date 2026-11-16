@@ -4,7 +4,7 @@ use datex_core::{
     macros::Datex,
     network::{
         com_hub::{
-            ComHub, InterfacePriority,
+            BlockInterceptor, ComHub, InterfacePriority,
             errors::ComInterfaceCreateError,
             managers::com_interface_manager::{
                 AsyncComInterfaceImplementationFactoryFn,
@@ -40,7 +40,6 @@ use js_sys::{Function, JsFunction1, Object, Promise, Reflect};
 use log::{error, info};
 use serde_wasm_bindgen::from_value;
 use std::{cell::RefCell, ops::Deref, rc::Rc, str::FromStr};
-use datex_core::network::com_hub::BlockInterceptor;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, future_to_promise};
 use web_sys::js_sys::{self};
@@ -492,7 +491,7 @@ impl JSComHub {
             include_debug_blocks
         )).to_string()
     }
-    
+
     pub fn unregister_block_interceptor(&self, uuid: String) {
         let uuid = UUID::from_string(uuid);
         self.com_hub().unregister_block_interceptor(&uuid);

@@ -10,16 +10,17 @@ use datex_core::{
                 factory::{
                     ComInterfaceAsyncFactory, ComInterfaceAsyncFactoryResult,
                     ComInterfaceConfiguration, SendCallback, SendFailure,
-                    SocketConfiguration, SocketProperties,
+                    SendSuccess, SocketConfiguration, SocketProperties,
                 },
-                properties::{ComInterfaceProperties, InterfaceDirection},
+                properties::{
+                    ComInterfaceProperties, InterfaceDirection,
+                    ReconnectionConfig,
+                },
             },
             default_setup_data::serial::serial_client::SerialClientInterfaceSetupData,
         },
     },
 };
-use datex_core::network::com_interfaces::com_interface::factory::SendSuccess;
-use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 use log::{debug, error};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;

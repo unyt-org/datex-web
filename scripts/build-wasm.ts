@@ -17,7 +17,7 @@ const name = "datex_web";
 const outDir = "./src/datex-web";
 const profile = flags.profile === "release" ? "release" : "debug";
 
-const debugRefCellFeatures = flags['debug-refcell']
+const debugRefCellFeatures = flags["debug-refcell"]
     ? [
         "-Zbuild-std=std,panic_abort",
         "-Zbuild-std-features=debug_refcell",

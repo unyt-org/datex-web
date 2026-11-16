@@ -13,7 +13,10 @@ use datex_core::{
                     ComInterfaceConfiguration, SendCallback, SendFailure,
                     SocketConfiguration, SocketProperties,
                 },
-                properties::{ComInterfaceProperties, InterfaceDirection},
+                properties::{
+                    ComInterfaceProperties, InterfaceDirection,
+                    ReconnectionConfig,
+                },
             },
             default_setup_data::webrtc::{
                 RTCIceCandidateInitDX, RTCIceServerDX, RTCSdpTypeDX,
@@ -23,7 +26,6 @@ use datex_core::{
         },
     },
 };
-use datex_core::network::com_interfaces::com_interface::properties::ReconnectionConfig;
 
 mod channels;
 use channels::*;

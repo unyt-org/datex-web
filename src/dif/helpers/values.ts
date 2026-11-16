@@ -1,8 +1,7 @@
 import { unreachable } from "../../utils/exceptions.ts";
 import type { DIFClassification, DIFCoreValue, DIFSharedValue, DIFValue, DIFValueContainer } from "../types/value.ts";
-import { PointerAddress } from "../../shared-container/mod.ts";
-import { JsLibTypeAddress } from "../js-lib.ts";
-
+import type { PointerAddress } from "../../shared-container/mod.ts";
+import type { PointerAddressWithOwnership } from "../../shared-container/mod.ts";
 export function tryGetClassification(value: DIFValue): DIFClassification | null {
     if (typeof value === "object" && value !== null && "_" in value && value?._ === "c") {
         if (!("c" in value)) {
@@ -43,7 +42,7 @@ export function createDIFValueWithImplClassification(
 
 export function createDIFValueWithEntityClassification(
     value: DIFCoreValue,
-    entityTypeAddress: PointerAddress,
+    entityTypeAddress: PointerAddressWithOwnership,
 ): DIFValue {
     return createDIFValueWithClassification(value, [entityTypeAddress, []]);
 }
@@ -58,4 +57,8 @@ export function createDIFValueWithTag(value: DIFCoreValue, tag: string, is_empty
 
 export function isSharedValueContainer(value: DIFValueContainer): value is DIFSharedValue {
     return typeof value === "object" && value !== null && "_" in value && value._ !== "t" && value._ !== "c";
+}
+
+export function isDIFCoreValue(value: DIFValue): value is DIFCoreValue {
+    return Array.isArray(value) && value.length === 2;
 }

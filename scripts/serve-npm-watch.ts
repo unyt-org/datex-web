@@ -17,7 +17,7 @@ const unsecureBuild = Deno.args.includes("--insecure");
 async function runBuild(buildRust = true) {
     if (buildRust) {
         const buildCmd = unsecureBuild ? "build:debug:no-opt:insecure" : "build:debug:no-opt";
-        console.info("Running "+buildCmd+"...");
+        console.info("Running " + buildCmd + "...");
         const cmd = new Deno.Command("deno", {
             args: ["task", buildCmd],
             stdout: "inherit",

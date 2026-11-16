@@ -37,8 +37,8 @@
             "command": "deno run -A scripts/build-wasm.ts --profile debug --no-opt"
         },
         "build:debug:no-opt:insecure": {
-          "description": "Build debug WASM without optimization.",
-          "command": "deno run -A scripts/build-wasm.ts --profile debug --no-opt --features allow_unsigned_blocks"
+            "description": "Build debug WASM without optimization.",
+            "command": "deno run -A scripts/build-wasm.ts --profile debug --no-opt --features allow_unsigned_blocks"
         },
         "types": {
             "description": "Generate TypeScript declarations from the Rust type registry.",
@@ -71,8 +71,8 @@
             "command": "deno run -A scripts/serve-npm-watch.ts"
         },
         "serve-npm-watch:insecure": {
-          "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
-          "command": "deno run -A scripts/serve-npm-watch.ts --insecure"
+            "description": "Build the npm package and watch for changes, rebuilding on change. Hosts a local server for the npm package.",
+            "command": "deno run -A scripts/serve-npm-watch.ts --insecure"
         },
         "fmt": {
             "description": "Format Deno and Rust sources.",

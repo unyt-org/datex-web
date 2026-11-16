@@ -2,7 +2,15 @@ use datex_core::values::core_values::boolean::Boolean;
 use num_bigint::BigInt as NumBigInt;
 
 use swc_common::DUMMY_SP;
-use swc_ecma_ast::{Accessibility, BigInt, BindingIdent, Bool, ClassDecl, ClassMember, ClassProp, Expr, Ident, IdentName, Lit, ModuleItem, Number, Pat, PropName, RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType, TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType, TsPropertySignature, TsQualifiedName, TsTupleElement, TsTupleType, TsType, TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation, TsTypeRef, TsUnionType};
+use swc_ecma_ast::{
+    Accessibility, BigInt, BindingIdent, Bool, ClassDecl, ClassMember,
+    ClassProp, Expr, Ident, IdentName, Lit, ModuleItem, Number, Pat, PropName,
+    RestPat, Str, TsArrayType, TsEntityName, TsFnParam, TsFnType,
+    TsIntersectionType, TsKeywordType, TsKeywordTypeKind, TsLit, TsLitType,
+    TsPropertySignature, TsQualifiedName, TsTupleElement, TsTupleType, TsType,
+    TsTypeAliasDecl, TsTypeAnn, TsTypeElement, TsTypeParamInstantiation,
+    TsTypeRef, TsUnionType,
+};
 
 use crate::ts::utils::sanitize_ts_identifier;
 
@@ -172,13 +180,17 @@ pub fn ts_type_reference(name: &str, parameters: Vec<TsType>) -> TsType {
     })
 }
 
-pub fn ts_class_property(name: &str, ty: TsType, accessibility: Accessibility) -> ClassProp {
+pub fn ts_class_property(
+    name: &str,
+    ty: TsType,
+    accessibility: Accessibility,
+) -> ClassProp {
     ClassProp {
         span: DUMMY_SP,
         key: PropName::Ident(IdentName::new(name.into(), DUMMY_SP)),
         value: None,
         type_ann: Some(Box::new(ts_type_ann(ty))),
-        is_static: false,          // the important part
+        is_static: false, // the important part
         decorators: vec![],
         accessibility: Some(accessibility),
         is_abstract: false,

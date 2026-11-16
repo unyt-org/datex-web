@@ -10,7 +10,7 @@ export * from "./array.ts";
 
 import type { TypeRegistry } from "../../dif/type-registry.ts";
 import { arrayTypeBinding } from "../mod.ts";
-import {readableStreamTypeBinding} from "../web-api-types/readable-stream.ts";
+import { readableStreamTypeBinding } from "../web-api-types/readable-stream.ts";
 
 export function registerCoreTypeBindings(
     registry: TypeRegistry,

@@ -440,7 +440,11 @@ impl JSDIFInterface {
         ];
         let inspector = self
             .runtime
-            .execute_instructions_remote_single_receiver(endpoint, instructions, true)
+            .execute_instructions_remote_single_receiver(
+                endpoint,
+                instructions,
+                true,
+            )
             .await
             .map_err(js_error)?
             .ok_or(js_error("Failed to create inspector"))?;
@@ -453,6 +457,9 @@ impl JSDIFInterface {
     }
 
     pub fn remove_stored_vec(&self, address: usize) {
-        self.dif_interface.cache.borrow_mut().remove_stored_vec(address);
+        self.dif_interface
+            .cache
+            .borrow_mut()
+            .remove_stored_vec(address);
     }
 }

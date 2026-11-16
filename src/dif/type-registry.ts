@@ -177,6 +177,7 @@ export class TypeRegistry {
                 return coreLibId;
             }
         }
+        return null;
     }
 
     /**
@@ -240,13 +241,13 @@ export class TypeBinding<
      */
     public handleDifUpdate(
         base: BaseSharedContainer<T>,
-        pointerAddress: string,
+        _pointerAddress: string,
         difUpdateData: DIFUpdateData,
     ): void {
         const updateHandlerTypes = this.getUpdateHandlerTypes();
         // add observer if there are update handlers
         if (updateHandlerTypes.size > 0) {
-            const path = difUpdateData[0]; // TODO handle path
+            // const path = difUpdateData[0]; // TODO handle path
             const kind = difUpdateData[1];
 
             const value = base.value as SharedRef<T>;

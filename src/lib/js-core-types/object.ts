@@ -9,8 +9,8 @@ export const objectTypeBinding: TypeBindingDefinition<
     Record<string | symbol, unknown>
 > = {
     coreLibTypeId: CoreLibTypeId.Map,
-    jsClass: Object,
-    bind(target, pointerAddress) {
+    jsClass: Object as unknown as new (...args: unknown[]) => Record<string | symbol, unknown>,
+    bind(target, _pointerAddress) {
         const metadata: CustomReferenceMetadata = {};
 
         // catch access (get or set) to original object value, not via proxy - this check is only active in debug mode

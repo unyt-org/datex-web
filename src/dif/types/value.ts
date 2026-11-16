@@ -52,7 +52,7 @@ export type DIFInMemoryValue = [null, CoreLibTypeId, number, number]; // core li
 
 export type DIFClassification = [
     PointerAddressWithOwnership | null, // entity address
-    PointerAddressWithOwnership[] | null, // impls
+    PointerAddress[] | null, // impls
 ];
 
 /**
