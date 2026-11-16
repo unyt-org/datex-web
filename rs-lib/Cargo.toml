@@ -31,7 +31,7 @@ datex-core = { version = "0.0.13", default-features = false, features = [
     "disassembler",
 ] }
 # git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
-datex-crypto-facade = { version = "0.0.3" }
+datex-crypto-facade = { version = "0.0.4" }
 linkme = "0.3.37"
 
 async-trait = "0.1.87"
