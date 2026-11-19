@@ -13,12 +13,11 @@ import {
     type ReferencedSharedContainer,
     SharedContainerMutability,
 } from "../shared-container/mod.ts";
-import type { FlatResult, TreeResult } from "./types.d.ts";
+import type { FlatResult, TreeResult } from "./types.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
-import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
 import type { Inspector } from "../datex-web/types/inspector/mod.ts";
 import { getDeviceTypeAndVersions } from "../utils/device-info.ts";
 
@@ -31,14 +30,6 @@ interface DebugConfig {
     // optional log level for internal runtime logs, if not set, no logs are printed
     log_level?: "error" | "warn" | "info" | "debug" | "trace" | null;
 }
-
-/** configuration for the runtime  */
-export type RuntimeConfig = {
-    endpoint: Endpoint;
-    name?: string;
-    interfaces?: { type: string; config: unknown; priority: InterfacePriority }[];
-    env?: Record<string, string>;
-};
 
 /**
  * The main Runtime class for executing Datex scripts and managing communication interfaces.
