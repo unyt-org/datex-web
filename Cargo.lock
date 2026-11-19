@@ -421,9 +421,9 @@ dependencies = [
 
 [[package]]
 name = "datex-core"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc31f4e23de348fbf1c9bb45ffd68992806109de06e376470f4f3d37153fa74c"
+checksum = "49e52a26c1e26e5603f06a64ba84bed882aef6df2cec42a0b7498b8fbc8d32f0"
 dependencies = [
  "async-select",
  "bigdecimal",
