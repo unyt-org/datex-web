@@ -26,4 +26,7 @@ export * as Network from "./network/mod.ts";
 export * as Builtins from "./lib/mod.ts";
 export * as Shared from "./shared-container/mod.ts";
 export * from "./repl/mod.ts";
+
+export type * from "./datex-core-types.ts";
+
 import "./utils/devtools-formatter.ts";

@@ -13,13 +13,15 @@
  */
 
 import { Endpoint, tagged } from "./lib/mod.ts";
-import { Runtime, type RuntimeConfig } from "./runtime/runtime.ts";
+import { Runtime } from "./runtime/runtime.ts";
+import type { RuntimeConfig } from "./datex-web/types/runtime/config.ts";
 
 /**
  * The default configuration for the Datex runtime.
  */
 const defaultConfig: RuntimeConfig = {
     endpoint: Endpoint.get("@unyt"),
+    name: null,
     interfaces: [{
         priority: tagged("Priority", 1),
         type: "websocket-client",
