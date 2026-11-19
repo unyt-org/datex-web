@@ -52,7 +52,7 @@ function startServer() {
         stderr: "inherit",
     }).spawn();
 
-    const url = encodeURIComponent("https://localhost:3489/esm/mod.js");
+    const url = encodeURIComponent("https://localhost:3489");
     setTimeout(() => {
         console.info(
             "\n============================================================================================================================",
