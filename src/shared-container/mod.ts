@@ -1,3 +1,8 @@
+/**
+ * @module shared-container/mod.ts
+ * @description
+ * This module provides wrapper classes, types and utility functions for shared containers in the DATEX runtime.
+ */
 import { DIFSharedContainerOwnership } from "../dif/types/mod.ts";
 import type { SharedContainerMutability } from "./base-shared-container.ts";
 import type { OwnedSharedContainer } from "./owned.ts";
