@@ -35,6 +35,7 @@ interface DebugConfig {
 /** configuration for the runtime  */
 export type RuntimeConfig = {
     endpoint: Endpoint;
+    name?: string;
     interfaces?: { type: string; config: unknown; priority: InterfacePriority }[];
     env?: Record<string, string>;
 };
