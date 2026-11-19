@@ -27,6 +27,7 @@ const defaultConfig: RuntimeConfig = {
         type: "websocket-client",
         config: { url: "wss://example.unyt.land" },
     }],
+    env: null,
 };
 
 /**

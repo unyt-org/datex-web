@@ -19,6 +19,7 @@ import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
 import type { Inspector } from "../datex-web/types/inspector/mod.ts";
+import type { RuntimeConfig } from "../datex-web/types/runtime/config.ts";
 import { getDeviceTypeAndVersions } from "../utils/device-info.ts";
 
 // TODO: move to global.ts
@@ -30,6 +31,9 @@ interface DebugConfig {
     // optional log level for internal runtime logs, if not set, no logs are printed
     log_level?: "error" | "warn" | "info" | "debug" | "trace" | null;
 }
+
+// TODO: use default auto generated RuntimeConfig type once it supports optional properties
+export type PartialRuntimeConfig = Partial<RuntimeConfig>;
 
 /**
  * The main Runtime class for executing Datex scripts and managing communication interfaces.
@@ -54,7 +58,7 @@ export class Runtime {
      * @returns A promise that resolves to the created Runtime instance
      */
     public static async create(
-        config: RuntimeConfig,
+        config: PartialRuntimeConfig,
         debugConfig?: DebugConfig,
     ): Promise<Runtime> {
         const { deviceType, versions } = await getDeviceTypeAndVersions();
