@@ -1,11 +1,12 @@
 {
     "name": "@unyt/datex",
-    "version": "0.0.16",
+    "version": "0.0.17",
     "license": "MIT",
     "exports": {
         ".": "./src/mod.ts",
         "./default": "./src/default.ts",
         "./lib": "./src/lib/mod.ts",
+        "./runtime": "./src/runtime/mod.ts",
         "./network": "./src/network/mod.ts",
         "./repl": "./src/repl/mod.ts",
         "./shared-container": "./src/shared-container/mod.ts",

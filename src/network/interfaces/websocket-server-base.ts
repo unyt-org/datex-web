@@ -1,3 +1,9 @@
+/**
+ * @module websocket-server-base.ts
+ * @description
+ * This module provides utility functions to create a WebSocket server communication interface factory and to create an async generator yielding ArrayBuffers from a WebSocket.
+ * It is used to facilitate the creation of WebSocket server interfaces in the Datex runtime.
+ */
 import type { ComInterfaceFactory, SocketConfiguration } from "../com-hub.ts";
 import { tagged } from "datex/lib/special-core-types/tagged.ts";
 import type { WebSocketServerInterfaceSetupData } from "../../datex-web/types/network/com_interfaces/default_setup_data/websocket/websocket_server.ts";

@@ -1,6 +1,6 @@
 [package]
 name = "datex-web"
-version = "0.0.16"
+version = "0.0.17"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
@@ -22,7 +22,7 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 # git = "https://github.com/unyt-org/datex"
-datex-core = { version = "0.0.13", default-features = false, features = [
+datex-core = { version = "0.0.14", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",

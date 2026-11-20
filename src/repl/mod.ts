@@ -1,3 +1,9 @@
+/**
+ * @module repl/mod.ts
+ * @description
+ * This module provides a REPL (Read-Eval-Print Loop) helper class for the DATEX runtime.
+ * It allows users to execute scripts and evaluate expressions in an interactive manner.
+ */
 import type { Runtime } from "../runtime/runtime.ts";
 import { Repl as ReplInternal } from "../datex.ts";
 import type { Endpoint } from "../lib/special-core-types/endpoint.ts";

@@ -52,14 +52,21 @@ function startServer() {
         stderr: "inherit",
     }).spawn();
 
-    const url = encodeURIComponent("https://localhost:3489/esm/mod.js");
+    const url = "https://localhost:3489";
+    const encodedUrl = encodeURIComponent("https://localhost:3489");
     setTimeout(() => {
         console.info(
-            "\n============================================================================================================================",
+            "\n==================================================================================",
         );
-        console.info(" Current DATEX build is available at https://workbench.unyt.org/enable-local-patch?url=" + url);
         console.info(
-            "============================================================================================================================",
+            " DATEX runtime patch served at " + url,
+        );
+        console.info(
+            " Use this DATEX runtime patch in the DATEX Workbench:\n https://workbench.unyt.org/enable-local-patch?url=" +
+                encodedUrl,
+        );
+        console.info(
+            "==================================================================================",
         );
     }, 1000);
 }

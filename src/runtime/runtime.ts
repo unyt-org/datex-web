@@ -13,18 +13,18 @@ import {
     type ReferencedSharedContainer,
     SharedContainerMutability,
 } from "../shared-container/mod.ts";
-import type { FlatResult, TreeResult } from "./types.d.ts";
+import type { FlatResult, TreeResult } from "./types.ts";
 import type { DIFTypeDefinition } from "../dif/types/mod.ts";
 import { Endpoint } from "../lib/mod.ts";
 import type { DisassemblerOptions } from "datex/datex-web/types/disassembler/options.ts";
 import type { DecompileOptions } from "datex/datex-web/types/decompiler/options.ts";
-import type { InterfacePriority } from "../datex-web/types/network/com_hub/mod.ts";
 import type { Inspector } from "../datex-web/types/inspector/mod.ts";
+import type { RuntimeConfig } from "../datex-web/types/runtime/config.ts";
 import { getDeviceTypeAndVersions } from "../utils/device-info.ts";
 
 // TODO: move to global.ts
 /** auto-generated version - do not edit: */
-const VERSION: string = "0.0.16";
+const VERSION: string = "0.0.17";
 
 /** debug flags for the runtime */
 interface DebugConfig {
@@ -32,12 +32,8 @@ interface DebugConfig {
     log_level?: "error" | "warn" | "info" | "debug" | "trace" | null;
 }
 
-/** configuration for the runtime  */
-export type RuntimeConfig = {
-    endpoint: Endpoint;
-    interfaces?: { type: string; config: unknown; priority: InterfacePriority }[];
-    env?: Record<string, string>;
-};
+// TODO: use default auto generated RuntimeConfig type once it supports optional properties
+export type PartialRuntimeConfig = Partial<RuntimeConfig>;
 
 /**
  * The main Runtime class for executing Datex scripts and managing communication interfaces.
@@ -62,7 +58,7 @@ export class Runtime {
      * @returns A promise that resolves to the created Runtime instance
      */
     public static async create(
-        config: RuntimeConfig,
+        config: PartialRuntimeConfig,
         debugConfig?: DebugConfig,
     ): Promise<Runtime> {
         const { deviceType, versions } = await getDeviceTypeAndVersions();
