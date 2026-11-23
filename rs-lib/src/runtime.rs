@@ -10,7 +10,7 @@ use datex_core::{
         value_container::ValueContainer,
     },
 };
-use datex_crypto_facade::crypto::Crypto;
+use datex_facades::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
