@@ -82,7 +82,7 @@ impl JSRuntime {
                 device_type: Some(device_type),
                 other_versions: versions,
             },
-        );
+        ).await;
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
         let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
 
