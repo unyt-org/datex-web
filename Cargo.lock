@@ -495,8 +495,8 @@ dependencies = [
  "cfg-if",
  "chrono",
  "datex-facades",
+ "datex-impls-web",
  "datex-macros-internal",
- "datex-web-impls",
  "erased-serde",
  "fnv64-rs",
  "foldhash 0.2.0",
@@ -549,6 +549,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "datex-impls-web"
+version = "0.0.1"
+dependencies = [
+ "datex-facades",
+ "der",
+ "ed25519-dalek",
+ "pkcs8",
+ "spki",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "x25519-dalek",
+]
+
+[[package]]
 name = "datex-macros-internal"
 version = "0.0.3"
 dependencies = [
@@ -594,21 +609,6 @@ dependencies = [
  "wasm-bindgen-test",
  "wasm-logger",
  "web-sys",
-]
-
-[[package]]
-name = "datex-web-impls"
-version = "0.0.1"
-dependencies = [
- "datex-facades",
- "der",
- "ed25519-dalek",
- "pkcs8",
- "spki",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "x25519-dalek",
 ]
 
 [[package]]
