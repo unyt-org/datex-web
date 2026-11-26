@@ -12,15 +12,16 @@
  * ```
  */
 
-import { Endpoint, tagged } from "./lib/mod.ts";
+import { tagged } from "./lib/mod.ts";
 import { Runtime } from "./runtime/runtime.ts";
 import type { RuntimeConfig } from "./datex-web/types/runtime/config.ts";
 
 /**
  * The default configuration for the Datex runtime.
+ * This creates a new anonymous endpoint with a websocket client interface connected to "wss://example.unyt.land"..
  */
 const defaultConfig: RuntimeConfig = {
-    endpoint: Endpoint.get("@unyt"),
+    endpoint: null,
     name: null,
     interfaces: [{
         priority: tagged("Priority", 1),
@@ -28,6 +29,7 @@ const defaultConfig: RuntimeConfig = {
         config: { url: "wss://example.unyt.land" },
     }],
     env: null,
+    vault_location: "local_storage",
 };
 
 /**

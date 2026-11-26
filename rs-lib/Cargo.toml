@@ -1,6 +1,6 @@
 [package]
 name = "datex-web"
-version = "0.0.18"
+version = "0.0.17"
 authors = [
     "Benedikt Strehle <benedikt@unyt.org>",
     "Jonas Strehle <jonas@unyt.org>",
@@ -22,7 +22,7 @@ panic = "abort"
 [dependencies]
 log = { version = "0.4", features = ["std", "serde"] }
 # git = "https://github.com/unyt-org/datex"
-datex-core = { version = "0.0.14", default-features = false, features = [
+datex-core = { version = "0.0.15", default-features = false, features = [
     "target_wasm",
     "compiler",
     "decompiler",
@@ -31,7 +31,7 @@ datex-core = { version = "0.0.14", default-features = false, features = [
     "disassembler",
 ] }
 # git = "https://github.com/unyt-org/datex", branch = "release/0.0.11", 
-datex-crypto-facade = { version = "0.0.4" }
+datex-facades = { version = "0.0.1" }
 linkme = "0.3.37"
 
 async-trait = "0.1.87"

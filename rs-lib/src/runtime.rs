@@ -10,7 +10,7 @@ use datex_core::{
         value_container::ValueContainer,
     },
 };
-use datex_crypto_facade::crypto::Crypto;
+use datex_facades::crypto::Crypto;
 use log::info;
 use std::{borrow::Cow, ops::Deref};
 
@@ -82,7 +82,7 @@ impl JSRuntime {
                 device_type: Some(device_type),
                 other_versions: versions,
             },
-        );
+        ).await;
         // Note: JSRuntime::new must be called before runtime run to initialize com interface factories
         let js_runtime = JSRuntime::new(runtime_runner.runtime.clone());
 
@@ -121,150 +121,6 @@ impl JSRuntime {
  */
 #[wasm_bindgen]
 impl JSRuntime {
-    // TODO remove @janiejestemja
-    pub async fn crypto_test_tmp(&self) -> Promise {
-        future_to_promise(async move {
-            let something = b"yellow submarineyellow submarine".to_owned();
-            let some_check =
-                "9At2nzU19GjL8F4WFRyB7RZSGLemMGUMVBZAMChfndF2".to_owned();
-
-            let based = CryptoImpl::enc_b58(&something).as_bytes().to_vec();
-            let unbased = CryptoImpl::dec_b58_32(&some_check).unwrap();
-            assert_eq!(something, unbased);
-            assert_eq!(some_check.as_bytes().to_vec(), based);
-
-            // Hashes
-            let mut ikm = Vec::from([0u8; 32]);
-            let hash = CryptoImpl::hash_sha256(&ikm).await.unwrap();
-            assert_eq!(
-                hash,
-                [
-                    102, 104, 122, 173, 248, 98, 189, 119, 108, 143, 193, 139,
-                    142, 159, 142, 32, 8, 151, 20, 133, 110, 226, 51, 179, 144,
-                    42, 89, 29, 13, 95, 41, 37
-                ]
-            );
-            let salt = Vec::from([0u8; 16]);
-            let hash_a = CryptoImpl::hkdf_sha256(&ikm, &salt).await.unwrap();
-            ikm[0] = 1u8;
-            let hash_b = CryptoImpl::hkdf_sha256(&ikm, &salt).await.unwrap();
-            assert_ne!(hash_a, hash_b);
-            assert_ne!(hash_a.to_vec(), ikm);
-            assert_eq!(
-                hash_a,
-                [
-                    223, 114, 4, 84, 111, 27, 238, 120, 184, 83, 36, 167, 137,
-                    140, 161, 25, 179, 135, 224, 19, 134, 209, 174, 240, 55,
-                    120, 29, 74, 138, 3, 106, 238
-                ]
-            );
-
-            // Checks gen_ed25519, sig_ed25519, ver_ed25519 against itself
-            let data = b"Some message to  sign".to_vec();
-            let other_data = b"Some message to sign".to_vec();
-
-            // Generate key and signature
-            let (pub_key, pri_key) = CryptoImpl::gen_ed25519().await.unwrap();
-            assert_eq!(pub_key.len(), 44_usize);
-            assert_eq!(pri_key.len(), 48_usize);
-
-            let sig = CryptoImpl::sig_ed25519(&pri_key, &data).await.unwrap();
-            assert_eq!(sig.len(), 64_usize);
-
-            // Verify key, signature and data
-            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &data)
-                .await
-                .unwrap();
-            assert!(ver);
-
-            // Falsify other data
-            let ver = CryptoImpl::ver_ed25519(&pub_key, &sig, &other_data)
-                .await
-                .unwrap();
-            assert!(!ver);
-
-            // Falsify other key
-            let (other_pub_key, other_pri_key) =
-                CryptoImpl::gen_ed25519().await.unwrap();
-            let ver = CryptoImpl::ver_ed25519(&other_pub_key, &sig, &data)
-                .await
-                .unwrap();
-            assert!(!ver);
-
-            // Falsify other signature
-            let other_sig = CryptoImpl::sig_ed25519(&other_pri_key, &data)
-                .await
-                .unwrap();
-            let ver = CryptoImpl::ver_ed25519(&pub_key, &other_sig, &data)
-                .await
-                .unwrap();
-            assert!(!ver);
-
-            // ECDH derivation
-            let (ser_pub, ser_pri) = CryptoImpl::gen_x25519().await.unwrap();
-            let (cli_pub, cli_pri) = CryptoImpl::gen_x25519().await.unwrap();
-            assert_eq!(ser_pub.len(), 44_usize);
-            assert_eq!(ser_pri.len(), 48_usize);
-
-            let cli_sec =
-                CryptoImpl::derive_x25519(&cli_pri, &ser_pub).await.unwrap();
-            let ser_sec =
-                CryptoImpl::derive_x25519(&ser_pri, &cli_pub).await.unwrap();
-
-            assert_eq!(cli_sec, ser_sec);
-            assert_eq!(cli_sec.len(), 32_usize);
-
-            // AES CTR with random key
-            let random_bytes: [u8; 32] =
-                CryptoImpl::random_bytes(32).try_into().unwrap();
-
-            let msg: Vec<u8> = b"Some message".to_vec();
-            let ctr_iv: [u8; 16] = [0u8; 16];
-
-            let ctr_ciphered =
-                CryptoImpl::aes_ctr_encrypt(&random_bytes, &ctr_iv, &msg)
-                    .await
-                    .unwrap();
-
-            let ctr_deciphered = CryptoImpl::aes_ctr_decrypt(
-                &random_bytes,
-                &ctr_iv,
-                &ctr_ciphered,
-            )
-            .await
-            .unwrap();
-
-            assert_eq!(msg, ctr_deciphered);
-            assert_ne!(msg, ctr_ciphered);
-
-            // AES key wrapping
-            let wrapped =
-                CryptoImpl::key_wrap_rfc3394(&random_bytes, &random_bytes)
-                    .await
-                    .unwrap();
-            let unwrapped =
-                CryptoImpl::key_unwrap_rfc3394(&random_bytes, &wrapped)
-                    .await
-                    .unwrap();
-            assert_eq!(random_bytes.to_vec(), unwrapped);
-            // assert_ne!(wrapped, unwrapped);
-
-            let js_array = js_array(&[
-                hash.to_vec(),
-                hash_a.to_vec(),
-                hash_b.to_vec(),
-                ser_pub.to_vec(),
-                pub_key.to_vec(),
-                cli_sec.to_vec(),
-                ser_sec.to_vec(),
-                random_bytes.to_vec(),
-                wrapped.to_vec(),
-                unwrapped.to_vec(),
-            ]);
-            Ok(js_array)
-        })
-    }
-
     #[wasm_bindgen(getter)]
     pub fn version(&self) -> String {
         self.runtime.version().to_string()

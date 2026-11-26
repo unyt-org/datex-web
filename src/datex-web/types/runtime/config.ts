@@ -15,8 +15,10 @@ export type RuntimeConfigInterface = {
 };
 
 export type RuntimeConfig = {
-    endpoint: Endpoint;
+    endpoint: Endpoint | null;
     name: string | null;
+    keys: unknown;
     interfaces: RuntimeConfigInterface[] | null;
     env: Map<string, string> | null;
+    vault_location: string | null;
 };
