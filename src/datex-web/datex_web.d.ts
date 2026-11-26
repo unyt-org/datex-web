@@ -58,7 +58,6 @@ export class JSRuntime {
      * Compiles a DATEX script with optional inserted values to a DXB body
      */
     compile(script: string, inserted_values?: any[] | null): Promise<Uint8Array>;
-    crypto_test_tmp(): Promise<Promise<any>>;
     /**
      * Get a handle to the DIF interface of the runtime
      */

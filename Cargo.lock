@@ -557,6 +557,8 @@ dependencies = [
  "ed25519-dalek",
  "pkcs8",
  "spki",
+ "strum",
+ "strum_macros",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
